@@ -6,6 +6,7 @@ import { CardForm } from './components/forms/CardForm';
 import { PaymentForm } from './components/forms/PaymentForm';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { GoalsView } from './components/GoalsView';
+import { SettingsView } from './components/SettingsView';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from './types';
 import { formatCurrency } from './utils/format';
 import { fetchData } from './services/googleSheetService';
@@ -231,9 +232,6 @@ function App() {
       case 'registrar': // Unified Entry
         return <UnifiedEntryForm scriptUrl={scriptUrl} pin={pin} cards={cards} onAddPending={handleAddPending} onSuccess={handleSync} {...commonProps} />;
 
-      case 'tarjetas':
-        return <CardForm scriptUrl={scriptUrl} pin={pin} onAddCard={handleAddCard} existingCards={cards} {...commonProps} />;
-
       case 'metas': // Savings Goals
         return <GoalsView history={history} savingsGoal={savingsGoal} onSaveGoal={saveSavingsGoal} />;
       
@@ -290,94 +288,18 @@ function App() {
 
       case 'config':
         return (
-          <div className={`${theme.colors.bgCard} p-8 rounded-2xl ${theme.colors.border} border shadow-lg max-w-2xl mx-auto`}>
-            <h2 className={`text-2xl font-bold mb-6 ${theme.colors.textPrimary}`}>⚙️ Configuración</h2>
-
-            {/* Theme Selector */}
-            <div className="mb-6 space-y-3">
-                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>Tema de la Aplicación</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {Object.values(themes).map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => setTheme(t.id)}
-                      className={`p-4 rounded-xl border-2 transition-all ${
-                        currentTheme === t.id
-                          ? `${t.colors.border} ${t.colors.primaryLight} border-current`
-                          : `${theme.colors.border} ${theme.colors.bgCard} hover:${theme.colors.bgCardHover}`
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-lg ${t.colors.gradientPrimary} shadow-md`}></div>
-                        <div className="text-left">
-                          <p className={`font-bold ${currentTheme === t.id ? theme.colors.textPrimary : theme.colors.textSecondary}`}>
-                            {t.name}
-                          </p>
-                          <p className={`text-xs ${theme.colors.textMuted}`}>
-                            {t.id === 'light-premium' ? 'Verde esmeralda' : 'Azul corporativo'}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-            </div>
-
-            <div className={`pt-6 border-t ${theme.colors.border}`}></div>
-
-            {/* Google Script URL */}
-            <div className="mt-6 space-y-3">
-                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>URL del Google Apps Script</label>
-                <div className="flex flex-col md:flex-row gap-2">
-                  <input
-                      type="text"
-                      value={scriptUrl}
-                      readOnly
-                      placeholder="https://script.google.com/..."
-                      className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-current outline-none transition-all`}
-                  />
-                  <button
-                    onClick={handleSync}
-                    className={`px-6 py-3 ${theme.colors.primary} ${theme.colors.primaryHover} rounded-lg text-white font-bold transition-all shadow-lg`}
-                  >
-                    Probar
-                  </button>
-                </div>
-                <p className={`text-xs ${theme.colors.textMuted}`}>
-                  Para cambiar la URL o PIN, reinicia la aplicación
-                </p>
-            </div>
-
-            {/* PIN Display */}
-            <div className="mt-6 space-y-3">
-                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>PIN de Seguridad</label>
-                <div className="flex items-center gap-3">
-                  <div className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm`}>
-                    {'•'.repeat(pin.length)}
-                  </div>
-                  <span className={`text-xs ${theme.colors.textMuted}`}>
-                    {pin.length} dígitos
-                  </span>
-                </div>
-                <p className={`text-xs ${theme.colors.textMuted}`}>
-                  Para cambiar el PIN, actualiza la celda A2 en la hoja "Config" de tu Google Sheet
-                </p>
-            </div>
-
-            <div className={`pt-6 mt-6 border-t ${theme.colors.border}`}>
-                <button
-                    onClick={() => {
-                        if(confirm("¿Borrar caché local y reiniciar?")) {
-                            localStorage.clear();
-                            window.location.reload();
-                        }
-                    }}
-                    className={`${theme.colors.danger} hover:bg-rose-700 text-white text-sm px-4 py-2 rounded-lg transition-colors`}
-                >
-                    ⚠️ Reiniciar aplicación
-                </button>
-            </div>
-          </div>
+          <SettingsView
+            scriptUrl={scriptUrl}
+            pin={pin}
+            cards={cards}
+            savingsGoal={savingsGoal}
+            currentTheme={currentTheme}
+            onAddCard={handleAddCard}
+            onSaveGoal={saveSavingsGoal}
+            onSetTheme={setTheme}
+            onSync={handleSync}
+            notify={showToast}
+          />
         );
         
       default:

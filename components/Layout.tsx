@@ -63,7 +63,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     { id: 'metas', label: 'Metas', icon: <Target /> },
     { id: 'deudas', label: 'Deudas', icon: <Clock /> },
     { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true }, // Unified Action
-    { id: 'tarjetas', label: 'Tarjetas', icon: <Wallet /> },
     { id: 'config', label: 'Ajustes', icon: <Settings /> },
   ];
 
