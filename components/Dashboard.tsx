@@ -120,14 +120,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         isCredit: true,
         timestamp: p.timestamp
     }))
-  ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
+  ].sort((a, b) => {
+    const dateA = new Date(a.timestamp || a.fecha).getTime();
+    const dateB = new Date(b.timestamp || b.fecha).getTime();
+    return dateB - dateA;
+  })
    .slice(0, 10);
 
   // Group transactions by day
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: any[] } = {};
     recentTransactions.forEach(t => {
-      const dayLabel = formatDateLabel(t.fecha);
+      const dayLabel = formatDateLabel(t.timestamp || t.fecha);
       if (!groups[dayLabel]) {
         groups[dayLabel] = [];
       }
@@ -302,7 +306,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                         </div>
                                         <div>
                                             <p className={`font-medium ${theme.colors.textPrimary} text-sm`}>{t.descripcion}</p>
-                                            <p className={`text-xs ${theme.colors.textMuted}`}>{formatTimeLabel(t.fecha)} • {t.categoria}</p>
+                                            <p className={`text-xs ${theme.colors.textMuted}`}>{formatTimeLabel(t.timestamp || t.fecha)} • {t.categoria}</p>
                                         </div>
                                     </div>
                                     <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : theme.colors.textPrimary}`}>
