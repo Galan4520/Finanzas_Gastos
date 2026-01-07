@@ -16,6 +16,7 @@ function App() {
   const { currentTheme, theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [scriptUrl, setScriptUrl] = useState('');
+  const [pin, setPin] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   
@@ -57,11 +58,17 @@ function App() {
 
   // Sync Logic
   const handleSync = useCallback(async () => {
-    if (!scriptUrl) return;
+    if (!scriptUrl || !pin) return;
     setIsSyncing(true);
     try {
-      const data = await fetchData(scriptUrl);
-      
+      const data = await fetchData(scriptUrl, pin);
+
+      // Verificar si hay error de PIN
+      if (data.error) {
+        showToast("❌ " + data.error, 'error');
+        return;
+      }
+
       // Cards
       if (data.cards && Array.isArray(data.cards)) {
         const cleanCards = data.cards.map((c: any) => ({
@@ -72,7 +79,7 @@ function App() {
         }));
         saveCards(cleanCards);
       }
-      
+
       // Pending Expenses
       if (data.pending && Array.isArray(data.pending)) {
         const cleanPending = data.pending.map((p: any) => ({
@@ -96,13 +103,16 @@ function App() {
     } finally {
       setIsSyncing(false);
     }
-  }, [scriptUrl]);
+  }, [scriptUrl, pin]);
 
   // Load Data on Mount
   useEffect(() => {
     const storedUrl = localStorage.getItem('scriptUrl');
-    if (storedUrl) {
+    const storedPin = localStorage.getItem('pin');
+
+    if (storedUrl && storedPin) {
       setScriptUrl(storedUrl);
+      setPin(storedPin);
       setShowWelcome(false);
     }
 
@@ -127,16 +137,28 @@ function App() {
     }
   }, [scriptUrl, handleSync, cards.length]);
 
-  const saveUrl = async (url: string) => {
+  const saveUrl = async (url: string, userPin: string) => {
     setScriptUrl(url);
+    setPin(userPin);
     setIsSyncing(true);
 
     try {
-      // Validar la URL primero intentando sincronizar
-      const data = await fetchData(url);
+      // Validar la URL y PIN primero intentando sincronizar
+      const data = await fetchData(url, userPin);
 
-      // Si llegamos aquí, la URL es válida
+      // Verificar si hay error (PIN inválido)
+      if (data.error) {
+        localStorage.removeItem('scriptUrl');
+        localStorage.removeItem('pin');
+        setScriptUrl('');
+        setPin('');
+        showToast("❌ " + data.error, 'error');
+        throw new Error(data.error);
+      }
+
+      // Si llegamos aquí, la URL y PIN son válidos
       localStorage.setItem('scriptUrl', url);
+      localStorage.setItem('pin', userPin);
 
       // Procesar datos
       if (data.cards && Array.isArray(data.cards)) {
@@ -167,11 +189,13 @@ function App() {
       setShowWelcome(false);
       showToast("✅ Conexión exitosa - Bienvenido!", 'success');
     } catch (error) {
-      console.error("Error validating URL:", error);
-      // NO guardar la URL ni ocultar el welcome
+      console.error("Error validating URL/PIN:", error);
+      // NO guardar la URL/PIN ni ocultar el welcome
       localStorage.removeItem('scriptUrl');
+      localStorage.removeItem('pin');
       setScriptUrl('');
-      showToast("❌ Error: No se pudo conectar con Google Apps Script. Verifica la URL.", 'error');
+      setPin('');
+      showToast("❌ Error: No se pudo conectar. Verifica la URL y el PIN.", 'error');
       throw error; // Re-throw para que WelcomeScreen lo maneje
     } finally {
       setIsSyncing(false);
@@ -194,10 +218,10 @@ function App() {
         return <Dashboard cards={cards} pendingExpenses={pendingExpenses} history={history} />;
       
       case 'registrar': // Unified Entry
-        return <UnifiedEntryForm scriptUrl={scriptUrl} cards={cards} onAddPending={handleAddPending} onSuccess={handleSync} {...commonProps} />;
-      
+        return <UnifiedEntryForm scriptUrl={scriptUrl} pin={pin} cards={cards} onAddPending={handleAddPending} onSuccess={handleSync} {...commonProps} />;
+
       case 'tarjetas':
-        return <CardForm scriptUrl={scriptUrl} onAddCard={handleAddCard} existingCards={cards} {...commonProps} />;
+        return <CardForm scriptUrl={scriptUrl} pin={pin} onAddCard={handleAddCard} existingCards={cards} {...commonProps} />;
       
       case 'deudas': // Previous 'pendientes' tab, but specifically for debt management
         return (
@@ -246,7 +270,7 @@ function App() {
         return (
             <div>
                 <button onClick={() => setActiveTab('deudas')} className="mb-4 text-slate-400 hover:text-white text-sm flex items-center gap-1">← Volver a Deudas</button>
-                <PaymentForm scriptUrl={scriptUrl} pendingExpenses={pendingExpenses} onUpdateExpense={handleUpdateExpense} {...commonProps} />
+                <PaymentForm scriptUrl={scriptUrl} pin={pin} pendingExpenses={pendingExpenses} onUpdateExpense={handleUpdateExpense} {...commonProps} />
             </div>
         );
 
@@ -294,7 +318,7 @@ function App() {
                   <input
                       type="text"
                       value={scriptUrl}
-                      onChange={(e) => saveUrl(e.target.value)}
+                      readOnly
                       placeholder="https://script.google.com/..."
                       className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-current outline-none transition-all`}
                   />
@@ -305,6 +329,25 @@ function App() {
                     Probar
                   </button>
                 </div>
+                <p className={`text-xs ${theme.colors.textMuted}`}>
+                  Para cambiar la URL o PIN, reinicia la aplicación
+                </p>
+            </div>
+
+            {/* PIN Display */}
+            <div className="mt-6 space-y-3">
+                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>PIN de Seguridad</label>
+                <div className="flex items-center gap-3">
+                  <div className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm`}>
+                    {'•'.repeat(pin.length)}
+                  </div>
+                  <span className={`text-xs ${theme.colors.textMuted}`}>
+                    {pin.length} dígitos
+                  </span>
+                </div>
+                <p className={`text-xs ${theme.colors.textMuted}`}>
+                  Para cambiar el PIN, actualiza la celda A2 en la hoja "Config" de tu Google Sheet
+                </p>
             </div>
 
             <div className={`pt-6 mt-6 border-t ${theme.colors.border}`}>

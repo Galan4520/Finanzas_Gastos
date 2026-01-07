@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Sparkles, BookOpen, Link as LinkIcon, CheckCircle, Copy, ExternalLink } from 'lucide-react';
+import { Sparkles, BookOpen, Link as LinkIcon, CheckCircle, Copy, ExternalLink, Lock } from 'lucide-react';
 
 interface WelcomeScreenProps {
-  onUrlSubmit: (url: string) => Promise<void>;
+  onUrlSubmit: (url: string, pin: string) => Promise<void>;
   isSyncing?: boolean;
 }
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyncing = false }) => {
   const [url, setUrl] = useState('');
+  const [pin, setPin] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -15,22 +16,30 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim() && !isValidating) {
+    if (url.trim() && pin.trim() && !isValidating) {
       setIsValidating(true);
       setValidationError('');
       try {
-        await onUrlSubmit(url.trim());
+        await onUrlSubmit(url.trim(), pin.trim());
         // Si llegamos aquí, la validación fue exitosa
       } catch (error) {
         // Mostrar error de validación
-        setValidationError('No se pudo conectar. Verifica que la URL sea correcta y que el script esté desplegado.');
+        setValidationError('No se pudo conectar. Verifica que la URL, el PIN sean correctos y que el script esté desplegado.');
       } finally {
         setIsValidating(false);
       }
     }
   };
 
-  const googleAppsScriptCode = `function doGet() {
+  const googleAppsScriptCode = `function doGet(e) {
+  // Validar PIN
+  const providedPin = e.parameter.pin;
+  if (!validatePin(providedPin)) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: 'PIN inválido' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   return ContentService
@@ -43,20 +52,49 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
 }
 
 function doPost(e) {
+  // Validar PIN
+  const providedPin = e.parameter.pin;
+  if (!validatePin(providedPin)) {
+    return ContentService.createTextOutput(JSON.stringify({ error: 'PIN inválido' }));
+  }
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const tipo = e.parameter.tipo;
 
-  if (!tipo) return ContentService.createTextOutput('Error: tipo no especificado');
+  if (!tipo) return ContentService.createTextOutput(JSON.stringify({ error: 'tipo no especificado' }));
 
   const sheet = ss.getSheetByName(tipo);
-  if (!sheet) return ContentService.createTextOutput('Error: hoja no encontrada');
+  if (!sheet) return ContentService.createTextOutput(JSON.stringify({ error: 'hoja no encontrada' }));
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const newRow = headers.map(header => e.parameter[header] || '');
 
   sheet.appendRow(newRow);
 
-  return ContentService.createTextOutput('OK');
+  return ContentService.createTextOutput(JSON.stringify({ success: true }));
+}
+
+function validatePin(providedPin) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const configSheet = ss.getSheetByName('Config');
+
+    // Si no existe Config, crearla con PIN por defecto
+    if (!configSheet) {
+      const newConfig = ss.insertSheet('Config');
+      newConfig.getRange('A1').setValue('PIN');
+      newConfig.getRange('A2').setValue('1234');
+      return providedPin === '1234';
+    }
+
+    // Obtener PIN de Config (celda A2)
+    const storedPin = configSheet.getRange('A2').getValue().toString();
+
+    return providedPin === storedPin;
+  } catch (error) {
+    Logger.log('Error validando PIN: ' + error);
+    return false;
+  }
 }
 
 function getSheetData(sheetName) {
@@ -116,7 +154,29 @@ function getSheetData(sheetName) {
                     <ExternalLink size={16} />
                     Abrir Plantilla
                   </a>
-                  <p className="text-xs text-slate-400 mt-2">O crea un Google Sheet con estas hojas: Tarjetas, Gastos_Pendientes, Gastos, Ingresos, Pagos</p>
+                  <p className="text-xs text-slate-400 mt-2">O crea un Google Sheet con estas hojas: Tarjetas, Gastos_Pendientes, Gastos, Ingresos, Pagos, Config</p>
+                </div>
+              </div>
+
+              {/* Step 1.5 - PIN Config */}
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <Lock size={16} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white mb-2">Configura tu PIN de seguridad</h3>
+                  <p className="text-slate-300 mb-2">En tu Google Sheet, crea una hoja llamada "Config":</p>
+                  <ol className="list-decimal list-inside text-slate-300 space-y-1 ml-4 text-sm">
+                    <li>Crea una nueva hoja llamada <span className="text-emerald-400 font-mono">Config</span></li>
+                    <li>En la celda A1 escribe: <span className="text-emerald-400 font-mono">PIN</span></li>
+                    <li>En la celda A2 escribe tu PIN (ej: <span className="text-emerald-400 font-mono">1234</span>)</li>
+                  </ol>
+                  <div className="mt-3 bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
+                    <p className="text-amber-200 text-xs flex items-center gap-2">
+                      <Sparkles size={14} />
+                      El PIN por defecto es <span className="font-mono font-bold">1234</span>. Cámbialo por uno más seguro.
+                    </p>
+                  </div>
                 </div>
               </div>
 
@@ -189,9 +249,10 @@ function getSheetData(sheetName) {
                   Importante
                 </h4>
                 <ul className="text-amber-200 text-sm space-y-1 list-disc list-inside">
-                  <li>Guarda tu URL en un lugar seguro</li>
-                  <li>No compartas tu URL públicamente</li>
-                  <li>Puedes cambiar la URL más tarde desde Ajustes</li>
+                  <li>Guarda tu URL y PIN en un lugar seguro</li>
+                  <li>No compartas tu URL ni tu PIN públicamente</li>
+                  <li>Puedes cambiar el PIN en la hoja Config de tu Google Sheet</li>
+                  <li>Para cambiar la URL o PIN, reinicia la aplicación</li>
                 </ul>
               </div>
 
@@ -254,6 +315,25 @@ function getSheetData(sheetName) {
                     setValidationError(''); // Limpiar error al escribir
                   }}
                   placeholder="https://script.google.com/macros/s/..."
+                  required
+                  disabled={isValidating}
+                  className={`w-full bg-slate-900/50 border ${validationError ? 'border-rose-500' : 'border-slate-600'} rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                  <Lock size={16} />
+                  PIN de Seguridad
+                </label>
+                <input
+                  type="password"
+                  value={pin}
+                  onChange={(e) => {
+                    setPin(e.target.value);
+                    setValidationError(''); // Limpiar error al escribir
+                  }}
+                  placeholder="Ingresa tu PIN (por defecto: 1234)"
                   required
                   disabled={isValidating}
                   className={`w-full bg-slate-900/50 border ${validationError ? 'border-rose-500' : 'border-slate-600'} rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}

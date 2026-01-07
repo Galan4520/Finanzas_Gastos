@@ -6,12 +6,13 @@ import { Plus, X, CreditCard as CardIcon, Calendar, Wallet, Layers } from 'lucid
 
 interface CardFormProps {
   scriptUrl: string;
+  pin: string;
   onAddCard: (card: CreditCard) => void;
   existingCards: CreditCard[];
   notify?: (msg: string, type: 'success' | 'error') => void;
 }
 
-export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, onAddCard, existingCards, notify }) => {
+export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, existingCards, notify }) => {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -64,7 +65,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, onAddCard, existi
       };
       
       onAddCard(newCard);
-      await sendToSheet(scriptUrl, newCard, 'Tarjetas');
+      await sendToSheet(scriptUrl, pin, newCard, 'Tarjetas');
       
       setFormData({
         banco: '', tipo_tarjeta: '', alias: '', url_imagen: '',

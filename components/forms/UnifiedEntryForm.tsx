@@ -8,6 +8,7 @@ import { getTextColor } from '../../themes';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
+  pin: string;
   cards: CreditCard[];
   onAddPending: (expense: PendingExpense) => void;
   onSuccess: () => void;
@@ -16,7 +17,7 @@ interface UnifiedEntryFormProps {
 
 type EntryType = 'gasto' | 'ingreso' | 'tarjeta';
 
-export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, cards, onAddPending, onSuccess, notify }) => {
+export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, pin, cards, onAddPending, onSuccess, notify }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
   const [entryType, setEntryType] = useState<EntryType>('gasto');
@@ -92,7 +93,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
             timestamp: new Date().toISOString()
         };
         onAddPending(newExpense);
-        await sendToSheet(scriptUrl, newExpense, 'Gastos_Pendientes');
+        await sendToSheet(scriptUrl, pin, newExpense, 'Gastos_Pendientes');
       } else {
         // Gasto (Cash) or Ingreso
         const payload = {
@@ -103,7 +104,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
             notas: formData.notas,
             timestamp: new Date().toISOString()
         };
-        await sendToSheet(scriptUrl, payload, entryType === 'gasto' ? 'Gastos' : 'Ingresos');
+        await sendToSheet(scriptUrl, pin, payload, entryType === 'gasto' ? 'Gastos' : 'Ingresos');
       }
 
       notify?.('Registrado exitosamente', 'success');

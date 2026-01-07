@@ -12,15 +12,16 @@ const objectToFormData = (obj: Record<string, any>): FormData => {
 };
 
 export const sendToSheet = async (
-  scriptUrl: string, 
-  data: Transaction | CreditCard | PendingExpense | any, 
+  scriptUrl: string,
+  pin: string,
+  data: Transaction | CreditCard | PendingExpense | any,
   tipo: string
 ) => {
   if (!scriptUrl) {
     throw new Error("URL de Google Apps Script no configurada");
   }
 
-  const payload = { ...data, tipo };
+  const payload = { ...data, tipo, pin };
   const formData = objectToFormData(payload);
 
   try {
@@ -36,12 +37,13 @@ export const sendToSheet = async (
   }
 };
 
-export const fetchData = async (scriptUrl: string) => {
+export const fetchData = async (scriptUrl: string, pin: string) => {
   if (!scriptUrl) throw new Error("URL no configurada");
+  if (!pin) throw new Error("PIN no configurado");
 
   try {
-    // We add a timestamp to prevent browser caching
-    const response = await fetch(`${scriptUrl}?t=${Date.now()}`, {
+    // We add PIN and a timestamp to prevent browser caching
+    const response = await fetch(`${scriptUrl}?pin=${encodeURIComponent(pin)}&t=${Date.now()}`, {
       method: 'GET',
       redirect: 'follow'
     });
