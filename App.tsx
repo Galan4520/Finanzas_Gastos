@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { UnifiedEntryForm } from './components/forms/UnifiedEntryForm';
 import { CardForm } from './components/forms/CardForm';
 import { PaymentForm } from './components/forms/PaymentForm';
+import { WelcomeScreen } from './components/WelcomeScreen';
 import { CreditCard, PendingExpense, Transaction } from './types';
 import { formatCurrency } from './utils/format';
 import { fetchData } from './services/googleSheetService';
@@ -13,6 +14,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [scriptUrl, setScriptUrl] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   
   // Toast State
   const [toast, setToast] = useState<{ msg: string; type: ToastType; visible: boolean }>({
@@ -96,16 +98,23 @@ function App() {
   // Load Data on Mount
   useEffect(() => {
     const storedUrl = localStorage.getItem('scriptUrl');
-    if (storedUrl) setScriptUrl(storedUrl);
+    if (storedUrl) {
+      setScriptUrl(storedUrl);
+      setShowWelcome(false);
+    }
 
-    const storedCards = localStorage.getItem('cards');
-    if (storedCards) setCards(JSON.parse(storedCards));
+    try {
+      const storedCards = localStorage.getItem('cards');
+      if (storedCards) setCards(JSON.parse(storedCards));
 
-    const storedPending = localStorage.getItem('pendientes');
-    if (storedPending) setPendingExpenses(JSON.parse(storedPending));
+      const storedPending = localStorage.getItem('pendientes');
+      if (storedPending) setPendingExpenses(JSON.parse(storedPending));
 
-    const storedHistory = localStorage.getItem('history');
-    if (storedHistory) setHistory(JSON.parse(storedHistory));
+      const storedHistory = localStorage.getItem('history');
+      if (storedHistory) setHistory(JSON.parse(storedHistory));
+    } catch (error) {
+      console.error('Error loading data from localStorage:', error);
+    }
   }, []);
 
   // Auto-sync
@@ -118,6 +127,11 @@ function App() {
   const saveUrl = (url: string) => {
     setScriptUrl(url);
     localStorage.setItem('scriptUrl', url);
+    setShowWelcome(false);
+    // Auto sync after setting URL
+    setTimeout(() => {
+      handleSync();
+    }, 500);
   };
 
   // Update handlers
@@ -232,6 +246,11 @@ function App() {
         return null;
     }
   };
+
+  // Show welcome screen if no URL configured
+  if (showWelcome) {
+    return <WelcomeScreen onUrlSubmit={saveUrl} />;
+  }
 
   return (
     <>
