@@ -9,8 +9,11 @@ import { CreditCard, PendingExpense, Transaction } from './types';
 import { formatCurrency } from './utils/format';
 import { fetchData } from './services/googleSheetService';
 import { Toast, ToastType } from './components/ui/Toast';
+import { useTheme } from './contexts/ThemeContext';
+import { themes } from './themes';
 
 function App() {
+  const { currentTheme, theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [scriptUrl, setScriptUrl] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -208,33 +211,70 @@ function App() {
 
       case 'config':
         return (
-          <div className="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-slate-100">⚙️ Configuración</h2>
-            <div className="mb-6 space-y-2">
-                <label className="block text-sm font-medium text-indigo-400 uppercase tracking-wider">URL del Google Apps Script</label>
+          <div className={`${theme.colors.bgCard} p-8 rounded-2xl ${theme.colors.border} border shadow-lg max-w-2xl mx-auto`}>
+            <h2 className={`text-2xl font-bold mb-6 ${theme.colors.textPrimary}`}>⚙️ Configuración</h2>
+
+            {/* Theme Selector */}
+            <div className="mb-6 space-y-3">
+                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>Tema de la Aplicación</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Object.values(themes).map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id)}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        currentTheme === t.id
+                          ? `${t.colors.border} ${t.colors.primaryLight} border-current`
+                          : `${theme.colors.border} ${theme.colors.bgCard} hover:${theme.colors.bgCardHover}`
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-lg ${t.colors.gradientPrimary} shadow-md`}></div>
+                        <div className="text-left">
+                          <p className={`font-bold ${currentTheme === t.id ? theme.colors.textPrimary : theme.colors.textSecondary}`}>
+                            {t.name}
+                          </p>
+                          <p className={`text-xs ${theme.colors.textMuted}`}>
+                            {t.id === 'light-premium' ? 'Verde esmeralda' : 'Azul corporativo'}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+            </div>
+
+            <div className={`pt-6 border-t ${theme.colors.border}`}></div>
+
+            {/* Google Script URL */}
+            <div className="mt-6 space-y-3">
+                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>URL del Google Apps Script</label>
                 <div className="flex flex-col md:flex-row gap-2">
-                  <input 
-                      type="text" 
-                      value={scriptUrl} 
+                  <input
+                      type="text"
+                      value={scriptUrl}
                       onChange={(e) => saveUrl(e.target.value)}
                       placeholder="https://script.google.com/..."
-                      className="flex-1 bg-slate-900/80 border border-slate-600 rounded-lg px-4 py-3 text-slate-200 font-mono text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-current outline-none transition-all`}
                   />
-                  <button onClick={handleSync} className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-white font-bold transition-all shadow-lg shadow-indigo-600/20">
+                  <button
+                    onClick={handleSync}
+                    className={`px-6 py-3 ${theme.colors.primary} ${theme.colors.primaryHover} rounded-lg text-white font-bold transition-all shadow-lg`}
+                  >
                     Probar
                   </button>
                 </div>
             </div>
-            
-            <div className="pt-6 border-t border-slate-700">
-                <button 
+
+            <div className={`pt-6 mt-6 border-t ${theme.colors.border}`}>
+                <button
                     onClick={() => {
                         if(confirm("¿Borrar caché local y reiniciar?")) {
                             localStorage.clear();
                             window.location.reload();
                         }
                     }}
-                    className="text-red-400 text-sm hover:text-red-300 hover:underline"
+                    className={`${theme.colors.danger} hover:bg-rose-700 text-white text-sm px-4 py-2 rounded-lg transition-colors`}
                 >
                     ⚠️ Reiniciar aplicación
                 </button>

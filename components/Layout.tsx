@@ -1,5 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle } from 'lucide-react';
+import { useTheme } from '../contexts/ThemeContext';
+import { getTextColor } from '../themes';
 
 interface NavItemProps {
   id: string;
@@ -9,34 +11,36 @@ interface NavItemProps {
   onClick: (id: string) => void;
   mobile?: boolean;
   isMain?: boolean;
+  theme: any;
+  textColors: any;
 }
 
-const NavItem: React.FC<NavItemProps> = ({ id, label, icon, active, onClick, mobile, isMain }) => (
+const NavItem: React.FC<NavItemProps> = ({ id, label, icon, active, onClick, mobile, isMain, theme, textColors }) => (
   <button
     onClick={() => onClick(id)}
     className={`flex items-center justify-center transition-all duration-300 relative group
-      ${mobile 
-        ? isMain 
-            ? 'flex-col -mt-8 mb-1' // Floating button style for mobile
-            : 'flex-col gap-1 p-2 w-full rounded-lg' 
+      ${mobile
+        ? isMain
+            ? 'flex-col -mt-8 mb-1'
+            : 'flex-col gap-1 p-2 w-full rounded-lg'
         : 'flex-row gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full'
       }
       ${active && !isMain
-        ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.2)]' 
-        : isMain ? '' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
+        ? `${theme.colors.primaryLight} ${textColors.primary} border ${theme.colors.border}`
+        : isMain ? '' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary} hover:${theme.colors.bgCardHover}`
       }`}
   >
     {isMain ? (
-        <div className={`rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 p-3 shadow-lg shadow-indigo-500/40 transform transition-transform ${active ? 'scale-110 ring-4 ring-indigo-500/20' : 'group-hover:scale-105'}`}>
+        <div className={`rounded-full ${theme.colors.gradientPrimary} p-3 shadow-lg transform transition-transform ${active ? 'scale-110' : 'group-hover:scale-105'}`}>
             {React.cloneElement(icon as React.ReactElement<any>, { size: 28, className: 'text-white' })}
         </div>
     ) : (
-        React.cloneElement(icon as React.ReactElement<any>, { 
+        React.cloneElement(icon as React.ReactElement<any>, {
             size: mobile ? 22 : 18,
-            className: active ? 'text-indigo-400' : 'text-slate-400 group-hover:text-slate-200'
+            className: active ? textColors.primary : `${theme.colors.textMuted} group-hover:${theme.colors.textPrimary}`
         })
     )}
-    <span className={`${mobile ? 'text-[10px]' : 'text-sm'} font-medium ${isMain ? 'mt-1 text-indigo-400' : ''}`}>{label}</span>
+    <span className={`${mobile ? 'text-[10px]' : 'text-sm'} font-medium ${isMain ? `mt-1 ${textColors.primary}` : ''}`}>{label}</span>
   </button>
 );
 
@@ -50,7 +54,9 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, connected, onSync, isSyncing }) => {
-  
+  const { theme, currentTheme } = useTheme();
+  const textColors = getTextColor(currentTheme);
+
   // Simplified Navigation Logic
   const navItems = [
     { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard /> },
@@ -61,32 +67,35 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B1120] text-slate-100 selection:bg-indigo-500/30">
+    <div className={`min-h-screen ${theme.colors.bgSecondary} ${theme.colors.textPrimary}`}>
       
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 fixed h-full border-r border-slate-800/50 bg-[#0B1120]/95 backdrop-blur-xl p-6 z-20">
+      <aside className={`hidden md:flex flex-col w-64 fixed h-full ${theme.colors.border} border-r ${theme.colors.bgCard} backdrop-blur-xl p-6 z-20`}>
         <div className="mb-8 flex items-center gap-2 px-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center shadow-lg`}>
                 <span className="font-bold text-white text-lg">CF</span>
             </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+            <h1 className={`text-xl font-bold ${theme.colors.textPrimary}`}>
                 Finanzas+
             </h1>
         </div>
-        
+
         <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
           {navItems.map(item => (
-            <NavItem key={item.id} {...item} active={activeTab === item.id} onClick={onTabChange} />
+            <NavItem key={item.id} {...item} active={activeTab === item.id} onClick={onTabChange} theme={theme} textColors={textColors} />
           ))}
         </div>
 
         {connected && (
-            <div className="mt-auto pt-6 border-t border-slate-800/50">
-                 <button 
+            <div className={`mt-auto pt-6 border-t ${theme.colors.border}`}>
+                 <button
                     onClick={onSync}
                     disabled={isSyncing}
-                    className={`w-full py-2.5 rounded-lg font-medium text-xs uppercase tracking-wider transition-all
-                        ${isSyncing ? 'bg-slate-800 text-slate-500' : 'bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-400'}`}
+                    className={`w-full py-2.5 rounded-lg font-medium text-xs uppercase tracking-wider transition-all ${
+                        isSyncing
+                          ? `${theme.colors.bgSecondary} ${theme.colors.textMuted}`
+                          : `${theme.colors.bgSecondary} ${theme.colors.primary} hover:text-white ${theme.colors.textSecondary}`
+                    }`}
                 >
                     {isSyncing ? 'Sincronizando...' : '↻ Sincronizar'}
                 </button>
@@ -95,15 +104,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       </aside>
 
       {/* Mobile Header */}
-      <div className="md:hidden p-4 flex justify-between items-center bg-[#0B1120]/80 backdrop-blur-lg sticky top-0 z-30 border-b border-slate-800/50">
+      <div className={`md:hidden p-4 flex justify-between items-center ${theme.colors.bgCard} backdrop-blur-lg sticky top-0 z-30 border-b ${theme.colors.border}`}>
         <div className="flex items-center gap-2">
-             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+             <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
                 <span className="font-bold text-white">CF</span>
             </div>
             <span className="font-bold text-lg">Finanzas+</span>
         </div>
         {connected && (
-             <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? 'animate-spin text-slate-500' : 'text-indigo-400 bg-indigo-500/10'}`}>
+             <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `animate-spin ${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
                  <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full" />
              </button>
         )}
@@ -115,10 +124,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0B1120]/90 backdrop-blur-xl border-t border-slate-800/50 pb-safe pt-2 px-4 z-40">
+      <div className={`md:hidden fixed bottom-0 left-0 right-0 ${theme.colors.bgCard} backdrop-blur-xl border-t ${theme.colors.border} pb-safe pt-2 px-4 z-40`}>
         <div className="flex justify-between items-end pb-3">
             {navItems.map(item => (
-                <NavItem key={item.id} {...item} active={activeTab === item.id} onClick={onTabChange} mobile isMain={item.isMain} />
+                <NavItem key={item.id} {...item} active={activeTab === item.id} onClick={onTabChange} mobile isMain={item.isMain} theme={theme} textColors={textColors} />
             ))}
         </div>
       </div>
