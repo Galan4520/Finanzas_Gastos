@@ -13,9 +13,21 @@ interface DashboardProps {
   savingsGoal?: SavingsGoalConfig | null;
 }
 
+// Helper function to parse date string as local date (avoids timezone issues)
+const parseLocalDate = (dateStr: string): Date => {
+  // If it's an ISO string with time, extract just the date part and parse as local
+  if (dateStr.includes('T')) {
+    const [datePart] = dateStr.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+  // Otherwise parse normally
+  return new Date(dateStr);
+};
+
 // Helper function to format dates
 const formatDateLabel = (dateStr: string): string => {
-  const date = new Date(dateStr);
+  const date = parseLocalDate(dateStr);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
@@ -35,6 +47,13 @@ const formatDateLabel = (dateStr: string): string => {
 };
 
 const formatTimeLabel = (dateStr: string): string => {
+  // Extract time from ISO string if present (avoids timezone conversion)
+  if (dateStr.includes('T')) {
+    const timePart = dateStr.split('T')[1];
+    const [hours, minutes] = timePart.split(':');
+    return `${hours}:${minutes}`;
+  }
+  // Fallback to date parsing for non-ISO formats
   const date = new Date(dateStr);
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
