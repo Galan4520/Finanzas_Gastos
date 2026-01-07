@@ -2,18 +2,31 @@ import React, { useState } from 'react';
 import { Sparkles, BookOpen, Link as LinkIcon, CheckCircle, Copy, ExternalLink } from 'lucide-react';
 
 interface WelcomeScreenProps {
-  onUrlSubmit: (url: string) => void;
+  onUrlSubmit: (url: string) => Promise<void>;
+  isSyncing?: boolean;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit }) => {
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyncing = false }) => {
   const [url, setUrl] = useState('');
   const [showInstructions, setShowInstructions] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (url.trim()) {
-      onUrlSubmit(url.trim());
+    if (url.trim() && !isValidating) {
+      setIsValidating(true);
+      setValidationError('');
+      try {
+        await onUrlSubmit(url.trim());
+        // Si llegamos aquí, la validación fue exitosa
+      } catch (error) {
+        // Mostrar error de validación
+        setValidationError('No se pudo conectar. Verifica que la URL sea correcta y que el script esté desplegado.');
+      } finally {
+        setIsValidating(false);
+      }
     }
   };
 
@@ -236,18 +249,39 @@ function getSheetData(sheetName) {
                 <input
                   type="url"
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={(e) => {
+                    setUrl(e.target.value);
+                    setValidationError(''); // Limpiar error al escribir
+                  }}
                   placeholder="https://script.google.com/macros/s/..."
                   required
-                  className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all"
+                  disabled={isValidating}
+                  className={`w-full bg-slate-900/50 border ${validationError ? 'border-rose-500' : 'border-slate-600'} rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
                 />
+                {validationError && (
+                  <p className="mt-2 text-sm text-rose-400 flex items-center gap-2">
+                    <span>❌</span> {validationError}
+                  </p>
+                )}
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/20 active:scale-95"
+                disabled={isValidating}
+                className={`w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/20 ${
+                  isValidating
+                    ? 'opacity-70 cursor-not-allowed'
+                    : 'hover:from-indigo-500 hover:to-purple-500 active:scale-95'
+                }`}
               >
-                Comenzar
+                {isValidating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Validando conexión...
+                  </span>
+                ) : (
+                  'Comenzar'
+                )}
               </button>
             </form>
 

@@ -127,14 +127,55 @@ function App() {
     }
   }, [scriptUrl, handleSync, cards.length]);
 
-  const saveUrl = (url: string) => {
+  const saveUrl = async (url: string) => {
     setScriptUrl(url);
-    localStorage.setItem('scriptUrl', url);
-    setShowWelcome(false);
-    // Auto sync after setting URL
-    setTimeout(() => {
-      handleSync();
-    }, 500);
+    setIsSyncing(true);
+
+    try {
+      // Validar la URL primero intentando sincronizar
+      const data = await fetchData(url);
+
+      // Si llegamos aquí, la URL es válida
+      localStorage.setItem('scriptUrl', url);
+
+      // Procesar datos
+      if (data.cards && Array.isArray(data.cards)) {
+        const cleanCards = data.cards.map((c: any) => ({
+          ...c,
+          limite: parseFloat(c.limite) || 0,
+          dia_cierre: parseInt(c.dia_cierre) || 1,
+          dia_pago: parseInt(c.dia_pago) || 1
+        }));
+        saveCards(cleanCards);
+      }
+
+      if (data.pending && Array.isArray(data.pending)) {
+        const cleanPending = data.pending.map((p: any) => ({
+          ...p,
+          monto: parseFloat(p.monto) || 0,
+          num_cuotas: parseInt(p.num_cuotas) || 1,
+          cuotas_pagadas: parseInt(p.cuotas_pagadas) || 0
+        }));
+        savePending(cleanPending);
+      }
+
+      if (data.history && Array.isArray(data.history)) {
+        saveHistory(data.history);
+      }
+
+      // Conexión exitosa - ocultar welcome y mostrar éxito
+      setShowWelcome(false);
+      showToast("✅ Conexión exitosa - Bienvenido!", 'success');
+    } catch (error) {
+      console.error("Error validating URL:", error);
+      // NO guardar la URL ni ocultar el welcome
+      localStorage.removeItem('scriptUrl');
+      setScriptUrl('');
+      showToast("❌ Error: No se pudo conectar con Google Apps Script. Verifica la URL.", 'error');
+      throw error; // Re-throw para que WelcomeScreen lo maneje
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   // Update handlers
@@ -289,7 +330,12 @@ function App() {
 
   // Show welcome screen if no URL configured
   if (showWelcome) {
-    return <WelcomeScreen onUrlSubmit={saveUrl} />;
+    return (
+      <>
+        <WelcomeScreen onUrlSubmit={saveUrl} isSyncing={isSyncing} />
+        <Toast message={toast.msg} type={toast.type} isVisible={toast.visible} onClose={hideToast} />
+      </>
+    );
   }
 
   return (
