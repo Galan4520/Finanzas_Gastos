@@ -13,10 +13,38 @@ interface DashboardProps {
   savingsGoal?: SavingsGoalConfig | null;
 }
 
+// Helper function to format dates
+const formatDateLabel = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  // Reset time part for comparison
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+  if (dateOnly.getTime() === todayOnly.getTime()) return 'Hoy';
+  if (dateOnly.getTime() === yesterdayOnly.getTime()) return 'Ayer';
+
+  // Format as "7 de enero"
+  const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+                  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  return `${date.getDate()} de ${months[date.getMonth()]}`;
+};
+
+const formatTimeLabel = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return `${hours}:${minutes}`;
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
-  
+
   const currentStats = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -64,17 +92,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
   const recentTransactions = [
     ...(history || []).map(h => ({ ...h, isCredit: false })),
-    ...pendingExpenses.map(p => ({ 
-        fecha: p.fecha_gasto, 
-        categoria: p.categoria, 
-        descripcion: p.descripcion, 
-        monto: p.monto, 
+    ...pendingExpenses.map(p => ({
+        fecha: p.fecha_gasto,
+        categoria: p.categoria,
+        descripcion: p.descripcion,
+        monto: p.monto,
         tipo: 'Gasto Tarjeta',
         isCredit: true,
-        timestamp: p.timestamp 
+        timestamp: p.timestamp
     }))
   ].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-   .slice(0, 5);
+   .slice(0, 10);
+
+  // Group transactions by day
+  const groupedTransactions = useMemo(() => {
+    const groups: { [key: string]: any[] } = {};
+    recentTransactions.forEach(t => {
+      const dayLabel = formatDateLabel(t.fecha);
+      if (!groups[dayLabel]) {
+        groups[dayLabel] = [];
+      }
+      groups[dayLabel].push(t);
+    });
+    return groups;
+  }, [recentTransactions]);
 
   return (
     <div className="space-y-6">
@@ -218,26 +259,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
          <div className={`p-6 border-b ${theme.colors.border}`}>
             <h3 className={`font-bold ${theme.colors.textPrimary}`}>Últimos Movimientos</h3>
          </div>
-         <div className={`divide-y ${theme.colors.border}`}>
+         <div>
             {recentTransactions.length === 0 ? (
                 <div className={`p-8 text-center ${theme.colors.textMuted} text-sm`}>No hay actividad reciente.</div>
             ) : (
-                recentTransactions.map((t: any, idx) => (
-                    <div key={idx} className={`p-4 flex items-center justify-between hover:${theme.colors.bgCardHover} transition-colors`}>
-                        <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
-                                ${t.tipo === 'Ingresos' ? 'bg-emerald-100 text-emerald-600' :
-                                  t.isCredit ? `${theme.colors.primaryLight} ${textColors.primary}` : 'bg-rose-100 text-rose-600'}`}>
-                                {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
-                            </div>
-                            <div>
-                                <p className={`font-medium ${theme.colors.textPrimary} text-sm`}>{t.descripcion}</p>
-                                <p className={`text-xs ${theme.colors.textMuted}`}>{t.fecha} • {t.categoria}</p>
-                            </div>
+                Object.entries(groupedTransactions).map(([dayLabel, transactions], groupIdx) => (
+                    <div key={groupIdx}>
+                        {/* Day Separator */}
+                        <div className={`px-6 py-3 ${theme.colors.bgSecondary} border-b ${theme.colors.border}`}>
+                            <p className={`text-xs font-bold ${theme.colors.textMuted} uppercase tracking-wider`}>
+                                {dayLabel}
+                            </p>
                         </div>
-                        <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : theme.colors.textPrimary}`}>
-                            {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
-                        </span>
+                        {/* Transactions for this day */}
+                        <div className={`divide-y ${theme.colors.border}`}>
+                            {transactions.map((t: any, idx) => (
+                                <div key={idx} className={`p-4 flex items-center justify-between hover:${theme.colors.bgCardHover} transition-colors`}>
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
+                                            ${t.tipo === 'Ingresos' ? 'bg-emerald-100 text-emerald-600' :
+                                              t.isCredit ? `${theme.colors.primaryLight} ${textColors.primary}` : 'bg-rose-100 text-rose-600'}`}>
+                                            {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
+                                        </div>
+                                        <div>
+                                            <p className={`font-medium ${theme.colors.textPrimary} text-sm`}>{t.descripcion}</p>
+                                            <p className={`text-xs ${theme.colors.textMuted}`}>{formatTimeLabel(t.fecha)} • {t.categoria}</p>
+                                        </div>
+                                    </div>
+                                    <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : theme.colors.textPrimary}`}>
+                                        {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ))
             )}
