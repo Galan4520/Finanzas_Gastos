@@ -239,8 +239,8 @@ function App() {
         return (
           <div className="space-y-6">
              <div className="flex justify-between items-center">
-                 <h2 className="text-2xl font-bold text-slate-100">Estado de Deudas</h2>
-                 <button onClick={() => setActiveTab('pagar-form')} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-emerald-500/20 transition-all">
+                 <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>Estado de Deudas</h2>
+                 <button onClick={() => setActiveTab('pagar-form')} className={`${theme.colors.primary} hover:${theme.colors.primaryHover} text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg transition-all`}>
                     Realizar Pago
                  </button>
              </div>
@@ -248,27 +248,27 @@ function App() {
              {/* List of debts */}
              <div className="space-y-3">
                 {pendingExpenses.length === 0 ? (
-                    <div className="p-8 text-center text-slate-500 border border-slate-700 border-dashed rounded-2xl">No hay deudas activas.</div>
+                    <div className={`p-8 text-center ${theme.colors.textMuted} border ${theme.colors.border} border-dashed rounded-2xl`}>No hay deudas activas.</div>
                 ) : (
                     pendingExpenses.map(p => {
                         const monto = Number(p.monto);
                         const cuotas = Number(p.num_cuotas);
                         const pagado = Number(p.cuotas_pagadas) * (monto/cuotas);
                         const restante = monto - pagado;
-                        
+
                         return (
-                             <div key={p.id} className="bg-slate-800/60 p-4 rounded-xl border border-slate-700/50 flex flex-col md:flex-row justify-between items-center gap-4">
+                             <div key={p.id} className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border} flex flex-col md:flex-row justify-between items-center gap-4`}>
                                 <div className="flex-1 w-full md:w-auto">
                                     <div className="flex items-center gap-2 mb-1">
-                                      <h3 className="font-bold text-indigo-400">{p.tarjeta}</h3>
+                                      <h3 className={`font-bold ${theme.colors.primary}`}>{p.tarjeta}</h3>
                                       {p.estado === 'Pagado' && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold">PAGADO</span>}
                                     </div>
-                                    <p className="text-slate-200 font-medium">{p.descripcion}</p>
-                                    <p className="text-xs text-slate-500 mt-1">Vence: {p.fecha_pago}</p>
+                                    <p className={`${theme.colors.textSecondary} font-medium`}>{p.descripcion}</p>
+                                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Vence: {p.fecha_pago}</p>
                                 </div>
                                 <div className="text-right w-full md:w-auto flex justify-between md:block">
-                                    <p className="text-xs text-slate-500">Por pagar</p>
-                                    <p className="text-xl font-mono font-bold text-white">{formatCurrency(restante)}</p>
+                                    <p className={`text-xs ${theme.colors.textMuted}`}>Por pagar</p>
+                                    <p className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(restante)}</p>
                                 </div>
                             </div>
                         );
@@ -281,7 +281,7 @@ function App() {
       case 'pagar-form': // Hidden tab for paying
         return (
             <div>
-                <button onClick={() => setActiveTab('deudas')} className="mb-4 text-slate-400 hover:text-white text-sm flex items-center gap-1">← Volver a Deudas</button>
+                <button onClick={() => setActiveTab('deudas')} className={`mb-4 ${theme.colors.textMuted} hover:${theme.colors.textPrimary} text-sm flex items-center gap-1 transition-colors`}>← Volver a Deudas</button>
                 <PaymentForm scriptUrl={scriptUrl} pin={pin} pendingExpenses={pendingExpenses} onUpdateExpense={handleUpdateExpense} {...commonProps} />
             </div>
         );
