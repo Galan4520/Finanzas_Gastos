@@ -155,7 +155,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
         </div>
 
         {/* Date & Amount */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-400 uppercase ml-1">Fecha</label>
                 <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500"/>
@@ -186,7 +186,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
                 </div>
 
                 {useInstallments && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                              <label className="text-xs text-indigo-300">Cuotas</label>
                              <select name="num_cuotas" value={formData.num_cuotas} onChange={handleChange} className="w-full bg-slate-900/80 border border-indigo-500/30 rounded-lg p-2 text-white">

@@ -92,7 +92,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </div>
             <h3 className="text-slate-400 font-bold uppercase text-xs tracking-wider mb-4">Flujo de Efectivo (Mes)</h3>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <div className="flex items-center gap-1 text-emerald-400 mb-1">
                         <ArrowUpRight size={16} /> <span className="text-xs font-bold">Ingresos</span>

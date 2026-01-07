@@ -156,7 +156,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
             </div>
 
             {useInstallments && (
-                <div className="mt-4 grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
                     <div>
                         <label className={labelClass}>N° Cuotas</label>
                         <select name="num_cuotas" value={formData.num_cuotas} onChange={handleChange} className={inputClass}>
@@ -187,7 +187,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
         </div>
 
         {formData.tarjetaAlias && (
-            <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                 <div className="bg-emerald-900/10 border border-emerald-500/20 p-3 rounded-lg text-center">
                     <p className="text-[10px] uppercase text-emerald-500 font-bold mb-1">Cierre Tarjeta</p>
                     <p className="text-emerald-300 font-mono font-bold">{formData.fecha_cierre || '-'}</p>
