@@ -5,7 +5,8 @@ import { UnifiedEntryForm } from './components/forms/UnifiedEntryForm';
 import { CardForm } from './components/forms/CardForm';
 import { PaymentForm } from './components/forms/PaymentForm';
 import { WelcomeScreen } from './components/WelcomeScreen';
-import { CreditCard, PendingExpense, Transaction } from './types';
+import { GoalsView } from './components/GoalsView';
+import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from './types';
 import { formatCurrency } from './utils/format';
 import { fetchData } from './services/googleSheetService';
 import { Toast, ToastType } from './components/ui/Toast';
@@ -38,7 +39,8 @@ function App() {
   // Data State
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>([]);
-  const [history, setHistory] = useState<Transaction[]>([]); // New history state
+  const [history, setHistory] = useState<Transaction[]>([]);
+  const [savingsGoal, setSavingsGoal] = useState<SavingsGoalConfig | null>(null);
 
   // Helpers to persist state
   const saveCards = (newCards: CreditCard[]) => {
@@ -54,6 +56,12 @@ function App() {
   const saveHistory = (newHistory: Transaction[]) => {
     setHistory(newHistory);
     localStorage.setItem('history', JSON.stringify(newHistory));
+  };
+
+  const saveSavingsGoal = (newGoal: SavingsGoalConfig) => {
+    setSavingsGoal(newGoal);
+    localStorage.setItem('savingsGoal', JSON.stringify(newGoal));
+    showToast('Meta de ahorro actualizada', 'success');
   };
 
   // Sync Logic
@@ -125,6 +133,9 @@ function App() {
 
       const storedHistory = localStorage.getItem('history');
       if (storedHistory) setHistory(JSON.parse(storedHistory));
+
+      const storedGoal = localStorage.getItem('savingsGoal');
+      if (storedGoal) setSavingsGoal(JSON.parse(storedGoal));
     } catch (error) {
       console.error('Error loading data from localStorage:', error);
     }
@@ -215,13 +226,16 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard cards={cards} pendingExpenses={pendingExpenses} history={history} />;
-      
+        return <Dashboard cards={cards} pendingExpenses={pendingExpenses} history={history} savingsGoal={savingsGoal} />;
+
       case 'registrar': // Unified Entry
         return <UnifiedEntryForm scriptUrl={scriptUrl} pin={pin} cards={cards} onAddPending={handleAddPending} onSuccess={handleSync} {...commonProps} />;
 
       case 'tarjetas':
         return <CardForm scriptUrl={scriptUrl} pin={pin} onAddCard={handleAddCard} existingCards={cards} {...commonProps} />;
+
+      case 'metas': // Savings Goals
+        return <GoalsView history={history} savingsGoal={savingsGoal} onSaveGoal={saveSavingsGoal} />;
       
       case 'deudas': // Previous 'pendientes' tab, but specifically for debt management
         return (

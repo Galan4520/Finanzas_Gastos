@@ -1,18 +1,19 @@
 import React, { useMemo } from 'react';
-import { CreditCard, PendingExpense, Transaction } from '../types';
+import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from '../types';
 import { formatCurrency } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 
 interface DashboardProps {
   cards: CreditCard[];
   pendingExpenses: PendingExpense[];
-  history: Transaction[]; // New prop for Income/Expense history
+  history: Transaction[];
+  savingsGoal?: SavingsGoalConfig | null;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
   
@@ -91,9 +92,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
         {/* Cash Flow Card */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl relative overflow-hidden`}>
-            <div className={`absolute top-0 right-0 p-4 opacity-5 ${textColors.primary}`}>
-                <Wallet size={120} />
-            </div>
             <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>Flujo de Efectivo (Mes)</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -129,9 +127,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
         {/* Credit Card Health */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl relative overflow-hidden`}>
-             <div className={`absolute top-0 right-0 p-4 opacity-5 ${textColors.primary}`}>
-                <CreditIcon size={120} />
-            </div>
             <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>Salud Crediticia</h3>
 
             <div className="mb-4">
@@ -160,6 +155,63 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </div>
         </div>
       </div>
+
+      {/* Savings Goal Card */}
+      {savingsGoal && (
+        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Target className={textColors.primary} size={20} />
+              <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider`}>
+                Meta de Ahorro {savingsGoal.anio}
+              </h3>
+            </div>
+            <span className={`text-xs ${theme.colors.textMuted}`}>{savingsGoal.proposito}</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+            {/* Total Ahorrado */}
+            <div>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total ahorrado hasta ahora</p>
+              <p className={`text-2xl font-mono font-bold ${textColors.primary}`}>
+                {formatCurrency(currentStats.ingresosMes - currentStats.gastosMes)}
+              </p>
+            </div>
+
+            {/* Meta Anual */}
+            <div>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Meta anual</p>
+              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                {formatCurrency(savingsGoal.meta_anual)}
+              </p>
+            </div>
+
+            {/* Te falta */}
+            <div>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Te falta</p>
+              <p className={`text-2xl font-mono font-bold text-rose-500`}>
+                {formatCurrency(Math.max(0, savingsGoal.meta_anual - (currentStats.ingresosMes - currentStats.gastosMes)))}
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div>
+            <div className="flex justify-between text-xs mb-2">
+              <span className={theme.colors.textMuted}>Progreso</span>
+              <span className={`${textColors.primary} font-bold`}>
+                {((((currentStats.ingresosMes - currentStats.gastosMes) / savingsGoal.meta_anual) * 100) || 0).toFixed(1)}%
+              </span>
+            </div>
+            <div className={`w-full h-3 ${theme.colors.bgSecondary} rounded-full overflow-hidden`}>
+              <div
+                className={`h-full rounded-full transition-all duration-1000 ${textColors.primary === 'text-emerald-600' ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                style={{width: `${Math.min(100, ((currentStats.ingresosMes - currentStats.gastosMes) / savingsGoal.meta_anual) * 100)}%`}}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recent Activity */}
       <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>

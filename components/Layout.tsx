@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 
@@ -60,6 +60,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   // Simplified Navigation Logic
   const navItems = [
     { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard /> },
+    { id: 'metas', label: 'Metas', icon: <Target /> },
     { id: 'deudas', label: 'Deudas', icon: <Clock /> },
     { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true }, // Unified Action
     { id: 'tarjetas', label: 'Tarjetas', icon: <Wallet /> },
