@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, SavingsGoalConfig } from '../types';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, getLocalISOString } from '../utils/format';
 import { Target, TrendingUp, Edit2, Save, X } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
@@ -29,7 +29,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, savingsGoal, onSa
       ahorro_mensual_necesario: formData.meta_anual / 12,
       proposito: formData.proposito,
       anio: formData.anio,
-      timestamp: new Date().toISOString()
+      timestamp: getLocalISOString()
     };
     onSaveGoal(goal);
     setIsEditing(false);

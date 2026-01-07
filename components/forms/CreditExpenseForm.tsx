@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
-import { generateId, formatCurrency } from '../../utils/format';
+import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
 
 interface CreditExpenseFormProps {
   scriptUrl: string;
@@ -88,7 +88,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
         num_cuotas: numCuotas,
         cuotas_pagadas: 0,
         notas: formData.notas,
-        timestamp: new Date().toISOString()
+        timestamp: getLocalISOString()
       };
       
       onAddExpense(newExpense);

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BANCOS, CreditCard } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, getLocalISOString } from '../../utils/format';
 import { Plus, X, CreditCard as CardIcon, Calendar, Wallet, Layers } from 'lucide-react';
 
 interface CardFormProps {
@@ -61,7 +61,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
         dia_cierre: Number(formData.dia_cierre),
         dia_pago: Number(formData.dia_pago),
         limite: Number(formData.limite),
-        timestamp: new Date().toISOString()
+        timestamp: getLocalISOString()
       };
       
       onAddCard(newCard);

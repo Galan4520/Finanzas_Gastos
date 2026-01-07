@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
+import { getLocalISOString } from '../../utils/format';
 
 interface SimpleFormProps {
   type: 'Gastos' | 'Ingresos';
@@ -33,7 +34,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, onSucce
     try {
       const payload = {
         ...formData,
-        timestamp: new Date().toISOString()
+        timestamp: getLocalISOString()
       };
       
       await sendToSheet(scriptUrl, payload, type);

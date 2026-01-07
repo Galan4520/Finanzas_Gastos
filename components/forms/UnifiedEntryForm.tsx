@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
-import { generateId, formatCurrency } from '../../utils/format';
+import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
 import { Wallet, TrendingUp, CreditCard as CreditIcon } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
@@ -90,7 +90,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
             num_cuotas: useInstallments ? parseInt(formData.num_cuotas) : 1,
             cuotas_pagadas: 0,
             notas: formData.notas,
-            timestamp: new Date().toISOString()
+            timestamp: getLocalISOString()
         };
         onAddPending(newExpense);
         await sendToSheet(scriptUrl, pin, newExpense, 'Gastos_Pendientes');
@@ -102,7 +102,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
             descripcion: formData.descripcion,
             monto: formData.monto,
             notas: formData.notas,
-            timestamp: new Date().toISOString()
+            timestamp: getLocalISOString()
         };
         await sendToSheet(scriptUrl, pin, payload, entryType === 'gasto' ? 'Gastos' : 'Ingresos');
       }

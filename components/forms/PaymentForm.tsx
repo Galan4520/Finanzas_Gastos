@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, getLocalISOString } from '../../utils/format';
 
 interface PaymentFormProps {
   scriptUrl: string;
@@ -74,7 +74,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         monto_pagado: montoPagado,
         tipo_pago: paymentType,
         num_cuota: paymentType === 'Cuota' ? (selectedExpense.cuotas_pagadas + 1) : '',
-        timestamp: new Date().toISOString()
+        timestamp: getLocalISOString()
       };
 
       onUpdateExpense(updatedExpense);

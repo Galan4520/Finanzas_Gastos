@@ -4,7 +4,7 @@ import { CardForm } from './forms/CardForm';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../themes';
 import { CreditCard, Target, Settings as SettingsIcon, Save, X } from 'lucide-react';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, getLocalISOString } from '../utils/format';
 
 interface SettingsViewProps {
   scriptUrl: string;
@@ -47,7 +47,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       ahorro_mensual_necesario: goalFormData.meta_anual / 12,
       proposito: goalFormData.proposito,
       anio: goalFormData.anio,
-      timestamp: new Date().toISOString()
+      timestamp: getLocalISOString()
     };
     onSaveGoal(goal);
     setIsEditingGoal(false);
