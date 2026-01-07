@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, BookOpen, Link as LinkIcon, CheckCircle, Copy, ExternalLink, Lock } from 'lucide-react';
+import { Sparkles, BookOpen, Link as LinkIcon, CheckCircle, Copy, ExternalLink, Lock, Wallet } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onUrlSubmit: (url: string, pin: string) => Promise<void>;
@@ -130,10 +130,10 @@ function getSheetData(sheetName) {
           <div className="bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-2xl overflow-hidden">
 
             {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-center">
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 p-6 text-center">
               <BookOpen className="w-12 h-12 mx-auto mb-3 text-white" />
               <h1 className="text-3xl font-bold text-white mb-2">Guía de Configuración</h1>
-              <p className="text-indigo-100">Configura tu Google Apps Script en 5 pasos</p>
+              <p className="text-emerald-50">Configura tu Google Apps Script en 5 pasos</p>
             </div>
 
             {/* Instructions */}
@@ -141,7 +141,7 @@ function getSheetData(sheetName) {
 
               {/* Step 1 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white mb-2">Crea una copia de la plantilla</h3>
                   <p className="text-slate-300 mb-3">Abre esta plantilla de Google Sheets y haz una copia para tu cuenta:</p>
@@ -182,12 +182,12 @@ function getSheetData(sheetName) {
 
               {/* Step 2 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white mb-2">Abre el Editor de Apps Script</h3>
                   <p className="text-slate-300 mb-2">En tu Google Sheet:</p>
                   <ol className="list-decimal list-inside text-slate-300 space-y-1 ml-4">
-                    <li>Ve a <span className="text-indigo-400 font-mono">Extensiones → Apps Script</span></li>
+                    <li>Ve a <span className="text-emerald-400 font-mono">Extensiones → Apps Script</span></li>
                     <li>Borra todo el código que aparece por defecto</li>
                   </ol>
                 </div>
@@ -195,7 +195,7 @@ function getSheetData(sheetName) {
 
               {/* Step 3 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">3</div>
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">3</div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white mb-2">Copia y pega este código</h3>
                   <div className="relative">
@@ -215,15 +215,15 @@ function getSheetData(sheetName) {
 
               {/* Step 4 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">4</div>
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">4</div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white mb-2">Implementa el script</h3>
                   <ol className="list-decimal list-inside text-slate-300 space-y-2 ml-4">
-                    <li>Click en <span className="text-indigo-400 font-mono">Implementar → Nueva implementación</span></li>
-                    <li>Selecciona tipo: <span className="text-indigo-400 font-mono">Aplicación web</span></li>
-                    <li>Ejecutar como: <span className="text-indigo-400 font-mono">Yo</span></li>
-                    <li>Quién tiene acceso: <span className="text-indigo-400 font-mono">Cualquier persona</span></li>
-                    <li>Click en <span className="text-indigo-400 font-mono">Implementar</span></li>
+                    <li>Click en <span className="text-emerald-400 font-mono">Implementar → Nueva implementación</span></li>
+                    <li>Selecciona tipo: <span className="text-emerald-400 font-mono">Aplicación web</span></li>
+                    <li>Ejecutar como: <span className="text-emerald-400 font-mono">Yo</span></li>
+                    <li>Quién tiene acceso: <span className="text-emerald-400 font-mono">Cualquier persona</span></li>
+                    <li>Click en <span className="text-emerald-400 font-mono">Implementar</span></li>
                     <li>Autoriza los permisos necesarios</li>
                   </ol>
                 </div>
@@ -231,7 +231,7 @@ function getSheetData(sheetName) {
 
               {/* Step 5 */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center text-white font-bold">5</div>
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">5</div>
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-white mb-2">Copia la URL de implementación</h3>
                   <p className="text-slate-300 mb-2">Google te dará una URL que se ve así:</p>
@@ -268,7 +268,7 @@ function getSheetData(sheetName) {
               </button>
               <button
                 onClick={() => setShowInstructions(false)}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-lg shadow-indigo-600/20"
+                className="bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-2 rounded-lg font-bold transition-colors shadow-lg"
               >
                 Ya tengo mi URL
               </button>
@@ -281,112 +281,128 @@ function getSheetData(sheetName) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
-        <div className="bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-2xl overflow-hidden">
 
-          {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-center">
-            <div className="w-20 h-20 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Sparkles className="w-10 h-10 text-white" />
+        {/* Green Header with Logo and Title */}
+        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-t-[2rem] p-8 text-center relative overflow-hidden">
+          {/* Decorative circles */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-700/20 rounded-full -ml-12 -mb-12"></div>
+
+          <div className="relative z-10">
+            {/* Logo */}
+            <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+              <Wallet className="w-12 h-12 text-white" strokeWidth={2.5} />
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2">Control Financiero+</h1>
-            <p className="text-indigo-100">Tu gestor de finanzas personales</p>
+
+            {/* Title */}
+            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">MoneyCrock</h1>
+            <p className="text-emerald-50 text-sm font-medium">Tu gestor de finanzas personales</p>
+          </div>
+        </div>
+
+        {/* White Card with Form */}
+        <div className="bg-white rounded-b-[2rem] shadow-2xl p-8">
+
+          {/* Welcome Header */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Bienvenido</h2>
+            <p className="text-gray-500 text-sm">Para comenzar, conecta tu hoja de cálculo financiera.</p>
           </div>
 
           {/* Form */}
-          <div className="p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* URL Input */}
             <div>
-              <h2 className="text-xl font-bold text-white mb-2">Bienvenido</h2>
-              <p className="text-slate-400 text-sm">Para comenzar, necesitas la URL de tu Google Apps Script</p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                  <LinkIcon size={16} />
-                  URL de Google Apps Script
-                </label>
-                <input
-                  type="url"
-                  value={url}
-                  onChange={(e) => {
-                    setUrl(e.target.value);
-                    setValidationError(''); // Limpiar error al escribir
-                  }}
-                  placeholder="https://script.google.com/macros/s/..."
-                  required
-                  disabled={isValidating}
-                  className={`w-full bg-slate-900/50 border ${validationError ? 'border-rose-500' : 'border-slate-600'} rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                  <Lock size={16} />
-                  PIN de Seguridad
-                </label>
-                <input
-                  type="password"
-                  value={pin}
-                  onChange={(e) => {
-                    setPin(e.target.value);
-                    setValidationError(''); // Limpiar error al escribir
-                  }}
-                  placeholder="Ingresa tu PIN (por defecto: 1234)"
-                  required
-                  disabled={isValidating}
-                  className={`w-full bg-slate-900/50 border ${validationError ? 'border-rose-500' : 'border-slate-600'} rounded-xl px-4 py-3 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                />
-                {validationError && (
-                  <p className="mt-2 text-sm text-rose-400 flex items-center gap-2">
-                    <span>❌</span> {validationError}
-                  </p>
-                )}
-              </div>
-
-              <button
-                type="submit"
+              <label className="block text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-2">
+                <LinkIcon size={16} />
+                URL de Google Apps Script
+              </label>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => {
+                  setUrl(e.target.value);
+                  setValidationError('');
+                }}
+                placeholder="https://script.google.com/macros/s/..."
+                required
                 disabled={isValidating}
-                className={`w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-indigo-600/20 ${
-                  isValidating
-                    ? 'opacity-70 cursor-not-allowed'
-                    : 'hover:from-indigo-500 hover:to-purple-500 active:scale-95'
-                }`}
-              >
-                {isValidating ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Validando conexión...
-                  </span>
-                ) : (
-                  'Comenzar'
-                )}
-              </button>
-            </form>
-
-            {/* Help Section */}
-            <div className="pt-6 border-t border-slate-700/50">
-              <button
-                onClick={() => setShowInstructions(true)}
-                className="w-full text-center group"
-              >
-                <p className="text-slate-400 text-sm mb-2">¿Primera vez?</p>
-                <div className="flex items-center justify-center gap-2 text-indigo-400 group-hover:text-indigo-300 transition-colors">
-                  <BookOpen size={16} />
-                  <span className="font-medium">Ver guía de configuración</span>
-                </div>
-              </button>
+                className={`w-full bg-gray-50 border ${validationError ? 'border-rose-400' : 'border-gray-200'} rounded-xl px-4 py-3.5 text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-emerald-400 focus:border-transparent focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
             </div>
 
+            {/* PIN Input */}
+            <div>
+              <label className="block text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-2">
+                <Lock size={16} />
+                PIN de Seguridad
+              </label>
+              <input
+                type="password"
+                value={pin}
+                onChange={(e) => {
+                  setPin(e.target.value);
+                  setValidationError('');
+                }}
+                placeholder="Ingresa tu PIN (por defecto: 1234)"
+                required
+                disabled={isValidating}
+                className={`w-full bg-gray-50 border ${validationError ? 'border-rose-400' : 'border-gray-200'} rounded-xl px-4 py-3.5 text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-emerald-400 focus:border-transparent focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
+              />
+              {validationError && (
+                <p className="mt-2 text-sm text-rose-500 flex items-center gap-2">
+                  <span>❌</span> {validationError}
+                </p>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={isValidating}
+              className={`w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/30 ${
+                isValidating
+                  ? 'opacity-70 cursor-not-allowed'
+                  : 'hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-emerald-700 active:scale-[0.98]'
+              }`}
+            >
+              {isValidating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Validando conexión...
+                </span>
+              ) : (
+                <span className="flex items-center justify-center gap-2">
+                  Comenzar
+                  <span>→</span>
+                </span>
+              )}
+            </button>
+          </form>
+
+          {/* Help Section */}
+          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+            <p className="text-gray-500 text-sm mb-2">¿Primera vez?</p>
+            <button
+              onClick={() => setShowInstructions(true)}
+              className="inline-flex items-center justify-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold text-sm transition-colors"
+            >
+              <BookOpen size={16} />
+              Ver guía de configuración
+            </button>
+          </div>
+
+          {/* Security Message */}
+          <div className="mt-6 flex items-center justify-center gap-2 text-gray-400 text-xs">
+            <Lock size={12} />
+            <span>Tus datos están encriptados y seguros.</span>
           </div>
 
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-slate-500 text-xs mt-6">
-          Tus datos están seguros y solo tú tienes acceso a ellos
-        </p>
       </div>
     </div>
   );
