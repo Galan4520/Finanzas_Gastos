@@ -35,7 +35,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
     descripcion: '',
     notas: '',
     // Credit specific
-    tarjetaAlias: '',
+    tarjetaId: '', // Unique identifier: "alias-banco"
     num_cuotas: '1',
     fecha_cierre: '',
     fecha_pago: ''
@@ -43,8 +43,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
 
   // Effect for Credit Card Dates calculation
   useEffect(() => {
-    if (entryType === 'tarjeta' && formData.tarjetaAlias && cards.length > 0) {
-      const card = cards.find(c => c.alias === formData.tarjetaAlias);
+    if (entryType === 'tarjeta' && formData.tarjetaId && cards.length > 0) {
+      const card = cards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
       if (card) {
         const hoy = new Date(formData.fecha);
         const anio = hoy.getFullYear();
@@ -68,7 +68,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
         }));
       }
     }
-  }, [entryType, formData.tarjetaAlias, cards, formData.fecha]);
+  }, [entryType, formData.tarjetaId, cards, formData.fecha]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,10 +77,14 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
 
     try {
       if (entryType === 'tarjeta') {
+        // Extract alias from tarjetaId (format: "alias-banco")
+        const selectedCard = cards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
+        const tarjetaAlias = selectedCard?.alias || '';
+
         const newExpense: PendingExpense = {
             id: generateId(),
             fecha_gasto: formData.fecha,
-            tarjeta: formData.tarjetaAlias,
+            tarjeta: tarjetaAlias,
             categoria: formData.categoria,
             descripcion: formData.descripcion,
             monto: parseFloat(formData.monto),
@@ -179,9 +183,9 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
             <div className="${theme.colors.primaryLight} border border-indigo-500/20 rounded-xl p-4 space-y-4">
                 <div>
                     <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-1 block">Seleccionar Tarjeta</label>
-                    <select name="tarjetaAlias" value={formData.tarjetaAlias} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary}">
+                    <select name="tarjetaId" value={formData.tarjetaId} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary}">
                         <option value="">-- Elige tarjeta --</option>
-                        {cards.map(c => <option key={`${c.alias}-${c.banco}`} value={c.alias}>{c.alias} ({c.banco})</option>)}
+                        {cards.map(c => <option key={`${c.alias}-${c.banco}`} value={`${c.alias}-${c.banco}`}>{c.alias} ({c.banco})</option>)}
                     </select>
                 </div>
                 
