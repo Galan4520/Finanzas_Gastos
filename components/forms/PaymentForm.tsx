@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, getLocalISOString } from '../../utils/format';
 
 interface PaymentFormProps {
   scriptUrl: string;
+  pin: string;
   pendingExpenses: PendingExpense[];
   onUpdateExpense: (expense: PendingExpense) => void;
   notify?: (msg: string, type: 'success' | 'error') => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pendingExpenses, onUpdateExpense, notify }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendingExpenses, onUpdateExpense, notify }) => {
   const [loading, setLoading] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState('');
   const [paymentType, setPaymentType] = useState('Cuota');
@@ -73,11 +74,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pendingExpe
         monto_pagado: montoPagado,
         tipo_pago: paymentType,
         num_cuota: paymentType === 'Cuota' ? (selectedExpense.cuotas_pagadas + 1) : '',
-        timestamp: new Date().toISOString()
+        timestamp: getLocalISOString()
       };
 
       onUpdateExpense(updatedExpense);
-      await sendToSheet(scriptUrl, paymentPayload, 'Pagos');
+      await sendToSheet(scriptUrl, pin, paymentPayload, 'Pagos');
       
       setSelectedExpenseId('');
       setCustomAmount('');

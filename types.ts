@@ -35,6 +35,23 @@ export interface PendingExpense {
   timestamp: string;
 }
 
+export interface SavingsGoalConfig {
+  meta_anual: number;
+  ahorro_mensual_necesario: number;
+  proposito: string;
+  anio: number;
+  timestamp: string;
+}
+
+export interface MonthlyGoalProgress {
+  mes: string;
+  ingresos: number;
+  gastos: number;
+  ahorro_real: number;
+  acumulado: number;
+  porcentaje_meta: number;
+}
+
 export const CATEGORIAS_GASTOS = [
   "🏠 Vivienda", "💡 Servicios", "🍕 Alimentación", "🚗 Transporte",
   "💊 Salud", "📚 Educación", "🎮 Entretenimiento", "👕 Ropa",

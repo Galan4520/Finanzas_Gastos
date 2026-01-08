@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
-import { generateId, formatCurrency } from '../../utils/format';
+import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
 import { Wallet, TrendingUp, CreditCard as CreditIcon } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
+import { getTextColor } from '../../themes';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
+  pin: string;
   cards: CreditCard[];
   onAddPending: (expense: PendingExpense) => void;
   onSuccess: () => void;
@@ -14,7 +17,9 @@ interface UnifiedEntryFormProps {
 
 type EntryType = 'gasto' | 'ingreso' | 'tarjeta';
 
-export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, cards, onAddPending, onSuccess, notify }) => {
+export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, pin, cards, onAddPending, onSuccess, notify }) => {
+  const { theme, currentTheme } = useTheme();
+  const textColors = getTextColor(currentTheme);
   const [entryType, setEntryType] = useState<EntryType>('gasto');
   const [loading, setLoading] = useState(false);
   
@@ -85,10 +90,10 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
             num_cuotas: useInstallments ? parseInt(formData.num_cuotas) : 1,
             cuotas_pagadas: 0,
             notas: formData.notas,
-            timestamp: new Date().toISOString()
+            timestamp: getLocalISOString()
         };
         onAddPending(newExpense);
-        await sendToSheet(scriptUrl, newExpense, 'Gastos_Pendientes');
+        await sendToSheet(scriptUrl, pin, newExpense, 'Gastos_Pendientes');
       } else {
         // Gasto (Cash) or Ingreso
         const payload = {
@@ -97,9 +102,9 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
             descripcion: formData.descripcion,
             monto: formData.monto,
             notas: formData.notas,
-            timestamp: new Date().toISOString()
+            timestamp: getLocalISOString()
         };
-        await sendToSheet(scriptUrl, payload, entryType === 'gasto' ? 'Gastos' : 'Ingresos');
+        await sendToSheet(scriptUrl, pin, payload, entryType === 'gasto' ? 'Gastos' : 'Ingresos');
       }
 
       notify?.('Registrado exitosamente', 'success');
@@ -122,32 +127,32 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      
+
       {/* Type Selector Tabs */}
-      <div className="bg-slate-800/60 p-1 rounded-2xl flex relative overflow-hidden">
-        <div 
-            className="absolute top-1 bottom-1 bg-indigo-600 rounded-xl transition-all duration-300 ease-out shadow-lg"
-            style={{ 
+      <div className={`${theme.colors.bgCard} p-1 rounded-2xl flex relative overflow-hidden border ${theme.colors.border}`}>
+        <div
+            className={`absolute top-1 bottom-1 ${theme.colors.primary} rounded-xl transition-all duration-300 ease-out shadow-lg`}
+            style={{
                 left: entryType === 'gasto' ? '0.5%' : entryType === 'ingreso' ? '33.3%' : '66.6%',
-                width: '32.8%' 
+                width: '32.8%'
             }}
         />
-        <button onClick={() => setEntryType('gasto')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'gasto' ? 'text-white' : 'text-slate-400 hover:text-white'}`}>
+        <button onClick={() => setEntryType('gasto')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'gasto' ? '${theme.colors.textPrimary}' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}`}>
             <Wallet size={16}/> Gasto
         </button>
-        <button onClick={() => setEntryType('ingreso')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'ingreso' ? 'text-white' : 'text-slate-400 hover:text-white'}`}>
+        <button onClick={() => setEntryType('ingreso')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'ingreso' ? '${theme.colors.textPrimary}' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}`}>
             <TrendingUp size={16}/> Ingreso
         </button>
-        <button onClick={() => setEntryType('tarjeta')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'tarjeta' ? 'text-white' : 'text-slate-400 hover:text-white'}`}>
+        <button onClick={() => setEntryType('tarjeta')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'tarjeta' ? '${theme.colors.textPrimary}' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}`}>
             <CreditIcon size={16}/> Tarjeta
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-slate-800/40 backdrop-blur-md p-6 md:p-8 rounded-3xl border border-slate-700/50 shadow-xl space-y-6 animate-in fade-in slide-in-from-bottom-4">
-        
+      <form onSubmit={handleSubmit} className={`${theme.colors.bgCard} backdrop-blur-md p-6 md:p-8 rounded-3xl border ${theme.colors.border} shadow-xl space-y-6 animate-in fade-in slide-in-from-bottom-4`}>
+
         {/* Header Dynamic */}
         <div className="text-center mb-2">
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>
                 {entryType === 'gasto' && "💸 Gasto en Efectivo"}
                 {entryType === 'ingreso' && "💰 Registrar Ingreso"}
                 {entryType === 'tarjeta' && "💳 Gasto con Tarjeta"}
@@ -155,47 +160,47 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
         </div>
 
         {/* Date & Amount */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Fecha</label>
-                <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500"/>
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Fecha</label>
+                <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current`}/>
             </div>
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Monto</label>
+                <label className="text-xs font-bold ${theme.colors.textMuted} uppercase ml-1">Monto</label>
                 <div className="relative">
-                    <span className="absolute left-4 top-3.5 text-slate-400">S/</span>
-                    <input type="number" name="monto" step="0.01" value={formData.monto} onChange={handleChange} placeholder="0.00" required className="w-full bg-slate-900/50 border border-slate-600 rounded-xl pl-10 pr-4 py-3 text-white font-mono text-lg focus:ring-2 focus:ring-indigo-500"/>
+                    <span className="absolute left-4 top-3.5 ${theme.colors.textMuted}">S/</span>
+                    <input type="number" name="monto" step="0.01" value={formData.monto} onChange={handleChange} placeholder="0.00" required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-mono text-lg focus:ring-2 focus:ring-indigo-500"/>
                 </div>
             </div>
         </div>
 
         {/* Credit Card Specific Fields */}
         {entryType === 'tarjeta' && (
-            <div className="bg-indigo-900/10 border border-indigo-500/20 rounded-xl p-4 space-y-4">
+            <div className="${theme.colors.primaryLight} border border-indigo-500/20 rounded-xl p-4 space-y-4">
                 <div>
-                    <label className="text-xs font-bold text-indigo-300 uppercase ml-1 mb-1 block">Seleccionar Tarjeta</label>
-                    <select name="tarjetaAlias" value={formData.tarjetaAlias} onChange={handleChange} required className="w-full bg-slate-900/80 border border-indigo-500/30 rounded-xl px-4 py-3 text-white">
+                    <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-1 block">Seleccionar Tarjeta</label>
+                    <select name="tarjetaAlias" value={formData.tarjetaAlias} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary}">
                         <option value="">-- Elige tarjeta --</option>
                         {cards.map(c => <option key={c.alias} value={c.alias}>{c.alias} ({c.banco})</option>)}
                     </select>
                 </div>
                 
                 <div className="flex items-center gap-3">
-                    <input type="checkbox" id="installments" checked={useInstallments} onChange={e => setUseInstallments(e.target.checked)} className="w-5 h-5 rounded bg-slate-800 border-slate-600 text-indigo-600 focus:ring-indigo-500"/>
+                    <input type="checkbox" id="installments" checked={useInstallments} onChange={e => setUseInstallments(e.target.checked)} className="w-5 h-5 rounded bg-slate-800 ${theme.colors.border} text-indigo-600 focus:ring-indigo-500"/>
                     <label htmlFor="installments" className="text-sm text-indigo-200 font-medium">Pagar en cuotas</label>
                 </div>
 
                 {useInstallments && (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                             <label className="text-xs text-indigo-300">Cuotas</label>
-                             <select name="num_cuotas" value={formData.num_cuotas} onChange={handleChange} className="w-full bg-slate-900/80 border border-indigo-500/30 rounded-lg p-2 text-white">
+                             <label className="text-xs ${textColors.primary}">Cuotas</label>
+                             <select name="num_cuotas" value={formData.num_cuotas} onChange={handleChange} className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-lg p-2 ${theme.colors.textPrimary}">
                                 {[2,3,6,12,18,24,36].map(n => <option key={n} value={n}>{n}</option>)}
                              </select>
                         </div>
                         <div>
-                             <label className="text-xs text-indigo-300">Mensual aprox.</label>
-                             <div className="w-full p-2 text-right font-mono text-white text-sm">
+                             <label className="text-xs ${textColors.primary}">Mensual aprox.</label>
+                             <div className="w-full p-2 text-right font-mono ${theme.colors.textPrimary} text-sm">
                                 {formData.monto ? formatCurrency(parseFloat(formData.monto)/parseInt(formData.num_cuotas)) : '-'}
                              </div>
                         </div>
@@ -207,23 +212,23 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, c
         {/* Category & Desc */}
         <div className="space-y-4">
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Categoría</label>
-                <select name="categoria" value={formData.categoria} onChange={handleChange} required className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500">
+                <label className="text-xs font-bold ${theme.colors.textMuted} uppercase ml-1">Categoría</label>
+                <select name="categoria" value={formData.categoria} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500">
                     <option value="">Selecciona...</option>
                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
             </div>
             <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-400 uppercase ml-1">Descripción</label>
-                <input type="text" name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Ej: Compra supermercado" required className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-indigo-500"/>
+                <label className="text-xs font-bold ${theme.colors.textMuted} uppercase ml-1">Descripción</label>
+                <input type="text" name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Ej: Compra supermercado" required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500"/>
             </div>
         </div>
 
         <button 
           type="submit" 
           disabled={loading}
-          className={`w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all transform active:scale-95
-            ${entryType === 'ingreso' ? 'bg-gradient-to-r from-emerald-600 to-teal-600' : 'bg-gradient-to-r from-indigo-600 to-purple-600'}
+          className={`w-full py-4 rounded-xl font-bold text-lg ${theme.colors.textPrimary} shadow-lg transition-all transform active:scale-95
+            ${entryType === 'ingreso' ? 'bg-gradient-to-r from-emerald-600 to-teal-600' : '${theme.colors.gradientPrimary}'}
             ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:brightness-110'}`}
         >
           {loading ? 'Guardando...' : 'Registrar Movimiento'}

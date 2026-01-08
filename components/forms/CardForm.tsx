@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import { BANCOS, CreditCard } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, getLocalISOString } from '../../utils/format';
 import { Plus, X, CreditCard as CardIcon, Calendar, Wallet, Layers } from 'lucide-react';
 
 interface CardFormProps {
   scriptUrl: string;
+  pin: string;
   onAddCard: (card: CreditCard) => void;
   existingCards: CreditCard[];
   notify?: (msg: string, type: 'success' | 'error') => void;
 }
 
-export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, onAddCard, existingCards, notify }) => {
+export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, existingCards, notify }) => {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -60,11 +61,11 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, onAddCard, existi
         dia_cierre: Number(formData.dia_cierre),
         dia_pago: Number(formData.dia_pago),
         limite: Number(formData.limite),
-        timestamp: new Date().toISOString()
+        timestamp: getLocalISOString()
       };
       
       onAddCard(newCard);
-      await sendToSheet(scriptUrl, newCard, 'Tarjetas');
+      await sendToSheet(scriptUrl, pin, newCard, 'Tarjetas');
       
       setFormData({
         banco: '', tipo_tarjeta: '', alias: '', url_imagen: '',
