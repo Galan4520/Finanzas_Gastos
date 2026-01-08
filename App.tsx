@@ -7,6 +7,7 @@ import { PaymentForm } from './components/forms/PaymentForm';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { GoalsView } from './components/GoalsView';
 import { SettingsView } from './components/SettingsView';
+import { ReportsView } from './components/ReportsView';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from './types';
 import { formatCurrency } from './utils/format';
 import { fetchData } from './services/googleSheetService';
@@ -286,6 +287,15 @@ function App() {
             </div>
         );
 
+      case 'reportes':
+        return (
+          <ReportsView
+            history={history}
+            cards={cards}
+            pendingExpenses={pendingExpenses}
+          />
+        );
+
       case 'config':
         return (
           <SettingsView
@@ -301,7 +311,7 @@ function App() {
             notify={showToast}
           />
         );
-        
+
       default:
         return null;
     }
