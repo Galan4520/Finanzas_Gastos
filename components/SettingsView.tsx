@@ -3,7 +3,7 @@ import { CreditCard as CreditCardType, SavingsGoalConfig, UserProfile } from '..
 import { CardForm } from './forms/CardForm';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../themes';
-import { CreditCard, Target, Settings as SettingsIcon, Save, X, Pencil, Trash2 } from 'lucide-react';
+import { CreditCard, Target, Settings as SettingsIcon, Save, X, Pencil, Trash2, AlertTriangle, PiggyBank } from 'lucide-react';
 import { formatCurrency, getLocalISOString } from '../utils/format';
 import { getAvatarById } from '../avatars';
 
@@ -71,7 +71,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>⚙️ Configuración</h2>
+        <h2 className={`text-2xl font-bold ${theme.colors.textPrimary} flex items-center gap-2`}>
+          <SettingsIcon size={28} />
+          Configuración
+        </h2>
         <p className={`${theme.colors.textMuted} text-sm mt-1`}>
           Gestiona tus tarjetas, metas y ajustes generales
         </p>
@@ -203,9 +206,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       window.location.reload();
                     }
                   }}
-                  className={`${theme.colors.danger} hover:bg-rose-700 text-white text-sm px-4 py-2 rounded-lg transition-colors`}
+                  className={`${theme.colors.danger} hover:bg-rose-700 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2 justify-center`}
                 >
-                  ⚠️ Reiniciar aplicación
+                  <AlertTriangle size={16} />
+                  Reiniciar aplicación
                 </button>
               </div>
             </div>
@@ -338,8 +342,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>
-                        💰 Meta de ahorro anual
+                      <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
+                        <PiggyBank size={18} />
+                        Meta de ahorro anual
                       </label>
                       <input
                         type="number"
@@ -353,8 +358,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     </div>
 
                     <div>
-                      <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>
-                        🎯 ¿Para qué estás ahorrando?
+                      <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
+                        <Target size={18} />
+                        ¿Para qué estás ahorrando?
                       </label>
                       <input
                         type="text"

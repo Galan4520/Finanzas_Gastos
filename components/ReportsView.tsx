@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Transaction, CreditCard, PendingExpense } from '../types';
 import { formatCurrency } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from 'recharts';
-import { TrendingUp, PieChart as PieIcon, Calendar, CreditCard as CardIcon, Download, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { TrendingUp, PieChart as PieIcon, Calendar, CreditCard as CardIcon, Download, ArrowUpRight, ArrowDownRight, BarChart3 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 
@@ -169,7 +169,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
       <div className={`${theme.colors.bgCard} p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className={`text-2xl font-bold ${theme.colors.textPrimary} mb-1`}>📊 Reportes y Análisis</h2>
+            <h2 className={`text-2xl font-bold ${theme.colors.textPrimary} mb-1 flex items-center gap-2`}>
+              <BarChart3 size={28} className={textColors.primary} />
+              Reportes y Análisis
+            </h2>
             <p className={`text-sm ${theme.colors.textMuted}`}>Análisis detallado de tus finanzas</p>
           </div>
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { getLocalISOString } from '../../utils/format';
+import { Banknote, DollarSign } from 'lucide-react';
 
 interface SimpleFormProps {
   type: 'Gastos' | 'Ingresos';
@@ -57,7 +58,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, pin, on
   return (
     <div className="bg-slate-800/40 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-slate-700/50 shadow-xl max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
-        <span className="text-3xl">{type === 'Gastos' ? '💸' : '💰'}</span>
+        {type === 'Gastos' ? <Banknote size={28} /> : <DollarSign size={28} />}
         {type === 'Gastos' ? 'Nuevo Gasto (Efectivo)' : 'Nuevo Ingreso'}
       </h2>
 

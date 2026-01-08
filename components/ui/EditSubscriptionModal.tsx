@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PendingExpense, CreditCard } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { X, Save, Calendar, DollarSign, CreditCard as CardIcon } from 'lucide-react';
+import { X, Save, Calendar, DollarSign, CreditCard as CardIcon, Edit } from 'lucide-react';
 import { formatCurrency } from '../../utils/format';
 
 interface EditSubscriptionModalProps {
@@ -70,8 +70,9 @@ export const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
             <div className={`relative ${theme.colors.bgCard} rounded-2xl shadow-2xl max-w-lg w-full p-6 animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto`}>
                 {/* Header */}
                 <div className="flex items-center justify-between mb-6">
-                    <h3 className={`text-xl font-bold ${theme.colors.textPrimary}`}>
-                        ✏️ Editar Suscripción
+                    <h3 className={`text-xl font-bold ${theme.colors.textPrimary} flex items-center gap-2`}>
+                        <Edit size={20} />
+                        Editar Suscripción
                     </h3>
                     <button
                         onClick={onClose}

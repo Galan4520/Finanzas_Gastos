@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
+import { CreditCard as CreditCardIcon } from 'lucide-react';
 
 interface CreditExpenseFormProps {
   scriptUrl: string;
@@ -86,7 +87,10 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
 
   return (
     <div className="bg-slate-800/40 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-slate-700/50 shadow-xl max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-2 text-white">💳 Gasto con Tarjeta</h2>
+      <h2 className="text-2xl font-bold mb-2 text-white flex items-center gap-2">
+        <CreditCardIcon size={28} />
+        Gasto con Tarjeta
+      </h2>
       <p className="text-slate-400 mb-6 text-sm">El sistema calcula tu fecha de pago automáticamente.</p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
