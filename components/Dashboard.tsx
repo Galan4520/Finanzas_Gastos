@@ -74,24 +74,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     // 1. Monthly Cash Flow (From History)
     let ingresosMes = 0;
     let gastosMes = 0; // Cash expenses only
+    let ingresosTotal = 0;
+    let gastosTotal = 0;
 
     if (history) {
         history.forEach(t => {
             const d = new Date(t.fecha);
-            // Fix timezone issue by checking raw string if needed, but simplified here
+            const monto = Number(t.monto);
+
+            // Monthly totals
             if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
-                if (t.tipo === 'Ingresos') ingresosMes += Number(t.monto);
-                if (t.tipo === 'Gastos') gastosMes += Number(t.monto);
+                if (t.tipo === 'Ingresos') ingresosMes += monto;
+                if (t.tipo === 'Gastos') gastosMes += monto;
             }
+
+            // All-time totals
+            if (t.tipo === 'Ingresos') ingresosTotal += monto;
+            if (t.tipo === 'Gastos') gastosTotal += monto;
         });
     }
+
+    const balanceTotal = ingresosTotal - gastosTotal;
 
     // 2. Credit Card Usage
     let deudaTotal = 0;
     let limiteTotal = 0;
-    
+
     cards.forEach(c => limiteTotal += Number(c.limite));
-    
+
     pendingExpenses.forEach(p => {
         const total = Number(p.monto);
         const cuotaVal = total / Number(p.num_cuotas);
@@ -102,7 +112,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     const disponible = Math.max(0, limiteTotal - deudaTotal);
     const usoCredito = limiteTotal > 0 ? (deudaTotal / limiteTotal) * 100 : 0;
 
-    return { ingresosMes, gastosMes, deudaTotal, disponible, usoCredito, limiteTotal };
+    return {
+      ingresosMes,
+      gastosMes,
+      ingresosTotal,
+      gastosTotal,
+      balanceTotal,
+      deudaTotal,
+      disponible,
+      usoCredito,
+      limiteTotal
+    };
   }, [cards, pendingExpenses, history]);
 
   // Chart Data
@@ -219,6 +239,56 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     <span className="text-sm font-mono font-bold text-emerald-500">{formatCurrency(currentStats.disponible)}</span>
                 </div>
             </div>
+        </div>
+      </div>
+
+      {/* Balance Total Card - Destacado */}
+      <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border-2 ${
+        currentStats.balanceTotal >= 0 ? 'border-emerald-500' : 'border-rose-500'
+      } shadow-2xl relative overflow-hidden`}>
+        <div className="flex items-center gap-3 mb-4">
+          <div className={`p-3 rounded-xl ${
+            currentStats.balanceTotal >= 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10'
+          }`}>
+            <Wallet className={currentStats.balanceTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'} size={28} />
+          </div>
+          <div>
+            <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider`}>
+              Balance Total
+            </h3>
+            <p className={`text-xs ${theme.colors.textMuted} mt-0.5`}>
+              Dinero disponible actual
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <p className={`text-4xl font-mono font-bold ${
+            currentStats.balanceTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'
+          }`}>
+            {formatCurrency(currentStats.balanceTotal)}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t ${theme.colors.borderLight}">
+          <div>
+            <div className="flex items-center gap-1 mb-1">
+              <ArrowUpRight className="text-emerald-500" size={14} />
+              <p className={`text-xs ${theme.colors.textMuted}`}>Total Ingresos</p>
+            </div>
+            <p className={`text-lg font-mono font-bold ${theme.colors.textPrimary}`}>
+              {formatCurrency(currentStats.ingresosTotal)}
+            </p>
+          </div>
+          <div>
+            <div className="flex items-center gap-1 mb-1">
+              <ArrowDownRight className="text-rose-500" size={14} />
+              <p className={`text-xs ${theme.colors.textMuted}`}>Total Gastos</p>
+            </div>
+            <p className={`text-lg font-mono font-bold ${theme.colors.textPrimary}`}>
+              {formatCurrency(currentStats.gastosTotal)}
+            </p>
+          </div>
         </div>
       </div>
 

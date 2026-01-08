@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PendingExpense, Transaction } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { formatCurrency, getLocalISOString } from '../../utils/format';
-import { Banknote, Lightbulb, CheckCircle } from 'lucide-react';
+import { Banknote, Lightbulb, CheckCircle, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface PaymentFormProps {
@@ -276,7 +276,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
           className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
             ${loading || !selectedExpense ? `${theme.colors.bgSecondary} cursor-not-allowed ${theme.colors.textMuted}` : `${theme.colors.primary} hover:${theme.colors.primaryHover} text-white`}`}
         >
-          {loading ? 'Procesando...' : (
+          {loading ? (
+            <>
+              <Loader2 size={20} className="animate-spin" />
+              Procesando pago...
+            </>
+          ) : (
             <>
               <CheckCircle size={20} />
               Confirmar Pago
