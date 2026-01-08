@@ -31,6 +31,7 @@ export interface PendingExpense {
   estado: 'Pendiente' | 'Pagado';
   num_cuotas: number;
   cuotas_pagadas: number;
+  tipo?: 'deuda' | 'suscripcion'; // Nueva propiedad para diferenciar
   notas?: string;
   timestamp: string;
 }
