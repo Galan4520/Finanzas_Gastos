@@ -11,10 +11,10 @@
 
 ### Paso 1: Copiar la Plantilla de Google Sheets
 
-1. **Abre la plantilla pública:** [LINK DE LA PLANTILLA AQUÍ]
-2. Click en **Archivo → Hacer una copia**
-3. Dale un nombre (ej: "Mis Finanzas 2025")
-4. Guarda el archivo en tu Google Drive
+1. **Abre la plantilla pública:** [📋 Click aquí para copiar la plantilla](https://docs.google.com/spreadsheets/d/1WNw94cR-IJrxZIKETz1BHGuPl2ZQ2VFSnmgrAT4etsk/copy)
+2. Google te pedirá **hacer una copia** automáticamente
+3. Dale un nombre (ej: "Mis Finanzas 2026")
+4. Click en **Hacer una copia**
 
 ✅ ¡Listo! La plantilla ya incluye:
 - Todas las hojas necesarias (Gastos, Ingresos, Tarjetas, etc.)
@@ -133,24 +133,23 @@ Sigue el **Paso 2** de la Opción 1 (arriba)
 
 Si quieres que otras personas usen MoneyCrock:
 
-### Opción A: Compartir la Aplicación Web
+### ¡Es muy fácil!
 
-1. Despliega la aplicación web (Netlify, Vercel, GitHub Pages, etc.)
-2. Comparte el link de la app
-3. **Cada persona debe crear su propia Google Sheet** (usando esta guía)
+1. **Comparte el enlace de la plantilla:**
+   ```
+   https://docs.google.com/spreadsheets/d/1WNw94cR-IJrxZIKETz1BHGuPl2ZQ2VFSnmgrAT4etsk/copy
+   ```
 
-### Opción B: Crear una Plantilla Compartible
+2. **Comparte el link de la aplicación web:**
+   - Si usas Netlify/Vercel: comparte tu URL de deploy
+   - Si es local: cada persona debe ejecutar `npm run dev` localmente
 
-Si tienes una Google Sheet bien configurada:
+3. **Instrucciones para nuevos usuarios:**
+   - Click en el enlace de la plantilla → se crea copia automática
+   - Seguir esta guía SETUP.md desde el Paso 2
+   - Cada persona tendrá su propia Google Sheet independiente
 
-1. Haz una copia limpia (sin datos personales)
-2. Click derecho en el archivo → **Compartir**
-3. Cambia a **Cualquier persona con el enlace puede ver**
-4. Copia el enlace
-5. Modifica el enlace para forzar copia:
-   - Cambia `/edit` por `/copy` al final del enlace
-   - Ejemplo: `https://docs.google.com/spreadsheets/d/XXXXX/copy`
-6. Comparte ese enlace
+**Nota:** Cada usuario necesita su propia copia de Google Sheet. El enlace `/copy` hace esto automáticamente. ¡No compartir las URLs de scripts personales!
 
 ---
 

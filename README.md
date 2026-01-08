@@ -65,10 +65,12 @@ La guía incluye:
 
 ### Pasos Básicos
 
-1. **Copia la plantilla de Google Sheets** (o crea una siguiendo [TEMPLATE_STRUCTURE.md](TEMPLATE_STRUCTURE.md))
-2. **Despliega el script** desde Google Apps Script
-3. **Conecta la aplicación** con la URL del script y tu PIN
+1. **[📋 Copia la plantilla de Google Sheets](https://docs.google.com/spreadsheets/d/1WNw94cR-IJrxZIKETz1BHGuPl2ZQ2VFSnmgrAT4etsk/copy)** (o crea una siguiendo [TEMPLATE_STRUCTURE.md](TEMPLATE_STRUCTURE.md))
+2. **Despliega el script** desde Google Apps Script (Extensions → Apps Script → Deploy)
+3. **Conecta la aplicación** con la URL del script y tu PIN (por defecto: 1234)
 4. **¡Listo!** Empieza a gestionar tus finanzas
+
+**Tiempo estimado:** 10 minutos | **Dificultad:** Fácil
 
 ## 📚 Documentación
 
@@ -119,9 +121,18 @@ npm run build
 
 ¿Quieres que más personas usen MoneyCrock?
 
-1. **Comparte la aplicación web** desplegada (Netlify, Vercel, etc.)
-2. **Cada usuario crea su propia Google Sheet** siguiendo [SETUP.md](SETUP.md)
-3. **Opcional**: Crea una plantilla compartible modificando el enlace a `/copy`
+### Enlace Directo de la Plantilla
+```
+https://docs.google.com/spreadsheets/d/1WNw94cR-IJrxZIKETz1BHGuPl2ZQ2VFSnmgrAT4etsk/copy
+```
+
+### Instrucciones para Compartir
+
+1. **Comparte el enlace de la plantilla** (arriba) - crea una copia automática
+2. **Comparte la aplicación web** desplegada (Netlify, Vercel, etc.)
+3. **Cada usuario sigue [SETUP.md](SETUP.md)** desde el Paso 2
+
+**Importante:** Cada persona tendrá su propia Google Sheet independiente. ¡Nunca compartas tu URL de script personal!
 
 Más detalles en la sección "Para Compartir con Otros" de [SETUP.md](SETUP.md)
 
