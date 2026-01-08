@@ -679,6 +679,7 @@ function App() {
             cards={cards}
             savingsGoal={savingsGoal}
             currentTheme={currentTheme}
+            profile={profile}
             onAddCard={handleAddCard}
             onEditCard={(card) => setEditingCard(card)}
             onDeleteCard={(card) => setDeleteTarget({ type: 'card', item: card })}

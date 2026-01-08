@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { CreditCard as CreditCardType, SavingsGoalConfig } from '../types';
+import { CreditCard as CreditCardType, SavingsGoalConfig, UserProfile } from '../types';
 import { CardForm } from './forms/CardForm';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../themes';
 import { CreditCard, Target, Settings as SettingsIcon, Save, X, Pencil, Trash2 } from 'lucide-react';
 import { formatCurrency, getLocalISOString } from '../utils/format';
+import { getAvatarById } from '../avatars';
 
 interface SettingsViewProps {
   scriptUrl: string;
@@ -12,6 +13,7 @@ interface SettingsViewProps {
   cards: CreditCardType[];
   savingsGoal: SavingsGoalConfig | null;
   currentTheme: string;
+  profile?: UserProfile | null;
   onAddCard: (card: CreditCardType) => void;
   onEditCard: (card: CreditCardType) => void;
   onDeleteCard: (card: CreditCardType) => void;
@@ -27,6 +29,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   cards,
   savingsGoal,
   currentTheme,
+  profile,
   onAddCard,
   onEditCard,
   onDeleteCard,
@@ -38,6 +41,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const { theme } = useTheme();
   const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general'>('general');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
   const [goalFormData, setGoalFormData] = useState({
     meta_anual: savingsGoal?.meta_anual || 40000,
@@ -95,6 +99,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {/* GENERAL SECTION */}
           {activeSection === 'general' && (
             <div className="space-y-6">
+
+              {/* Profile Card (Added for Mobile visibility) */}
+              {profile && avatar && (
+                <div className={`${theme.colors.bgSecondary} p-4 rounded-xl border ${theme.colors.border} flex items-center gap-4`}>
+                  <div className="relative">
+                    <img
+                      src={avatar.imagePath}
+                      alt={avatar.label}
+                      className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md"
+                    />
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                  </div>
+                  <div>
+                    <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>{profile.nombre}</h3>
+                    <p className={`text-sm ${theme.colors.textMuted}`}>{avatar.label}</p>
+                    <p className="text-xs text-emerald-500 font-medium mt-1">● Cuenta Activa</p>
+                  </div>
+                </div>
+              )}
+
               {/* Theme Selector */}
               <div>
                 <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3`}>
