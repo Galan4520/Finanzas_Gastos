@@ -73,10 +73,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       <aside className={`hidden md:flex flex-col w-64 fixed h-full ${theme.colors.border} border-r ${theme.colors.bgCard} backdrop-blur-xl p-6 z-20`}>
         <div className="mb-8 flex items-center gap-2 px-2">
             <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center shadow-lg`}>
-                <span className="font-bold text-white text-lg">CF</span>
+                <span className="font-bold text-white text-lg">MC</span>
             </div>
             <h1 className={`text-xl font-bold ${theme.colors.textPrimary}`}>
-                Finanzas+
+                MoneyCrock
             </h1>
         </div>
 
@@ -107,9 +107,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       <div className={`md:hidden p-4 flex justify-between items-center ${theme.colors.bgCard} backdrop-blur-lg sticky top-0 z-30 border-b ${theme.colors.border}`}>
         <div className="flex items-center gap-2">
              <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
-                <span className="font-bold text-white">CF</span>
+                <span className="font-bold text-white">MC</span>
             </div>
-            <span className="font-bold text-lg">Finanzas+</span>
+            <span className="font-bold text-lg">MoneyCrock</span>
         </div>
         {connected && (
              <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `animate-spin ${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
