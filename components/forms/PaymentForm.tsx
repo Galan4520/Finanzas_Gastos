@@ -22,10 +22,17 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
   // Auto-fill amount based on type
   useEffect(() => {
     if (selectedExpense) {
+      // Para suscripciones, siempre es el monto completo
+      if (selectedExpense.tipo === 'suscripcion') {
+        setCustomAmount(Number(selectedExpense.monto).toFixed(2));
+        return;
+      }
+
+      // Para deudas, calcular según tipo de pago
       const total = Number(selectedExpense.monto);
       const cuotas = Number(selectedExpense.num_cuotas);
       const cuotaAmount = total / cuotas;
-      
+
       if (paymentType === 'Cuota') setCustomAmount(cuotaAmount.toFixed(2));
       if (paymentType === 'Total') {
           const paid = (cuotaAmount * selectedExpense.cuotas_pagadas);
@@ -42,29 +49,49 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
 
     try {
       const montoPagado = parseFloat(customAmount);
-      const montoTotal = Number(selectedExpense.monto);
-      const numCuotas = Number(selectedExpense.num_cuotas);
-      const montoCuota = montoTotal / numCuotas;
-      
-      let newCuotasPagadas = selectedExpense.cuotas_pagadas;
-      let newEstado: 'Pendiente' | 'Pagado' = 'Pendiente';
+      const esSuscripcion = selectedExpense.tipo === 'suscripcion';
 
-      if (paymentType === 'Cuota') newCuotasPagadas += 1;
-      else if (paymentType === 'Total') {
-        newCuotasPagadas = numCuotas;
-        newEstado = 'Pagado';
+      let updatedExpense: PendingExpense;
+
+      if (esSuscripcion) {
+        // LÓGICA PARA SUSCRIPCIONES: Renovar al próximo mes
+        const fechaActual = new Date(selectedExpense.fecha_pago);
+        const proximaFecha = new Date(fechaActual);
+        proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+
+        updatedExpense = {
+          ...selectedExpense,
+          fecha_pago: proximaFecha.toISOString().split('T')[0],
+          fecha_cierre: proximaFecha.toISOString().split('T')[0],
+          // Suscripciones siempre quedan como Pendiente (no se eliminan)
+          estado: 'Pendiente'
+        };
+      } else {
+        // LÓGICA PARA DEUDAS: Incrementar cuotas
+        const montoTotal = Number(selectedExpense.monto);
+        const numCuotas = Number(selectedExpense.num_cuotas);
+        const montoCuota = montoTotal / numCuotas;
+
+        let newCuotasPagadas = selectedExpense.cuotas_pagadas;
+        let newEstado: 'Pendiente' | 'Pagado' = 'Pendiente';
+
+        if (paymentType === 'Cuota') newCuotasPagadas += 1;
+        else if (paymentType === 'Total') {
+          newCuotasPagadas = numCuotas;
+          newEstado = 'Pagado';
+        }
+        else if (paymentType === 'Parcial') {
+           newCuotasPagadas += Math.floor(montoPagado / montoCuota);
+        }
+
+        if (newCuotasPagadas >= numCuotas) newEstado = 'Pagado';
+
+        updatedExpense = {
+          ...selectedExpense,
+          cuotas_pagadas: newCuotasPagadas,
+          estado: newEstado
+        };
       }
-      else if (paymentType === 'Parcial') {
-         newCuotasPagadas += Math.floor(montoPagado / montoCuota);
-      }
-
-      if (newCuotasPagadas >= numCuotas) newEstado = 'Pagado';
-
-      const updatedExpense: PendingExpense = {
-        ...selectedExpense,
-        cuotas_pagadas: newCuotasPagadas,
-        estado: newEstado
-      };
 
       const paymentPayload = {
         fecha_pago: new Date().toISOString().split('T')[0],
@@ -79,10 +106,15 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
 
       onUpdateExpense(updatedExpense);
       await sendToSheet(scriptUrl, pin, paymentPayload, 'Pagos');
-      
+
       setSelectedExpenseId('');
       setCustomAmount('');
-      notify?.('Pago registrado correctamente', 'success');
+
+      if (esSuscripcion) {
+        notify?.('✅ Pago de suscripción registrado - Próximo cargo actualizado', 'success');
+      } else {
+        notify?.('✅ Pago registrado correctamente', 'success');
+      }
 
     } catch (error) {
       notify?.("Error al procesar pago", 'error');
@@ -125,24 +157,71 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         </div>
 
         {selectedExpense && (
-            <div className="bg-indigo-900/20 p-5 rounded-xl border border-indigo-500/30 text-sm space-y-3 animate-in fade-in slide-in-from-top-2">
-                <div className="flex justify-between items-center border-b border-indigo-500/10 pb-2">
-                    <span className="text-slate-400">Total Compra:</span>
-                    <span className="font-bold text-slate-200 text-lg">{formatCurrency(selectedExpense.monto)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-slate-400">Cuotas Pagadas:</span>
-                    <div className="flex items-center gap-2">
-                        <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-500" style={{ width: `${(selectedExpense.cuotas_pagadas / selectedExpense.num_cuotas) * 100}%`}}></div>
-                        </div>
-                        <span className="font-bold text-slate-200">{selectedExpense.cuotas_pagadas} / {selectedExpense.num_cuotas}</span>
+            <div className={`p-5 rounded-xl border text-sm space-y-3 animate-in fade-in slide-in-from-top-2 ${
+              selectedExpense.tipo === 'suscripcion'
+                ? 'bg-purple-900/20 border-purple-500/30'
+                : 'bg-indigo-900/20 border-indigo-500/30'
+            }`}>
+                {selectedExpense.tipo === 'suscripcion' ? (
+                  // Vista para SUSCRIPCIONES
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-0.5 rounded font-bold">SUSCRIPCIÓN RECURRENTE</span>
                     </div>
-                </div>
+                    <div className="flex justify-between items-center border-b border-purple-500/10 pb-2">
+                        <span className="text-slate-400">Costo Mensual:</span>
+                        <span className="font-bold text-slate-200 text-lg">{formatCurrency(selectedExpense.monto)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Próxima Fecha de Cargo:</span>
+                        <span className="font-bold text-slate-200">{selectedExpense.fecha_pago}</span>
+                    </div>
+                    <div className="mt-3 p-3 bg-purple-500/10 rounded-lg">
+                      <p className="text-xs text-purple-200">
+                        💡 Al pagar, la fecha se actualizará automáticamente al próximo mes
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  // Vista para DEUDAS
+                  <>
+                    <div className="flex justify-between items-center border-b border-indigo-500/10 pb-2">
+                        <span className="text-slate-400">Total Compra:</span>
+                        <span className="font-bold text-slate-200 text-lg">{formatCurrency(selectedExpense.monto)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Cuotas Pagadas:</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-indigo-500" style={{ width: `${(selectedExpense.cuotas_pagadas / selectedExpense.num_cuotas) * 100}%`}}></div>
+                            </div>
+                            <span className="font-bold text-slate-200">{selectedExpense.cuotas_pagadas} / {selectedExpense.num_cuotas}</span>
+                        </div>
+                    </div>
+                  </>
+                )}
             </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {selectedExpense?.tipo === 'suscripcion' ? (
+          // Para SUSCRIPCIONES: solo monto fijo
+          <div>
+              <label className={labelClass}>Monto a Pagar (Fijo)</label>
+              <div className="relative">
+                  <span className="absolute left-4 top-3.5 text-slate-400">S/</span>
+                  <input
+                      type="number"
+                      step="0.01"
+                      value={customAmount}
+                      readOnly
+                      className={`${inputClass} pl-10 font-mono text-lg font-bold text-purple-400 bg-slate-900/70`}
+                  />
+              </div>
+              <p className="text-xs text-slate-400 mt-2">Las suscripciones se pagan siempre por el monto completo</p>
+          </div>
+        ) : (
+          // Para DEUDAS: opciones flexibles
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
              <div>
                 <label className={labelClass}>Tipo de Pago</label>
                 <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className={inputClass}>
@@ -155,16 +234,17 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
                 <label className={labelClass}>Monto a Pagar</label>
                 <div className="relative">
                     <span className="absolute left-4 top-3.5 text-slate-400">S/</span>
-                    <input 
-                        type="number" 
-                        step="0.01" 
-                        value={customAmount} 
+                    <input
+                        type="number"
+                        step="0.01"
+                        value={customAmount}
                         onChange={(e) => setCustomAmount(e.target.value)}
                         className={`${inputClass} pl-10 font-mono text-lg font-bold text-emerald-400`}
                     />
                 </div>
              </div>
-        </div>
+          </div>
+        )}
 
         <button 
           type="submit" 
