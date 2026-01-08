@@ -133,7 +133,7 @@ function getSheetData(sheetName) {
             <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 p-6 text-center">
               <BookOpen className="w-12 h-12 mx-auto mb-3 text-white" />
               <h1 className="text-3xl font-bold text-white mb-2">Guía de Configuración</h1>
-              <p className="text-emerald-50">Configura tu Google Apps Script en 5 pasos</p>
+              <p className="text-emerald-50">Configura tu Google Apps Script en 4 pasos simples</p>
             </div>
 
             {/* Instructions */}
@@ -146,7 +146,7 @@ function getSheetData(sheetName) {
                   <h3 className="text-lg font-bold text-white mb-2">Crea una copia de la plantilla</h3>
                   <p className="text-slate-300 mb-3">Abre esta plantilla de Google Sheets y haz una copia para tu cuenta:</p>
                   <a
-                    href="https://docs.google.com/spreadsheets/d/1234567890/copy"
+                    href="https://docs.google.com/spreadsheets/d/1WNw94cR-IJrxZIKETz1BHGuPl2ZQ2VFSnmgrAT4etsk/copy"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -158,87 +158,75 @@ function getSheetData(sheetName) {
                 </div>
               </div>
 
-              {/* Step 1.5 - PIN Config */}
+              {/* Step 2 - Verify Script */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
-                  <Lock size={16} />
-                </div>
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white mb-2">Configura tu PIN de seguridad</h3>
-                  <p className="text-slate-300 mb-2">En tu Google Sheet, crea una hoja llamada "Config":</p>
-                  <ol className="list-decimal list-inside text-slate-300 space-y-1 ml-4 text-sm">
-                    <li>Crea una nueva hoja llamada <span className="text-emerald-400 font-mono">Config</span></li>
-                    <li>En la celda A1 escribe: <span className="text-emerald-400 font-mono">PIN</span></li>
-                    <li>En la celda A2 escribe tu PIN (ej: <span className="text-emerald-400 font-mono">1234</span>)</li>
+                  <h3 className="text-lg font-bold text-white mb-2">Verifica el Script (ya incluido)</h3>
+                  <p className="text-slate-300 mb-2">En tu copia de Google Sheet:</p>
+                  <ol className="list-decimal list-inside text-slate-300 space-y-1 ml-4">
+                    <li>Ve a <span className="text-emerald-400 font-mono">Extensiones → Apps Script</span></li>
+                    <li>El código ya debería estar ahí (no necesitas copiar nada)</li>
+                    <li>Si el editor está vacío, contacta al administrador</li>
                   </ol>
-                  <div className="mt-3 bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
-                    <p className="text-amber-200 text-xs flex items-center gap-2">
-                      <Sparkles size={14} />
-                      El PIN por defecto es <span className="font-mono font-bold">1234</span>. Cámbialo por uno más seguro.
+                  <div className="mt-3 bg-emerald-900/20 border border-emerald-500/30 rounded-lg p-3">
+                    <p className="text-emerald-200 text-xs flex items-center gap-2">
+                      <CheckCircle size={14} />
+                      La plantilla incluye el script completo pre-configurado
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Step 2 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white mb-2">Abre el Editor de Apps Script</h3>
-                  <p className="text-slate-300 mb-2">En tu Google Sheet:</p>
-                  <ol className="list-decimal list-inside text-slate-300 space-y-1 ml-4">
-                    <li>Ve a <span className="text-emerald-400 font-mono">Extensiones → Apps Script</span></li>
-                    <li>Borra todo el código que aparece por defecto</li>
-                  </ol>
-                </div>
-              </div>
-
-              {/* Step 3 */}
+              {/* Step 3 - Deploy */}
               <div className="flex gap-4">
                 <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">3</div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white mb-2">Copia y pega este código</h3>
-                  <div className="relative">
-                    <pre className="bg-slate-950 border border-slate-700 rounded-lg p-4 text-sm text-slate-300 overflow-x-auto max-h-64 overflow-y-auto">
-                      <code>{googleAppsScriptCode}</code>
-                    </pre>
-                    <button
-                      onClick={copyToClipboard}
-                      className="absolute top-2 right-2 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors"
-                    >
-                      {copied ? <CheckCircle size={14} /> : <Copy size={14} />}
-                      {copied ? 'Copiado!' : 'Copiar'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 4 */}
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">4</div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white mb-2">Implementa el script</h3>
+                  <h3 className="text-lg font-bold text-white mb-2">Despliega el Script</h3>
                   <ol className="list-decimal list-inside text-slate-300 space-y-2 ml-4">
-                    <li>Click en <span className="text-emerald-400 font-mono">Implementar → Nueva implementación</span></li>
+                    <li>En el editor de Apps Script, click en <span className="text-emerald-400 font-mono">Implementar → Nueva implementación</span></li>
                     <li>Selecciona tipo: <span className="text-emerald-400 font-mono">Aplicación web</span></li>
                     <li>Ejecutar como: <span className="text-emerald-400 font-mono">Yo</span></li>
                     <li>Quién tiene acceso: <span className="text-emerald-400 font-mono">Cualquier persona</span></li>
                     <li>Click en <span className="text-emerald-400 font-mono">Implementar</span></li>
-                    <li>Autoriza los permisos necesarios</li>
+                    <li>Autoriza los permisos cuando te lo pida</li>
                   </ol>
                 </div>
               </div>
 
-              {/* Step 5 */}
+              {/* Step 4 - Copy URL */}
               <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">5</div>
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">4</div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-bold text-white mb-2">Copia la URL de implementación</h3>
+                  <h3 className="text-lg font-bold text-white mb-2">Copia la URL de Despliegue</h3>
                   <p className="text-slate-300 mb-2">Google te dará una URL que se ve así:</p>
                   <code className="block bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-emerald-400 break-all">
                     https://script.google.com/macros/s/XXXXXXXXX/exec
                   </code>
                   <p className="text-slate-400 text-sm mt-2">Copia esta URL y pégala en la pantalla anterior</p>
+                </div>
+              </div>
+
+              {/* Step 5 - PIN Info */}
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <Lock size={16} />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-white mb-2">Configura tu PIN</h3>
+                  <p className="text-slate-300 mb-2">El PIN por defecto es <span className="text-emerald-400 font-mono font-bold">1234</span></p>
+                  <p className="text-slate-300 text-sm mb-2">Para cambiarlo:</p>
+                  <ol className="list-decimal list-inside text-slate-300 space-y-1 ml-4 text-sm">
+                    <li>En tu Google Sheet, ve a la hoja <span className="text-emerald-400 font-mono">Config</span></li>
+                    <li>En la celda A2, cambia el valor por tu PIN preferido</li>
+                    <li>Usa ese nuevo PIN para conectarte</li>
+                  </ol>
+                  <div className="mt-3 bg-amber-900/20 border border-amber-500/30 rounded-lg p-3">
+                    <p className="text-amber-200 text-xs flex items-center gap-2">
+                      <Sparkles size={14} />
+                      Cambia el PIN por defecto para mayor seguridad
+                    </p>
+                  </div>
                 </div>
               </div>
 
