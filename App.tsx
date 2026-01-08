@@ -18,6 +18,7 @@ import { themes } from './themes';
 function App() {
   const { currentTheme, theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [debtSubTab, setDebtSubTab] = useState<'deudas' | 'suscripciones'>('deudas');
   const [scriptUrl, setScriptUrl] = useState('');
   const [pin, setPin] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -237,21 +238,55 @@ function App() {
         return <GoalsView history={history} savingsGoal={savingsGoal} onSaveGoal={saveSavingsGoal} />;
       
       case 'deudas': // Previous 'pendientes' tab, but specifically for debt management
+        // Filter data based on subtab
+        const deudasData = pendingExpenses.filter(p => !p.tipo || p.tipo === 'deuda');
+        const suscripcionesData = pendingExpenses.filter(p => p.tipo === 'suscripcion');
+        const currentData = debtSubTab === 'deudas' ? deudasData : suscripcionesData;
+
         return (
           <div className="space-y-6">
-             <div className="flex justify-between items-center">
-                 <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>Estado de Deudas</h2>
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                 <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>
+                   {debtSubTab === 'deudas' ? 'Estado de Deudas' : 'Mis Suscripciones'}
+                 </h2>
                  <button onClick={() => setActiveTab('pagar-form')} className={`${theme.colors.primary} hover:${theme.colors.primaryHover} text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg transition-all`}>
                     Realizar Pago
                  </button>
              </div>
 
-             {/* List of debts */}
+             {/* Tabs */}
+             <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setDebtSubTab('deudas')}
+                  className={`px-4 py-2 font-semibold text-sm transition-all ${
+                    debtSubTab === 'deudas'
+                      ? `${theme.colors.textPrimary} border-b-2 border-teal-500`
+                      : `${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+                  }`}
+                >
+                  💳 Deudas a Cuotas ({deudasData.length})
+                </button>
+                <button
+                  onClick={() => setDebtSubTab('suscripciones')}
+                  className={`px-4 py-2 font-semibold text-sm transition-all ${
+                    debtSubTab === 'suscripciones'
+                      ? `${theme.colors.textPrimary} border-b-2 border-purple-500`
+                      : `${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+                  }`}
+                >
+                  🔄 Suscripciones ({suscripcionesData.length})
+                </button>
+             </div>
+
+             {/* List of debts or subscriptions */}
              <div className="space-y-4">
-                {pendingExpenses.length === 0 ? (
-                    <div className={`p-8 text-center ${theme.colors.textMuted} border ${theme.colors.border} border-dashed rounded-2xl`}>No hay deudas activas.</div>
-                ) : (
-                    pendingExpenses.map(p => {
+                {currentData.length === 0 ? (
+                    <div className={`p-8 text-center ${theme.colors.textMuted} border ${theme.colors.border} border-dashed rounded-2xl`}>
+                      {debtSubTab === 'deudas' ? 'No hay deudas activas.' : 'No hay suscripciones activas.'}
+                    </div>
+                ) : debtSubTab === 'deudas' ? (
+                    // DEUDAS VIEW
+                    currentData.map(p => {
                         const monto = Number(p.monto);
                         const cuotas = Number(p.num_cuotas);
                         const pagado = Number(p.cuotas_pagadas) * (monto/cuotas);
@@ -340,8 +375,111 @@ function App() {
                             </div>
                         );
                     })
+                ) : (
+                    // SUSCRIPCIONES VIEW
+                    currentData.map(p => {
+                        const monto = Number(p.monto);
+
+                        // Calculate days until next payment
+                        const fechaVencimiento = new Date(p.fecha_pago);
+                        const hoy = new Date();
+                        const diffTime = fechaVencimiento.getTime() - hoy.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                        // Determine urgency color for subscriptions
+                        const getUrgencyColor = (days: number) => {
+                          if (days < 0) return 'text-red-500';
+                          if (days <= 3) return 'text-orange-500';
+                          if (days <= 7) return 'text-yellow-500';
+                          return theme.colors.textMuted;
+                        };
+
+                        const getUrgencyBg = (days: number) => {
+                          if (days < 0) return 'bg-red-500/10 border-red-500/20';
+                          if (days <= 3) return 'bg-orange-500/10 border-orange-500/20';
+                          if (days <= 7) return 'bg-yellow-500/10 border-yellow-500/20';
+                          return '';
+                        };
+
+                        return (
+                             <div key={p.id} className={`${theme.colors.bgCard} p-5 rounded-xl border ${theme.colors.border} ${getUrgencyBg(diffDays)} transition-all hover:shadow-lg`}>
+                                {/* Header with Card Badge and Amount */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs px-3 py-1 rounded-md font-bold shadow-sm">{p.tarjeta}</span>
+                                        <span className="bg-purple-500/20 text-purple-400 text-[10px] px-2 py-0.5 rounded font-bold">RECURRENTE</span>
+                                      </div>
+                                      <h3 className={`${theme.colors.textPrimary} font-semibold text-lg`}>{p.descripcion}</h3>
+                                      <p className={`text-xs ${theme.colors.textMuted} mt-1`}>{p.categoria}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Costo mensual</p>
+                                        <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(monto)}</p>
+                                    </div>
+                                </div>
+
+                                {/* Subscription Info */}
+                                <div className="grid grid-cols-2 gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                                  <div>
+                                    <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Fecha de cargo</p>
+                                    <p className={`text-sm font-semibold ${theme.colors.textSecondary}`}>{formatDate(p.fecha_pago)}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Costo anual estimado</p>
+                                    <p className={`text-sm font-semibold ${theme.colors.textSecondary}`}>{formatCurrency(monto * 12)}</p>
+                                  </div>
+                                </div>
+
+                                {/* Footer with Days Remaining */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                  <div className="flex items-center gap-2">
+                                    <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    <span className={`text-sm ${theme.colors.textSecondary}`}>
+                                      Próximo cargo: <span className="font-semibold">{formatDate(p.fecha_pago)}</span>
+                                    </span>
+                                  </div>
+                                  <span className={`text-sm font-bold ${getUrgencyColor(diffDays)}`}>
+                                    {diffDays < 0
+                                      ? `¡Cobrado hace ${Math.abs(diffDays)} días!`
+                                      : diffDays === 0
+                                        ? '¡Se cobra hoy!'
+                                        : `${diffDays} ${diffDays === 1 ? 'día' : 'días'} restantes`
+                                    }
+                                  </span>
+                                </div>
+                            </div>
+                        );
+                    })
                 )}
              </div>
+
+             {/* Summary Footer */}
+             {currentData.length > 0 && (
+               <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
+                 <div className="flex justify-between items-center">
+                   <span className={`text-sm font-semibold ${theme.colors.textSecondary}`}>
+                     {debtSubTab === 'deudas' ? 'Total pendiente:' : 'Total mensual:'}
+                   </span>
+                   <span className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                     {formatCurrency(
+                       currentData.reduce((sum, p) => {
+                         if (debtSubTab === 'deudas') {
+                           const monto = Number(p.monto);
+                           const cuotas = Number(p.num_cuotas);
+                           const pagado = Number(p.cuotas_pagadas) * (monto/cuotas);
+                           return sum + (monto - pagado);
+                         } else {
+                           return sum + Number(p.monto);
+                         }
+                       }, 0)
+                     )}
+                   </span>
+                 </div>
+               </div>
+             )}
           </div>
         );
 
