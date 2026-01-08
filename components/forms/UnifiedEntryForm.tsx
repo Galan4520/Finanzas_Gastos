@@ -181,7 +181,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
                     <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-1 block">Seleccionar Tarjeta</label>
                     <select name="tarjetaAlias" value={formData.tarjetaAlias} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary}">
                         <option value="">-- Elige tarjeta --</option>
-                        {cards.map(c => <option key={c.alias} value={c.alias}>{c.alias} ({c.banco})</option>)}
+                        {cards.map(c => <option key={`${c.alias}-${c.banco}`} value={c.alias}>{c.alias} ({c.banco})</option>)}
                     </select>
                 </div>
                 
