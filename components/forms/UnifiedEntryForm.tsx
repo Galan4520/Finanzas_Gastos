@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
-import { Wallet, TrendingUp, CreditCard as CreditIcon } from 'lucide-react';
+import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
 import { SubscriptionSelector } from './SubscriptionSelector';
@@ -164,10 +164,25 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
 
         {/* Header Dynamic */}
         <div className="text-center mb-2">
-          <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>
-            {entryType === 'gasto' && "💸 Gasto en Efectivo"}
-            {entryType === 'ingreso' && "💰 Registrar Ingreso"}
-            {entryType === 'tarjeta' && "💳 Gasto con Tarjeta"}
+          <h2 className={`text-2xl font-bold ${theme.colors.textPrimary} flex items-center justify-center gap-2`}>
+            {entryType === 'gasto' && (
+              <>
+                <Banknote size={28} />
+                Gasto en Efectivo
+              </>
+            )}
+            {entryType === 'ingreso' && (
+              <>
+                <DollarSign size={28} />
+                Registrar Ingreso
+              </>
+            )}
+            {entryType === 'tarjeta' && (
+              <>
+                <CreditIcon size={28} />
+                Gasto con Tarjeta
+              </>
+            )}
           </h2>
         </div>
 
@@ -201,7 +216,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
                     : 'border-slate-600 text-slate-400 hover:border-slate-500'
                     }`}
                 >
-                  💳 Deuda/Compra
+                  <CreditIcon size={16} className="inline-block mr-1" />
+                  Deuda/Compra
                 </button>
                 <button
                   type="button"
@@ -211,12 +227,14 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
                     : 'border-slate-600 text-slate-400 hover:border-slate-500'
                     }`}
                 >
-                  🔄 Suscripción
+                  <RefreshCw size={16} className="inline-block mr-1" />
+                  Suscripción
                 </button>
               </div>
               {expenseType === 'suscripcion' && (
-                <p className="text-xs text-purple-300 mt-2 ml-1">
-                  💡 Las suscripciones se renuevan automáticamente cada mes
+                <p className="text-xs text-purple-300 mt-2 ml-1 flex items-center gap-1">
+                  <Lightbulb size={14} />
+                  Las suscripciones se renuevan automáticamente cada mes
                 </p>
               )}
             </div>

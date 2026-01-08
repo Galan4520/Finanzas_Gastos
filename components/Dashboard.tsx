@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from '../types';
 import { formatCurrency } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line, CartesianGrid, Legend } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, DollarSign, Banknote } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 
@@ -301,10 +301,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                             {transactions.map((t: any, idx) => (
                                 <div key={idx} className={`p-4 flex items-center justify-between hover:${theme.colors.bgCardHover} transition-colors`}>
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center
                                             ${t.tipo === 'Ingresos' ? 'bg-emerald-100 text-emerald-600' :
                                               t.isCredit ? `${theme.colors.primaryLight} ${textColors.primary}` : 'bg-rose-100 text-rose-600'}`}>
-                                            {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
+                                            {t.tipo === 'Ingresos' ? <DollarSign size={20} /> : t.isCredit ? <CreditIcon size={20} /> : <Banknote size={20} />}
                                         </div>
                                         <div>
                                             <p className={`font-medium ${theme.colors.textPrimary} text-sm`}>{t.descripcion}</p>

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, SavingsGoalConfig } from '../types';
 import { formatCurrency, getLocalISOString } from '../utils/format';
-import { Target, TrendingUp, Edit2, Save, X } from 'lucide-react';
+import { Target, TrendingUp, Edit2, Save, X, BarChart3, PiggyBank, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
@@ -111,14 +111,18 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, savingsGoal, onSa
 
       {/* Goal Configuration Card */}
       <div className={`${theme.colors.bgCard} p-6 rounded-2xl ${theme.colors.border} border shadow-lg`}>
-        <h3 className={`text-lg font-bold ${theme.colors.textPrimary} mb-4`}>📊 Meta Anual</h3>
+        <h3 className={`text-lg font-bold ${theme.colors.textPrimary} mb-4 flex items-center gap-2`}>
+          <BarChart3 size={20} className={textColors.primary} />
+          Meta Anual
+        </h3>
 
         {isEditing ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>
-                  💰 Meta de ahorro anual
+                <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
+                  <PiggyBank size={18} className={textColors.primary} />
+                  Meta de ahorro anual
                 </label>
                 <input
                   type="number"
@@ -132,8 +136,9 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, savingsGoal, onSa
               </div>
 
               <div>
-                <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>
-                  🎯 ¿Para qué estás ahorrando?
+                <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
+                  <Target size={18} className={textColors.primary} />
+                  ¿Para qué estás ahorrando?
                 </label>
                 <input
                   type="text"
@@ -206,8 +211,18 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, savingsGoal, onSa
 
         <div className={`${theme.colors.bgCard} p-6 rounded-2xl ${theme.colors.border} border shadow-lg`}>
           <p className={`text-sm ${theme.colors.textMuted} mb-2`}>¿Llegaste a tu meta?</p>
-          <p className={`text-2xl font-bold ${porcentajeCompletado >= 100 ? 'text-emerald-500' : 'text-amber-500'}`}>
-            {porcentajeCompletado >= 100 ? '✅ ¡Completado!' : '⏳ En progreso...'}
+          <p className={`text-2xl font-bold ${porcentajeCompletado >= 100 ? 'text-emerald-500' : 'text-amber-500'} flex items-center gap-2`}>
+            {porcentajeCompletado >= 100 ? (
+              <>
+                <CheckCircle size={24} />
+                ¡Completado!
+              </>
+            ) : (
+              <>
+                <Clock size={24} />
+                En progreso...
+              </>
+            )}
           </p>
         </div>
 
@@ -272,7 +287,10 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, savingsGoal, onSa
       {/* Monthly Tracking Table */}
       <div className={`${theme.colors.bgCard} rounded-2xl ${theme.colors.border} border shadow-lg overflow-hidden`}>
         <div className="p-6 border-b ${theme.colors.border}">
-          <h3 className={`font-bold ${theme.colors.textPrimary}`}>📅 Seguimiento Mensual (se actualiza automáticamente)</h3>
+          <h3 className={`font-bold ${theme.colors.textPrimary} flex items-center gap-2`}>
+            <Calendar size={20} className={textColors.primary} />
+            Seguimiento Mensual (se actualiza automáticamente)
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">

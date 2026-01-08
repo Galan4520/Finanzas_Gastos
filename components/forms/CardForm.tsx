@@ -213,7 +213,10 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       </button>
 
       <div className={`${theme.colors.bgCard} backdrop-blur-sm p-6 md:p-8 rounded-2xl border ${theme.colors.border} shadow-xl`}>
-        <h2 className={`text-2xl font-bold mb-6 ${theme.colors.textPrimary}`}>💳 Registrar Nueva Tarjeta</h2>
+        <h2 className={`text-2xl font-bold mb-6 ${theme.colors.textPrimary} flex items-center gap-2`}>
+          <CardIcon size={28} />
+          Registrar Nueva Tarjeta
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Banco y Tipo */}

@@ -18,7 +18,7 @@ import { themes } from './themes';
 import { EditSubscriptionModal } from './components/ui/EditSubscriptionModal';
 import { EditCardModal } from './components/ui/EditCardModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, CreditCard as CreditCardIcon } from 'lucide-react';
 
 function App() {
   const { currentTheme, theme, setTheme } = useTheme();
@@ -415,7 +415,8 @@ function App() {
                   : `${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
                   }`}
               >
-                💳 Deudas a Cuotas ({deudasData.length})
+                <CreditCardIcon size={16} className="inline-block mr-1" />
+                Deudas a Cuotas ({deudasData.length})
               </button>
               <button
                 onClick={() => setDebtSubTab('suscripciones')}

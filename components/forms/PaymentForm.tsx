@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PendingExpense } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { formatCurrency, getLocalISOString } from '../../utils/format';
+import { Banknote, Lightbulb, CheckCircle } from 'lucide-react';
 
 interface PaymentFormProps {
   scriptUrl: string;
@@ -130,7 +131,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
 
   return (
     <div className="bg-slate-800/40 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-slate-700/50 shadow-xl max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4 text-white">💸 Pagar Tarjeta</h2>
+      <h2 className="text-2xl font-bold mb-4 text-white flex items-center gap-2">
+        <Banknote size={28} />
+        Pagar Tarjeta
+      </h2>
       <p className="text-slate-400 mb-6 text-sm">Registra pagos para disminuir tu deuda en el sistema.</p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -177,8 +181,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
                         <span className="font-bold text-slate-200">{selectedExpense.fecha_pago}</span>
                     </div>
                     <div className="mt-3 p-3 bg-purple-500/10 rounded-lg">
-                      <p className="text-xs text-purple-200">
-                        💡 Al pagar, la fecha se actualizará automáticamente al próximo mes
+                      <p className="text-xs text-purple-200 flex items-center gap-1">
+                        <Lightbulb size={14} />
+                        Al pagar, la fecha se actualizará automáticamente al próximo mes
                       </p>
                     </div>
                   </>
@@ -249,10 +254,15 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         <button 
           type="submit" 
           disabled={loading || !selectedExpense}
-          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95
+          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
             ${loading || !selectedExpense ? 'bg-slate-700 cursor-not-allowed text-slate-500' : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'}`}
         >
-          {loading ? 'Procesando...' : '✅ Confirmar Pago'}
+          {loading ? 'Procesando...' : (
+            <>
+              <CheckCircle size={20} />
+              Confirmar Pago
+            </>
+          )}
         </button>
       </form>
     </div>
