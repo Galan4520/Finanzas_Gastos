@@ -9,7 +9,7 @@ import { GoalsView } from './components/GoalsView';
 import { SettingsView } from './components/SettingsView';
 import { ReportsView } from './components/ReportsView';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from './types';
-import { formatCurrency } from './utils/format';
+import { formatCurrency, formatDate } from './utils/format';
 import { fetchData } from './services/googleSheetService';
 import { Toast, ToastType } from './components/ui/Toast';
 import { useTheme } from './contexts/ThemeContext';
@@ -245,9 +245,9 @@ function App() {
                     Realizar Pago
                  </button>
              </div>
-             
+
              {/* List of debts */}
-             <div className="space-y-3">
+             <div className="space-y-4">
                 {pendingExpenses.length === 0 ? (
                     <div className={`p-8 text-center ${theme.colors.textMuted} border ${theme.colors.border} border-dashed rounded-2xl`}>No hay deudas activas.</div>
                 ) : (
@@ -256,20 +256,86 @@ function App() {
                         const cuotas = Number(p.num_cuotas);
                         const pagado = Number(p.cuotas_pagadas) * (monto/cuotas);
                         const restante = monto - pagado;
+                        const porcentajePagado = (pagado / monto) * 100;
+
+                        // Calculate days until payment
+                        const fechaVencimiento = new Date(p.fecha_pago);
+                        const hoy = new Date();
+                        const diffTime = fechaVencimiento.getTime() - hoy.getTime();
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                        // Determine urgency color
+                        const getUrgencyColor = (days: number) => {
+                          if (days < 0) return 'text-red-500';
+                          if (days <= 3) return 'text-orange-500';
+                          if (days <= 7) return 'text-yellow-500';
+                          return theme.colors.textMuted;
+                        };
+
+                        const getUrgencyBg = (days: number) => {
+                          if (days < 0) return 'bg-red-500/10 border-red-500/20';
+                          if (days <= 3) return 'bg-orange-500/10 border-orange-500/20';
+                          if (days <= 7) return 'bg-yellow-500/10 border-yellow-500/20';
+                          return '';
+                        };
 
                         return (
-                             <div key={p.id} className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border} flex flex-col md:flex-row justify-between items-center gap-4`}>
-                                <div className="flex-1 w-full md:w-auto">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <h3 className={`font-bold ${theme.colors.primary}`}>{p.tarjeta}</h3>
-                                      {p.estado === 'Pagado' && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold">PAGADO</span>}
+                             <div key={p.id} className={`${theme.colors.bgCard} p-5 rounded-xl border ${theme.colors.border} ${getUrgencyBg(diffDays)} transition-all hover:shadow-lg`}>
+                                {/* Header with Card Badge and Amount */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className="bg-gradient-to-r from-teal-500 to-emerald-500 text-white text-xs px-3 py-1 rounded-md font-bold shadow-sm">{p.tarjeta}</span>
+                                        {p.estado === 'Pagado' && <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded font-bold">PAGADO</span>}
+                                      </div>
+                                      <h3 className={`${theme.colors.textPrimary} font-semibold text-lg`}>{p.descripcion}</h3>
                                     </div>
-                                    <p className={`${theme.colors.textSecondary} font-medium`}>{p.descripcion}</p>
-                                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Vence: {p.fecha_pago}</p>
+                                    <div className="text-right">
+                                        <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Por pagar</p>
+                                        <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(restante)}</p>
+                                    </div>
                                 </div>
-                                <div className="text-right w-full md:w-auto flex justify-between md:block">
-                                    <p className={`text-xs ${theme.colors.textMuted}`}>Por pagar</p>
-                                    <p className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(restante)}</p>
+
+                                {/* Progress Bar */}
+                                <div className="mb-3">
+                                  <div className="flex justify-between items-center mb-1.5">
+                                    <span className={`text-xs ${theme.colors.textMuted}`}>Progreso de pago</span>
+                                    <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>{p.cuotas_pagadas}/{p.num_cuotas} cuotas</span>
+                                  </div>
+                                  <div className={`w-full h-2.5 rounded-full overflow-hidden ${theme.colors.bgSecondary}`}>
+                                    <div
+                                      className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500 rounded-full"
+                                      style={{ width: `${porcentajePagado}%` }}
+                                    />
+                                  </div>
+                                  <div className="flex justify-between items-center mt-1.5">
+                                    <span className={`text-xs ${theme.colors.textMuted}`}>
+                                      {formatCurrency(pagado)} pagado
+                                    </span>
+                                    <span className={`text-xs font-medium ${theme.colors.textSecondary}`}>
+                                      {porcentajePagado.toFixed(1)}%
+                                    </span>
+                                  </div>
+                                </div>
+
+                                {/* Footer with Date and Days Remaining */}
+                                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                                  <div className="flex items-center gap-2">
+                                    <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <span className={`text-sm ${theme.colors.textSecondary}`}>
+                                      Vence: <span className="font-semibold">{formatDate(p.fecha_pago)}</span>
+                                    </span>
+                                  </div>
+                                  <span className={`text-sm font-bold ${getUrgencyColor(diffDays)}`}>
+                                    {diffDays < 0
+                                      ? `¡Vencida hace ${Math.abs(diffDays)} días!`
+                                      : diffDays === 0
+                                        ? '¡Vence hoy!'
+                                        : `${diffDays} ${diffDays === 1 ? 'día' : 'días'} restantes`
+                                    }
+                                  </span>
                                 </div>
                             </div>
                         );
