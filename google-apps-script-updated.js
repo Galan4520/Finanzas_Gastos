@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v4.1
-// Sistema de Pagos con Tracking de Cuotas, Deuda Restante, PIN Security y SUSCRIPCIONES
+// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v4.3
+// Sistema de Pagos con Tracking de Cuotas, Deuda Restante, 
+// PIN Security, SUSCRIPCIONES, CRUD (UPDATE/DELETE) y PERFIL
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════
@@ -30,6 +31,57 @@ function validatePin(providedPin) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 🆕 FUNCIONES DE PERFIL DE USUARIO
+// ═══════════════════════════════════════════════════════════════
+function getProfile(sheet) {
+  let perfilSheet = sheet.getSheetByName('Perfil');
+
+  // Si no existe la hoja Perfil, crearla
+  if (!perfilSheet) {
+    perfilSheet = sheet.insertSheet('Perfil');
+    perfilSheet.getRange('A1').setValue('avatar_id');
+    perfilSheet.getRange('B1').setValue('nombre');
+    return null; // Perfil vacío
+  }
+
+  const data = perfilSheet.getDataRange().getValues();
+
+  // Si solo hay encabezados o la fila 2 está vacía
+  if (data.length < 2 || !data[1][0]) {
+    return null; // Perfil vacío
+  }
+
+  return {
+    avatar_id: data[1][0],
+    nombre: data[1][1]
+  };
+}
+
+function saveProfile(sheet, params) {
+  let perfilSheet = sheet.getSheetByName('Perfil');
+
+  // Si no existe la hoja Perfil, crearla
+  if (!perfilSheet) {
+    perfilSheet = sheet.insertSheet('Perfil');
+    perfilSheet.getRange('A1').setValue('avatar_id');
+    perfilSheet.getRange('B1').setValue('nombre');
+  }
+
+  // Guardar o actualizar en fila 2
+  perfilSheet.getRange('A2').setValue(params.avatar_id);
+  perfilSheet.getRange('B2').setValue(params.nombre);
+
+  return ContentService.createTextOutput(JSON.stringify({
+    success: true,
+    message: 'Perfil guardado correctamente',
+    profile: {
+      avatar_id: params.avatar_id,
+      nombre: params.nombre
+    }
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═══════════════════════════════════════════════════════════════
 // POST - REGISTRO DE DATOS CON VALIDACIÓN DE PIN
 // ═══════════════════════════════════════════════════════════════
 function doPost(e) {
@@ -44,6 +96,26 @@ function doPost(e) {
   }
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet();
+
+  // ═══════════════════════════════════════════════════════════════
+  // Manejar acciones especiales
+  // ═══════════════════════════════════════════════════════════════
+  const action = params.action;
+
+  // 🆕 Guardar perfil
+  if (action === 'saveProfile') {
+    return saveProfile(sheet, params);
+  }
+
+  if (action === 'update') {
+    return handleUpdate(sheet, params);
+  }
+
+  if (action === 'delete') {
+    return handleDelete(sheet, params);
+  }
+
+  // Si no hay acción especial, es un INSERT normal
   const targetSheet = sheet.getSheetByName(params.tipo);
 
   if (!targetSheet) {
@@ -83,7 +155,7 @@ function doPost(e) {
     const numCuotas = parseInt(params.num_cuotas) || 1;
     const cuotasPagadas = parseInt(params.cuotas_pagadas) || 0;
     const gastoId = params.id || generateId();
-    const tipoGasto = params.tipo_gasto || 'deuda'; // NUEVO: deuda o suscripcion
+    const tipoGasto = params.tipo_gasto || 'deuda';
 
     row = [
       gastoId,                      // A: ID único del gasto
@@ -97,7 +169,7 @@ function doPost(e) {
       params.estado,                // I: Estado (Pendiente/Pagado)
       numCuotas,                    // J: Número de cuotas
       cuotasPagadas,                // K: Cuotas pagadas
-      tipoGasto,                    // L: Tipo (deuda/suscripcion) ← NUEVO
+      tipoGasto,                    // L: Tipo (deuda/suscripcion)
       params.notas || '',           // M: Notas
       params.timestamp              // N: Timestamp
     ];
@@ -129,6 +201,114 @@ function doPost(e) {
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// FUNCIÓN PARA ACTUALIZAR REGISTROS
+// ═══════════════════════════════════════════════════════════════
+function handleUpdate(sheet, params) {
+  const tipo = params.tipo;
+  const targetSheet = sheet.getSheetByName(tipo);
+
+  if (!targetSheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      error: 'Hoja no encontrada - ' + tipo
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const data = targetSheet.getDataRange().getValues();
+
+  if (tipo === 'Gastos_Pendientes') {
+    const gastoId = params.id;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === gastoId) {
+        targetSheet.getRange(i + 1, 2).setValue(params.fecha_gasto);
+        targetSheet.getRange(i + 1, 3).setValue(params.tarjeta);
+        targetSheet.getRange(i + 1, 4).setValue(params.categoria);
+        targetSheet.getRange(i + 1, 5).setValue(params.descripcion);
+        targetSheet.getRange(i + 1, 6).setValue(parseFloat(params.monto));
+        targetSheet.getRange(i + 1, 7).setValue(params.fecha_cierre);
+        targetSheet.getRange(i + 1, 8).setValue(params.fecha_pago);
+        targetSheet.getRange(i + 1, 9).setValue(params.estado);
+        targetSheet.getRange(i + 1, 10).setValue(parseInt(params.num_cuotas) || 1);
+        targetSheet.getRange(i + 1, 11).setValue(parseInt(params.cuotas_pagadas) || 0);
+        targetSheet.getRange(i + 1, 12).setValue(params.tipo || 'deuda');
+        targetSheet.getRange(i + 1, 13).setValue(params.notas || '');
+
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Registro actualizado'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  } else if (tipo === 'Tarjetas') {
+    const searchAlias = params.originalAlias || params.alias;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][2] === searchAlias) {
+        targetSheet.getRange(i + 1, 1).setValue(params.banco);
+        targetSheet.getRange(i + 1, 2).setValue(params.tipo_tarjeta);
+        targetSheet.getRange(i + 1, 3).setValue(params.alias);
+        targetSheet.getRange(i + 1, 4).setValue(params.url_imagen || '');
+        targetSheet.getRange(i + 1, 5).setValue(parseInt(params.dia_cierre));
+        targetSheet.getRange(i + 1, 6).setValue(parseInt(params.dia_pago));
+        targetSheet.getRange(i + 1, 7).setValue(parseFloat(params.limite));
+
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Tarjeta actualizada'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    error: 'Registro no encontrado'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FUNCIÓN PARA ELIMINAR REGISTROS
+// ═══════════════════════════════════════════════════════════════
+function handleDelete(sheet, params) {
+  const tipo = params.tipo;
+  const targetSheet = sheet.getSheetByName(tipo);
+
+  if (!targetSheet) {
+    return ContentService.createTextOutput(JSON.stringify({
+      error: 'Hoja no encontrada - ' + tipo
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const data = targetSheet.getDataRange().getValues();
+  const idToDelete = params.id;
+
+  if (tipo === 'Gastos_Pendientes') {
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === idToDelete) {
+        targetSheet.deleteRow(i + 1);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Registro eliminado'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  } else if (tipo === 'Tarjetas') {
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][2] === idToDelete) {
+        targetSheet.deleteRow(i + 1);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Tarjeta eliminada'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({
+    error: 'Registro no encontrado'
+  })).setMimeType(ContentService.MimeType.JSON);
+}
+
 function actualizarGastoPendiente(sheet, params) {
   const gastosSheet = sheet.getSheetByName('Gastos_Pendientes');
   if (!gastosSheet) return;
@@ -136,33 +316,26 @@ function actualizarGastoPendiente(sheet, params) {
   const data = gastosSheet.getDataRange().getValues();
   const gastoId = params.id_gasto;
 
-  // Buscar el gasto por ID (columna A)
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === gastoId) {
-      const montoTotal = data[i][5];  // Columna F (Monto)
-      const numCuotas = data[i][9];    // Columna J (Num_Cuotas)
-      let cuotasPagadas = data[i][10]; // Columna K (Cuotas_Pagadas)
-      const tipoGasto = data[i][11];   // Columna L (Tipo) ← NUEVO
+      const montoTotal = data[i][5];
+      const numCuotas = data[i][9];
+      let cuotasPagadas = data[i][10];
+      const tipoGasto = data[i][11];
 
       const tipoPago = params.tipo_pago;
       const montoPagado = parseFloat(params.monto_pagado);
 
-      // LÓGICA DIFERENCIADA: Suscripciones vs Deudas
       if (tipoGasto === 'suscripcion') {
-        // SUSCRIPCIONES: Renovar fecha al próximo mes
-        const fechaActual = new Date(data[i][7]); // Columna H (fecha_pago)
+        const fechaActual = new Date(data[i][7]);
         const proximaFecha = new Date(fechaActual);
         proximaFecha.setMonth(proximaFecha.getMonth() + 1);
 
-        // Actualizar fecha_pago (columna H = 8)
         gastosSheet.getRange(i + 1, 8).setValue(proximaFecha);
-        // Actualizar fecha_cierre (columna G = 7)
         gastosSheet.getRange(i + 1, 7).setValue(proximaFecha);
-        // Estado siempre Pendiente para suscripciones
         gastosSheet.getRange(i + 1, 9).setValue('Pendiente');
 
       } else {
-        // DEUDAS: Incrementar cuotas pagadas
         const montoCuota = montoTotal / numCuotas;
 
         if (tipoPago === 'Cuota') {
@@ -174,10 +347,8 @@ function actualizarGastoPendiente(sheet, params) {
           cuotasPagadas += cuotasEquivalentes;
         }
 
-        // Actualizar cuotas pagadas (columna K = 11)
         gastosSheet.getRange(i + 1, 11).setValue(cuotasPagadas);
 
-        // Si completó todas las cuotas, marcar como Pagado (columna I = 9)
         if (cuotasPagadas >= numCuotas) {
           gastosSheet.getRange(i + 1, 9).setValue('Pagado');
         }
@@ -206,13 +377,16 @@ function doGet(e) {
 
   const sheet = SpreadsheetApp.getActiveSpreadsheet();
 
+  // 🆕 Obtener Perfil
+  const profile = getProfile(sheet);
+
   // 1. Obtener Tarjetas
   const tarjetasSheet = sheet.getSheetByName('Tarjetas');
   let cards = [];
   if (tarjetasSheet) {
     const data = tarjetasSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if(data[i][0]) {
+      if (data[i][0]) {
         cards.push({
           banco: data[i][0],
           tipo_tarjeta: data[i][1],
@@ -233,7 +407,7 @@ function doGet(e) {
   if (pendientesSheet) {
     const data = pendientesSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if(data[i][0]) {
+      if (data[i][0]) {
         pending.push({
           id: data[i][0],
           fecha_gasto: formatDate(data[i][1]),
@@ -246,7 +420,7 @@ function doGet(e) {
           estado: data[i][8],
           num_cuotas: data[i][9],
           cuotas_pagadas: data[i][10],
-          tipo: data[i][11] || 'deuda',  // ← NUEVO: tipo (deuda/suscripcion)
+          tipo: data[i][11] || 'deuda',
           notas: data[i][12],
           timestamp: data[i][13]
         });
@@ -260,7 +434,7 @@ function doGet(e) {
   if (gastosSheet) {
     const data = gastosSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if(data[i][0]) {
+      if (data[i][0]) {
         history.push({
           fecha: formatDate(data[i][0]),
           categoria: data[i][1],
@@ -278,7 +452,7 @@ function doGet(e) {
   if (ingresosSheet) {
     const data = ingresosSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
-      if(data[i][0]) {
+      if (data[i][0]) {
         history.push({
           fecha: formatDate(data[i][0]),
           categoria: data[i][1],
@@ -292,8 +466,9 @@ function doGet(e) {
     }
   }
 
-  // Retornar JSON
+  // 🆕 Retornar JSON con perfil incluido
   return ContentService.createTextOutput(JSON.stringify({
+    profile: profile,  // null si no existe, o { avatar_id, nombre }
     cards: cards,
     pending: pending,
     history: history
@@ -311,7 +486,6 @@ function formatDate(date) {
 
 /**
  * Función para obtener el resumen de un gasto específico
- * Útil si quieres hacer consultas desde la app
  */
 function obtenerResumenGasto(gastoId) {
   const sheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -325,7 +499,6 @@ function obtenerResumenGasto(gastoId) {
 
   let gasto = null;
 
-  // Buscar el gasto
   for (let i = 1; i < gastosData.length; i++) {
     if (gastosData[i][0] === gastoId) {
       gasto = {
@@ -334,7 +507,7 @@ function obtenerResumenGasto(gastoId) {
         montoTotal: gastosData[i][5],
         numCuotas: gastosData[i][9],
         cuotasPagadas: gastosData[i][10],
-        tipo: gastosData[i][11] || 'deuda', // ← NUEVO
+        tipo: gastosData[i][11] || 'deuda',
         estado: gastosData[i][8]
       };
       break;
@@ -343,15 +516,13 @@ function obtenerResumenGasto(gastoId) {
 
   if (!gasto) return null;
 
-  // Calcular deuda restante (solo para deudas, no suscripciones)
   if (gasto.tipo === 'deuda') {
     const montoCuota = gasto.montoTotal / gasto.numCuotas;
     gasto.deudaRestante = gasto.montoTotal - (montoCuota * gasto.cuotasPagadas);
   } else {
-    gasto.deudaRestante = 0; // Suscripciones no tienen "deuda restante"
+    gasto.deudaRestante = 0;
   }
 
-  // Contar pagos registrados
   let totalPagado = 0;
   for (let i = 1; i < pagosData.length; i++) {
     if (pagosData[i][1] === gastoId) {

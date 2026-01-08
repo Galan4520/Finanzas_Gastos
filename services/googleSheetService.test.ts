@@ -11,7 +11,7 @@ describe('googleSheetService', () => {
 
   describe('sendToSheet', () => {
     it('should throw error if scriptUrl is not provided', async () => {
-      await expect(sendToSheet('', { some: 'data' }, 'test')).rejects.toThrow(
+      await expect(sendToSheet('', '1234', { some: 'data' }, 'test')).rejects.toThrow(
         'URL de Google Apps Script no configurada'
       );
     });
@@ -21,10 +21,11 @@ describe('googleSheetService', () => {
       global.fetch = mockFetch;
 
       const scriptUrl = 'https://script.google.com/test';
+      const pin = '1234';
       const data = { monto: 100, descripcion: 'Test' };
       const tipo = 'Gastos';
 
-      await sendToSheet(scriptUrl, data, tipo);
+      await sendToSheet(scriptUrl, pin, data, tipo);
 
       expect(mockFetch).toHaveBeenCalledWith(
         scriptUrl,
@@ -41,10 +42,11 @@ describe('googleSheetService', () => {
       global.fetch = mockFetch;
 
       const scriptUrl = 'https://script.google.com/test';
+      const pin = '1234';
       const data = { monto: 100 };
       const tipo = 'Ingresos';
 
-      await sendToSheet(scriptUrl, data, tipo);
+      await sendToSheet(scriptUrl, pin, data, tipo);
 
       const callArgs = mockFetch.mock.calls[0];
       const formData = callArgs[1].body as FormData;
@@ -60,7 +62,7 @@ describe('googleSheetService', () => {
       const scriptUrl = 'https://script.google.com/test';
       const data = { monto: 100 };
 
-      await expect(sendToSheet(scriptUrl, data, 'Gastos')).rejects.toThrow();
+      await expect(sendToSheet(scriptUrl, '1234', data, 'Gastos')).rejects.toThrow();
     });
 
     it('should filter out undefined and null values from data', async () => {
@@ -75,7 +77,7 @@ describe('googleSheetService', () => {
         extra: null
       };
 
-      await sendToSheet(scriptUrl, data, 'Gastos');
+      await sendToSheet(scriptUrl, '1234', data, 'Gastos');
 
       expect(mockFetch).toHaveBeenCalled();
     });
@@ -83,7 +85,7 @@ describe('googleSheetService', () => {
 
   describe('fetchData', () => {
     it('should throw error if scriptUrl is not provided', async () => {
-      await expect(fetchData('')).rejects.toThrow('URL no configurada');
+      await expect(fetchData('', '1234')).rejects.toThrow('URL no configurada');
     });
 
     it('should fetch data successfully', async () => {
@@ -99,11 +101,11 @@ describe('googleSheetService', () => {
       });
       global.fetch = mockFetch;
 
-      const result = await fetchData('https://script.google.com/test');
+      const result = await fetchData('https://script.google.com/test', '1234');
 
       expect(result).toEqual(mockData);
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('https://script.google.com/test?t='),
+        expect.stringContaining('https://script.google.com/test?pin=1234&t='),
         expect.objectContaining({
           method: 'GET',
           redirect: 'follow'
@@ -118,10 +120,10 @@ describe('googleSheetService', () => {
       });
       global.fetch = mockFetch;
 
-      await fetchData('https://script.google.com/test');
+      await fetchData('https://script.google.com/test', '1234');
 
       const calledUrl = mockFetch.mock.calls[0][0] as string;
-      expect(calledUrl).toMatch(/\?t=\d+/);
+      expect(calledUrl).toMatch(/\?pin=1234&t=\d+/);
     });
 
     it('should throw error on HTTP error status', async () => {
@@ -131,7 +133,7 @@ describe('googleSheetService', () => {
       });
       global.fetch = mockFetch;
 
-      await expect(fetchData('https://script.google.com/test')).rejects.toThrow(
+      await expect(fetchData('https://script.google.com/test', '1234')).rejects.toThrow(
         'Error HTTP: 404'
       );
     });
@@ -140,7 +142,7 @@ describe('googleSheetService', () => {
       const mockFetch = vi.fn().mockRejectedValue(new Error('Network failure'));
       global.fetch = mockFetch;
 
-      await expect(fetchData('https://script.google.com/test')).rejects.toThrow();
+      await expect(fetchData('https://script.google.com/test', '1234')).rejects.toThrow();
     });
 
     it('should handle malformed JSON response', async () => {
@@ -152,7 +154,7 @@ describe('googleSheetService', () => {
       });
       global.fetch = mockFetch;
 
-      await expect(fetchData('https://script.google.com/test')).rejects.toThrow();
+      await expect(fetchData('https://script.google.com/test', '1234')).rejects.toThrow();
     });
   });
 
@@ -167,7 +169,7 @@ describe('googleSheetService', () => {
         activo: true
       };
 
-      await sendToSheet('https://test.com', data, 'test');
+      await sendToSheet('https://test.com', '1234', data, 'test');
 
       expect(mockFetch).toHaveBeenCalled();
     });

@@ -184,11 +184,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
               <button
                 key={range.value}
                 onClick={() => setDateRange(range.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  dateRange === range.value
-                    ? `${theme.colors.primary} text-white shadow-lg`
-                    : `${theme.colors.bgSecondary} ${theme.colors.textSecondary} hover:${theme.colors.bgCardHover}`
-                }`}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateRange === range.value
+                  ? `${theme.colors.primary} text-white shadow-lg`
+                  : `${theme.colors.bgSecondary} ${theme.colors.textSecondary} hover:${theme.colors.bgCardHover}`
+                  }`}
               >
                 {range.label}
               </button>
@@ -226,7 +225,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
         <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
           <div className="flex items-center justify-between mb-2">
             <p className={`text-sm ${theme.colors.textMuted}`}>Uso de Crédito</p>
-            <CardIcon className={usoCredito > 70 ? 'text-rose-500' : 'text-emerald-500'} size={20} />
+            <CardIcon className={healthMetrics.usoCredito > 70 ? 'text-rose-500' : 'text-emerald-500'} size={20} />
           </div>
           <p className={`text-3xl font-bold ${theme.colors.textPrimary}`}>
             {healthMetrics.usoCredito.toFixed(1)}%
@@ -352,9 +351,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
               <div key={cat.category} className={`p-4 rounded-xl ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} transition-colors`}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className={`font-bold ${theme.colors.textPrimary}`}>{cat.category}</h4>
-                  <div className={`flex items-center gap-1 text-sm font-medium ${
-                    cat.change > 0 ? 'text-rose-500' : cat.change < 0 ? 'text-emerald-500' : theme.colors.textMuted
-                  }`}>
+                  <div className={`flex items-center gap-1 text-sm font-medium ${cat.change > 0 ? 'text-rose-500' : cat.change < 0 ? 'text-emerald-500' : theme.colors.textMuted
+                    }`}>
                     {cat.change > 0 ? '↑' : cat.change < 0 ? '↓' : '→'} {Math.abs(cat.change).toFixed(1)}%
                   </div>
                 </div>
@@ -384,11 +382,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
         <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
           <button
             onClick={() => setSelectedCard('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-              selectedCard === 'all'
-                ? `${theme.colors.primary} text-white`
-                : `${theme.colors.bgSecondary} ${theme.colors.textSecondary}`
-            }`}
+            className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${selectedCard === 'all'
+              ? `${theme.colors.primary} text-white`
+              : `${theme.colors.bgSecondary} ${theme.colors.textSecondary}`
+              }`}
           >
             Todas
           </button>
@@ -396,11 +393,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             <button
               key={card.alias}
               onClick={() => setSelectedCard(card.alias)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                selectedCard === card.alias
-                  ? `${theme.colors.primary} text-white`
-                  : `${theme.colors.bgSecondary} ${theme.colors.textSecondary}`
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${selectedCard === card.alias
+                ? `${theme.colors.primary} text-white`
+                : `${theme.colors.bgSecondary} ${theme.colors.textSecondary}`
+                }`}
             >
               {card.alias}
             </button>

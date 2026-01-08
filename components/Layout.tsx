@@ -1,7 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3, User } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
+import { UserProfile } from '../types';
+import { getAvatarById } from '../avatars';
 
 interface NavItemProps {
   id: string;
@@ -21,8 +23,8 @@ const NavItem: React.FC<NavItemProps> = ({ id, label, icon, active, onClick, mob
     className={`flex items-center justify-center transition-all duration-300 relative group
       ${mobile
         ? isMain
-            ? 'flex-col -mt-8 mb-1'
-            : 'flex-col gap-1 p-2 w-full rounded-lg'
+          ? 'flex-col -mt-8 mb-1'
+          : 'flex-col gap-1 p-2 w-full rounded-lg'
         : 'flex-row gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full'
       }
       ${active && !isMain
@@ -31,14 +33,14 @@ const NavItem: React.FC<NavItemProps> = ({ id, label, icon, active, onClick, mob
       }`}
   >
     {isMain ? (
-        <div className={`rounded-full ${theme.colors.gradientPrimary} p-3 shadow-lg transform transition-transform ${active ? 'scale-110' : 'group-hover:scale-105'}`}>
-            {React.cloneElement(icon as React.ReactElement<any>, { size: 28, className: 'text-white' })}
-        </div>
+      <div className={`rounded-full ${theme.colors.gradientPrimary} p-3 shadow-lg transform transition-transform ${active ? 'scale-110' : 'group-hover:scale-105'}`}>
+        {React.cloneElement(icon as React.ReactElement<any>, { size: 28, className: 'text-white' })}
+      </div>
     ) : (
-        React.cloneElement(icon as React.ReactElement<any>, {
-            size: mobile ? 22 : 18,
-            className: active ? textColors.primary : `${theme.colors.textMuted} group-hover:${theme.colors.textPrimary}`
-        })
+      React.cloneElement(icon as React.ReactElement<any>, {
+        size: mobile ? 22 : 18,
+        className: active ? textColors.primary : `${theme.colors.textMuted} group-hover:${theme.colors.textPrimary}`
+      })
     )}
     <span className={`${mobile ? 'text-[10px]' : 'text-sm'} font-medium ${isMain ? `mt-1 ${textColors.primary}` : ''}`}>{label}</span>
   </button>
@@ -51,11 +53,13 @@ interface LayoutProps {
   connected: boolean;
   onSync: () => void;
   isSyncing: boolean;
+  profile?: UserProfile | null;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, connected, onSync, isSyncing }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, connected, onSync, isSyncing, profile }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
+  const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
   // Simplified Navigation Logic
   const navItems = [
@@ -68,16 +72,36 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
 
   return (
     <div className={`min-h-screen ${theme.colors.bgSecondary} ${theme.colors.textPrimary}`}>
-      
+
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex flex-col w-64 fixed h-full ${theme.colors.border} border-r ${theme.colors.bgCard} backdrop-blur-xl p-6 z-20`}>
-        <div className="mb-8 flex items-center gap-2 px-2">
+        <div className="mb-8 px-2">
+          <div className="flex items-center gap-2 mb-6">
             <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center shadow-lg`}>
-                <span className="font-bold text-white text-lg">MC</span>
+              <span className="font-bold text-white text-lg">MC</span>
             </div>
             <h1 className={`text-xl font-bold ${theme.colors.textPrimary}`}>
-                MoneyCrock
+              MoneyCrock
             </h1>
+          </div>
+
+          {/* Profile Section - Desktop */}
+          {profile && avatar && (
+            <div className={`flex items-center gap-3 p-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary}`}>
+              <div className="relative">
+                <img
+                  src={avatar.imagePath}
+                  alt={avatar.label}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                />
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+              </div>
+              <div className="overflow-hidden">
+                <p className={`text-sm font-bold ${theme.colors.textPrimary} truncate`}>{profile.nombre}</p>
+                <p className={`text-xs ${theme.colors.textMuted} truncate`}>{avatar.label}</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -87,34 +111,41 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         </div>
 
         {connected && (
-            <div className={`mt-auto pt-6 border-t ${theme.colors.border}`}>
-                 <button
-                    onClick={onSync}
-                    disabled={isSyncing}
-                    className={`w-full py-2.5 rounded-lg font-medium text-xs uppercase tracking-wider transition-all ${
-                        isSyncing
-                          ? `${theme.colors.bgSecondary} ${theme.colors.textMuted}`
-                          : `${theme.colors.bgSecondary} ${theme.colors.primary} hover:text-white ${theme.colors.textSecondary}`
-                    }`}
-                >
-                    {isSyncing ? 'Sincronizando...' : '↻ Sincronizar'}
-                </button>
-            </div>
+          <div className={`mt-auto pt-6 border-t ${theme.colors.border}`}>
+            <button
+              onClick={onSync}
+              disabled={isSyncing}
+              className={`w-full py-2.5 rounded-lg font-medium text-xs uppercase tracking-wider transition-all ${isSyncing
+                  ? `${theme.colors.bgSecondary} ${theme.colors.textMuted}`
+                  : `${theme.colors.bgSecondary} ${theme.colors.primary} hover:text-white ${theme.colors.textSecondary}`
+                }`}
+            >
+              {isSyncing ? 'Sincronizando...' : '↻ Sincronizar'}
+            </button>
+          </div>
         )}
       </aside>
 
       {/* Mobile Header */}
       <div className={`md:hidden p-4 flex justify-between items-center ${theme.colors.bgCard} backdrop-blur-lg sticky top-0 z-30 border-b ${theme.colors.border}`}>
-        <div className="flex items-center gap-2">
-             <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
-                <span className="font-bold text-white">MC</span>
+        <div className="flex items-center gap-3">
+          {profile && avatar ? (
+            <img
+              src={avatar.imagePath}
+              alt={avatar.label}
+              className="w-8 h-8 rounded-full object-cover border border-gray-200"
+            />
+          ) : (
+            <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
+              <span className="font-bold text-white">MC</span>
             </div>
-            <span className="font-bold text-lg">MoneyCrock</span>
+          )}
+          <span className="font-bold text-lg">{profile ? `Hola, ${profile.nombre}` : 'MoneyCrock'}</span>
         </div>
         {connected && (
-             <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `animate-spin ${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
-                 <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full" />
-             </button>
+          <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `animate-spin ${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
+            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full" />
+          </button>
         )}
       </div>
 
@@ -126,9 +157,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       {/* Mobile Bottom Navigation */}
       <div className={`md:hidden fixed bottom-0 left-0 right-0 ${theme.colors.bgCard} backdrop-blur-xl border-t ${theme.colors.border} pb-safe pt-2 px-4 z-40`}>
         <div className="flex justify-between items-end pb-3">
-            {navItems.map(item => (
-                <NavItem key={item.id} {...item} active={activeTab === item.id} onClick={onTabChange} mobile isMain={item.isMain} theme={theme} textColors={textColors} />
-            ))}
+          {navItems.map(item => (
+            <NavItem key={item.id} {...item} active={activeTab === item.id} onClick={onTabChange} mobile isMain={item.isMain} theme={theme} textColors={textColors} />
+          ))}
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { CreditCard as CreditCardType, SavingsGoalConfig } from '../types';
 import { CardForm } from './forms/CardForm';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../themes';
-import { CreditCard, Target, Settings as SettingsIcon, Save, X } from 'lucide-react';
+import { CreditCard, Target, Settings as SettingsIcon, Save, X, Pencil, Trash2 } from 'lucide-react';
 import { formatCurrency, getLocalISOString } from '../utils/format';
 
 interface SettingsViewProps {
@@ -13,6 +13,8 @@ interface SettingsViewProps {
   savingsGoal: SavingsGoalConfig | null;
   currentTheme: string;
   onAddCard: (card: CreditCardType) => void;
+  onEditCard: (card: CreditCardType) => void;
+  onDeleteCard: (card: CreditCardType) => void;
   onSaveGoal: (goal: SavingsGoalConfig) => void;
   onSetTheme: (theme: string) => void;
   onSync: () => void;
@@ -26,6 +28,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   savingsGoal,
   currentTheme,
   onAddCard,
+  onEditCard,
+  onDeleteCard,
   onSaveGoal,
   onSetTheme,
   onSync,
@@ -76,11 +80,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <button
               key={section.id}
               onClick={() => setActiveSection(section.id)}
-              className={`flex-1 px-4 py-3 font-medium text-sm transition-all flex items-center justify-center gap-2 ${
-                activeSection === section.id
-                  ? `${theme.colors.primaryLight} ${theme.colors.textPrimary} border-b-2 border-current`
-                  : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`
-              }`}
+              className={`flex-1 px-4 py-3 font-medium text-sm transition-all flex items-center justify-center gap-2 ${activeSection === section.id
+                ? `${theme.colors.primaryLight} ${theme.colors.textPrimary} border-b-2 border-current`
+                : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`
+                }`}
             >
               {section.icon}
               <span className="hidden sm:inline">{section.label}</span>
@@ -102,11 +105,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <button
                       key={t.id}
                       onClick={() => onSetTheme(t.id)}
-                      className={`p-4 rounded-xl border-2 transition-all ${
-                        currentTheme === t.id
-                          ? `${t.colors.border} ${t.colors.primaryLight} border-current`
-                          : `${theme.colors.border} ${theme.colors.bgCard} hover:${theme.colors.bgCardHover}`
-                      }`}
+                      className={`p-4 rounded-xl border-2 transition-all ${currentTheme === t.id
+                        ? `${t.colors.border} ${t.colors.primaryLight} border-current`
+                        : `${theme.colors.border} ${theme.colors.bgCard} hover:${theme.colors.bgCardHover}`
+                        }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`w-12 h-12 rounded-lg ${t.colors.gradientPrimary} shadow-md`}></div>
@@ -172,7 +174,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <div className={`pt-6 border-t ${theme.colors.border}`}>
                 <button
                   onClick={() => {
-                    if(confirm("¿Borrar caché local y reiniciar?")) {
+                    if (confirm("¿Borrar caché local y reiniciar?")) {
                       localStorage.clear();
                       window.location.reload();
                     }
@@ -187,14 +189,76 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
           {/* TARJETAS SECTION */}
           {activeSection === 'tarjetas' && (
-            <div>
-              <CardForm
-                scriptUrl={scriptUrl}
-                pin={pin}
-                onAddCard={onAddCard}
-                existingCards={cards}
-                notify={notify}
-              />
+            <div className="space-y-6">
+              {/* Existing Cards List */}
+              {cards.length > 0 && (
+                <div>
+                  <h4 className={`text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3`}>
+                    Tarjetas Registradas ({cards.length})
+                  </h4>
+                  <div className="space-y-3">
+                    {cards.map(card => (
+                      <div
+                        key={`${card.alias}-${card.banco}`}
+                        className={`${theme.colors.bgSecondary} p-4 rounded-xl border ${theme.colors.border} flex items-center justify-between`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-teal-500 to-emerald-500 flex items-center justify-center">
+                            <CreditCard size={20} className="text-white" />
+                          </div>
+                          <div>
+                            <p className={`font-semibold ${theme.colors.textPrimary}`}>{card.alias}</p>
+                            <p className={`text-xs ${theme.colors.textMuted}`}>{card.banco} • {card.tipo_tarjeta}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right hidden sm:block">
+                            <p className={`text-xs ${theme.colors.textMuted}`}>Límite</p>
+                            <p className={`font-mono font-semibold ${theme.colors.textSecondary}`}>{formatCurrency(card.limite)}</p>
+                          </div>
+                          <p className={`text-xs ${theme.colors.textMuted} hidden sm:block`}>
+                            Cierre: {card.dia_cierre} | Pago: {card.dia_pago}
+                          </p>
+                          {/* Edit/Delete Buttons */}
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => onEditCard(card)}
+                              className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-teal-500/20 transition-colors`}
+                              title="Editar"
+                            >
+                              <Pencil size={14} className="text-teal-400" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteCard(card)}
+                              className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-red-500/20 transition-colors`}
+                              title="Eliminar"
+                            >
+                              <Trash2 size={14} className="text-red-400" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Divider */}
+              {cards.length > 0 && <div className={`border-t ${theme.colors.border}`}></div>}
+
+              {/* Add New Card Form */}
+              <div>
+                <h4 className={`text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3`}>
+                  Agregar Nueva Tarjeta
+                </h4>
+                <CardForm
+                  scriptUrl={scriptUrl}
+                  pin={pin}
+                  onAddCard={onAddCard}
+                  existingCards={cards}
+                  notify={notify}
+                />
+              </div>
             </div>
           )}
 
@@ -256,7 +320,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <input
                         type="number"
                         value={goalFormData.meta_anual}
-                        onChange={(e) => setGoalFormData({...goalFormData, meta_anual: parseFloat(e.target.value) || 0})}
+                        onChange={(e) => setGoalFormData({ ...goalFormData, meta_anual: parseFloat(e.target.value) || 0 })}
                         className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-2 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current outline-none`}
                       />
                       <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
@@ -271,7 +335,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       <input
                         type="text"
                         value={goalFormData.proposito}
-                        onChange={(e) => setGoalFormData({...goalFormData, proposito: e.target.value})}
+                        onChange={(e) => setGoalFormData({ ...goalFormData, proposito: e.target.value })}
                         placeholder="Fondo de emergencia / Viaje / Auto"
                         className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-2 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current outline-none`}
                       />

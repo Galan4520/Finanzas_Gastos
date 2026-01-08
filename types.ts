@@ -69,3 +69,9 @@ export const BANCOS = [
   "BCP", "Interbank", "Scotiabank", "BBVA", "Banco Pichincha",
   "Banbif", "Falabella", "Ripley", "Otro"
 ];
+
+// User Profile
+export interface UserProfile {
+  avatar_id: string;
+  nombre: string;
+}

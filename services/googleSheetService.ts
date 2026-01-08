@@ -37,6 +37,66 @@ export const sendToSheet = async (
   }
 };
 
+// Update an existing record in Google Sheet
+export const updateInSheet = async (
+  scriptUrl: string,
+  pin: string,
+  data: PendingExpense | CreditCard | any,
+  tipo: string
+) => {
+  if (!scriptUrl) {
+    throw new Error("URL de Google Apps Script no configurada");
+  }
+
+  const payload = { ...data, tipo, pin, action: 'update' };
+  console.log('📤 Sending UPDATE to Sheet:', { tipo, data: payload });
+
+  const formData = objectToFormData(payload);
+
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+    console.log('✅ UPDATE request sent successfully');
+    return true;
+  } catch (error) {
+    console.error("❌ Error updating in sheet:", error);
+    throw error;
+  }
+};
+
+// Delete a record from Google Sheet
+export const deleteFromSheet = async (
+  scriptUrl: string,
+  pin: string,
+  id: string,
+  tipo: string
+) => {
+  if (!scriptUrl) {
+    throw new Error("URL de Google Apps Script no configurada");
+  }
+
+  const payload = { id, tipo, pin, action: 'delete' };
+  console.log('🗑️ Sending DELETE to Sheet:', payload);
+
+  const formData = objectToFormData(payload);
+
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+    console.log('✅ DELETE request sent successfully');
+    return true;
+  } catch (error) {
+    console.error("❌ Error deleting from sheet:", error);
+    throw error;
+  }
+};
+
 export const fetchData = async (scriptUrl: string, pin: string) => {
   if (!scriptUrl) throw new Error("URL no configurada");
   if (!pin) throw new Error("PIN no configurado");
@@ -56,6 +116,43 @@ export const fetchData = async (scriptUrl: string, pin: string) => {
     return json;
   } catch (error) {
     console.error("Error fetching data:", error);
+    throw error;
+  }
+};
+
+// Save user profile to Google Sheet
+export const saveProfile = async (
+  scriptUrl: string,
+  pin: string,
+  avatarId: string,
+  nombre: string
+) => {
+  if (!scriptUrl) {
+    throw new Error("URL de Google Apps Script no configurada");
+  }
+
+  const payload = {
+    action: 'saveProfile',
+    pin,
+    avatar_id: avatarId,
+    nombre
+  };
+
+  const formData = new FormData();
+  Object.keys(payload).forEach(key => {
+    formData.append(key, (payload as any)[key].toString());
+  });
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+    console.log('✅ Profile saved successfully');
+    return true;
+  } catch (error) {
+    console.error("❌ Error saving profile:", error);
     throw error;
   }
 };
