@@ -25,6 +25,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
   
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
+  const [expenseType, setExpenseType] = useState<'deuda' | 'suscripcion'>('deuda');
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -91,8 +92,9 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
             fecha_cierre: formData.fecha_cierre,
             fecha_pago: formData.fecha_pago,
             estado: 'Pendiente',
-            num_cuotas: useInstallments ? parseInt(formData.num_cuotas) : 1,
+            num_cuotas: expenseType === 'suscripcion' ? 1 : (useInstallments ? parseInt(formData.num_cuotas) : 1),
             cuotas_pagadas: 0,
+            tipo: expenseType,
             notas: formData.notas,
             timestamp: getLocalISOString()
         };
@@ -181,6 +183,40 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
         {/* Credit Card Specific Fields */}
         {entryType === 'tarjeta' && (
             <div className="${theme.colors.primaryLight} border border-indigo-500/20 rounded-xl p-4 space-y-4">
+                {/* Tipo de Gasto: Deuda o Suscripción */}
+                <div>
+                    <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-2 block">Tipo de Gasto</label>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            onClick={() => { setExpenseType('deuda'); setUseInstallments(false); }}
+                            className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border-2 ${
+                                expenseType === 'deuda'
+                                    ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
+                                    : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                            }`}
+                        >
+                            💳 Deuda/Compra
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setExpenseType('suscripcion'); setUseInstallments(false); }}
+                            className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border-2 ${
+                                expenseType === 'suscripcion'
+                                    ? 'bg-purple-500 border-purple-500 text-white shadow-lg'
+                                    : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                            }`}
+                        >
+                            🔄 Suscripción
+                        </button>
+                    </div>
+                    {expenseType === 'suscripcion' && (
+                        <p className="text-xs text-purple-300 mt-2 ml-1">
+                            💡 Las suscripciones se renuevan automáticamente cada mes
+                        </p>
+                    )}
+                </div>
+
                 <div>
                     <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-1 block">Seleccionar Tarjeta</label>
                     <select name="tarjetaId" value={formData.tarjetaId} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary}">
@@ -188,11 +224,13 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
                         {cards.map(c => <option key={`${c.alias}-${c.banco}`} value={`${c.alias}-${c.banco}`}>{c.alias} ({c.banco})</option>)}
                     </select>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                    <input type="checkbox" id="installments" checked={useInstallments} onChange={e => setUseInstallments(e.target.checked)} className="w-5 h-5 rounded bg-slate-800 ${theme.colors.border} text-indigo-600 focus:ring-indigo-500"/>
-                    <label htmlFor="installments" className="text-sm text-indigo-200 font-medium">Pagar en cuotas</label>
-                </div>
+
+                {expenseType === 'deuda' && (
+                    <div className="flex items-center gap-3">
+                        <input type="checkbox" id="installments" checked={useInstallments} onChange={e => setUseInstallments(e.target.checked)} className="w-5 h-5 rounded bg-slate-800 ${theme.colors.border} text-indigo-600 focus:ring-indigo-500"/>
+                        <label htmlFor="installments" className="text-sm text-indigo-200 font-medium">Pagar en cuotas</label>
+                    </div>
+                )}
 
                 {useInstallments && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
