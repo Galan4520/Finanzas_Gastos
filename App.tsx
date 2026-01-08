@@ -377,6 +377,10 @@ function App() {
   };
 
   const renderContent = () => {
+    const handleAddToHistory = (transaction: Transaction) => {
+      saveHistory([...history, transaction]);
+    };
+
     const commonProps = { notify: showToast };
 
     switch (activeTab) {
@@ -668,7 +672,7 @@ function App() {
         return (
           <div>
             <button onClick={() => setActiveTab('deudas')} className={`mb-4 ${theme.colors.textMuted} hover:${theme.colors.textPrimary} text-sm flex items-center gap-1 transition-colors`}>← Volver a Deudas</button>
-            <PaymentForm scriptUrl={scriptUrl} pin={pin} pendingExpenses={pendingExpenses} onUpdateExpense={handleUpdateExpense} {...commonProps} />
+            <PaymentForm scriptUrl={scriptUrl} pin={pin} pendingExpenses={pendingExpenses} onUpdateExpense={handleUpdateExpense} onAddToHistory={handleAddToHistory} {...commonProps} />
           </div>
         );
 

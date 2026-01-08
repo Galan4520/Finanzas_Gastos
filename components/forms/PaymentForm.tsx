@@ -1,18 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { PendingExpense } from '../../types';
+import { PendingExpense, Transaction } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { formatCurrency, getLocalISOString } from '../../utils/format';
 import { Banknote, Lightbulb, CheckCircle } from 'lucide-react';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface PaymentFormProps {
   scriptUrl: string;
   pin: string;
   pendingExpenses: PendingExpense[];
   onUpdateExpense: (expense: PendingExpense) => void;
+  onAddToHistory?: (transaction: Transaction) => void;
   notify?: (msg: string, type: 'success' | 'error') => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendingExpenses, onUpdateExpense, notify }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendingExpenses, onUpdateExpense, onAddToHistory, notify }) => {
+  const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState('');
   const [paymentType, setPaymentType] = useState('Cuota');
@@ -108,13 +111,33 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
       onUpdateExpense(updatedExpense);
       await sendToSheet(scriptUrl, pin, paymentPayload, 'Pagos');
 
+      // Registrar el pago como un gasto en el historial
+      const gastoEntry = {
+        fecha: new Date().toISOString().split('T')[0],
+        categoria: selectedExpense.categoria,
+        descripcion: esSuscripcion
+          ? `${selectedExpense.descripcion} (Suscripción)`
+          : `Pago ${paymentType} - ${selectedExpense.descripcion}`,
+        monto: montoPagado,
+        notas: `Pago de ${esSuscripcion ? 'suscripción' : 'deuda'} - ${selectedExpense.tarjeta}`,
+        timestamp: getLocalISOString()
+      };
+
+      // Agregar al historial si la función está disponible
+      if (onAddToHistory) {
+        onAddToHistory({ ...gastoEntry, tipo: 'Gastos' } as Transaction);
+      }
+
+      // También enviar a la hoja de Gastos
+      await sendToSheet(scriptUrl, pin, gastoEntry, 'Gastos');
+
       setSelectedExpenseId('');
       setCustomAmount('');
 
       if (esSuscripcion) {
-        notify?.('✅ Pago de suscripción registrado - Próximo cargo actualizado', 'success');
+        notify?.('Pago de suscripción registrado - Próximo cargo actualizado', 'success');
       } else {
-        notify?.('✅ Pago registrado correctamente', 'success');
+        notify?.('Pago registrado correctamente', 'success');
       }
 
     } catch (error) {
@@ -126,16 +149,16 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
 
   const activePending = pendingExpenses.filter(e => e.estado === 'Pendiente');
 
-  const inputClass = "w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all";
-  const labelClass = "text-xs font-bold text-slate-400 uppercase tracking-wide ml-1 mb-1 block";
+  const inputClass = `w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-current transition-all`;
+  const labelClass = `text-xs font-bold ${theme.colors.textMuted} uppercase tracking-wide ml-1 mb-1 block`;
 
   return (
-    <div className="bg-slate-800/40 backdrop-blur-sm p-6 md:p-8 rounded-2xl border border-slate-700/50 shadow-xl max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold mb-4 text-white flex items-center gap-2">
+    <div className={`${theme.colors.bgCard} backdrop-blur-sm p-6 md:p-8 rounded-2xl border ${theme.colors.border} shadow-xl max-w-2xl mx-auto`}>
+      <h2 className={`text-2xl font-bold mb-4 ${theme.colors.textPrimary} flex items-center gap-2`}>
         <Banknote size={28} />
         Pagar Tarjeta
       </h2>
-      <p className="text-slate-400 mb-6 text-sm">Registra pagos para disminuir tu deuda en el sistema.</p>
+      <p className={`${theme.colors.textMuted} mb-6 text-sm`}>Registra pagos para disminuir tu deuda en el sistema.</p>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -161,24 +184,20 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         </div>
 
         {selectedExpense && (
-            <div className={`p-5 rounded-xl border text-sm space-y-3 animate-in fade-in slide-in-from-top-2 ${
-              selectedExpense.tipo === 'suscripcion'
-                ? 'bg-purple-900/20 border-purple-500/30'
-                : 'bg-indigo-900/20 border-indigo-500/30'
-            }`}>
+            <div className={`p-5 rounded-xl border text-sm space-y-3 animate-in fade-in slide-in-from-top-2 ${theme.colors.bgSecondary} ${theme.colors.border}`}>
                 {selectedExpense.tipo === 'suscripcion' ? (
                   // Vista para SUSCRIPCIONES
                   <>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-0.5 rounded font-bold">SUSCRIPCIÓN RECURRENTE</span>
                     </div>
-                    <div className="flex justify-between items-center border-b border-purple-500/10 pb-2">
-                        <span className="text-slate-400">Costo Mensual:</span>
-                        <span className="font-bold text-slate-200 text-lg">{formatCurrency(selectedExpense.monto)}</span>
+                    <div className={`flex justify-between items-center border-b ${theme.colors.border} pb-2`}>
+                        <span className={theme.colors.textMuted}>Costo Mensual:</span>
+                        <span className={`font-bold ${theme.colors.textPrimary} text-lg`}>{formatCurrency(selectedExpense.monto)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Próxima Fecha de Cargo:</span>
-                        <span className="font-bold text-slate-200">{selectedExpense.fecha_pago}</span>
+                        <span className={theme.colors.textMuted}>Próxima Fecha de Cargo:</span>
+                        <span className={`font-bold ${theme.colors.textPrimary}`}>{selectedExpense.fecha_pago}</span>
                     </div>
                     <div className="mt-3 p-3 bg-purple-500/10 rounded-lg">
                       <p className="text-xs text-purple-200 flex items-center gap-1">
@@ -190,17 +209,17 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
                 ) : (
                   // Vista para DEUDAS
                   <>
-                    <div className="flex justify-between items-center border-b border-indigo-500/10 pb-2">
-                        <span className="text-slate-400">Total Compra:</span>
-                        <span className="font-bold text-slate-200 text-lg">{formatCurrency(selectedExpense.monto)}</span>
+                    <div className={`flex justify-between items-center border-b ${theme.colors.border} pb-2`}>
+                        <span className={theme.colors.textMuted}>Total Compra:</span>
+                        <span className={`font-bold ${theme.colors.textPrimary} text-lg`}>{formatCurrency(selectedExpense.monto)}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                        <span className="text-slate-400">Cuotas Pagadas:</span>
+                        <span className={theme.colors.textMuted}>Cuotas Pagadas:</span>
                         <div className="flex items-center gap-2">
-                            <div className="w-24 h-2 bg-slate-700 rounded-full overflow-hidden">
+                            <div className={`w-24 h-2 ${theme.colors.bgTertiary} rounded-full overflow-hidden`}>
                                 <div className="h-full bg-indigo-500" style={{ width: `${(selectedExpense.cuotas_pagadas / selectedExpense.num_cuotas) * 100}%`}}></div>
                             </div>
-                            <span className="font-bold text-slate-200">{selectedExpense.cuotas_pagadas} / {selectedExpense.num_cuotas}</span>
+                            <span className={`font-bold ${theme.colors.textPrimary}`}>{selectedExpense.cuotas_pagadas} / {selectedExpense.num_cuotas}</span>
                         </div>
                     </div>
                   </>
@@ -213,16 +232,16 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
           <div>
               <label className={labelClass}>Monto a Pagar (Fijo)</label>
               <div className="relative">
-                  <span className="absolute left-4 top-3.5 text-slate-400">S/</span>
+                  <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
                   <input
                       type="number"
                       step="0.01"
                       value={customAmount}
                       readOnly
-                      className={`${inputClass} pl-10 font-mono text-lg font-bold text-purple-400 bg-slate-900/70`}
+                      className={`${inputClass} pl-10 font-mono text-lg font-bold text-purple-400`}
                   />
               </div>
-              <p className="text-xs text-slate-400 mt-2">Las suscripciones se pagan siempre por el monto completo</p>
+              <p className={`text-xs ${theme.colors.textMuted} mt-2`}>Las suscripciones se pagan siempre por el monto completo</p>
           </div>
         ) : (
           // Para DEUDAS: opciones flexibles
@@ -238,7 +257,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
              <div>
                 <label className={labelClass}>Monto a Pagar</label>
                 <div className="relative">
-                    <span className="absolute left-4 top-3.5 text-slate-400">S/</span>
+                    <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
                     <input
                         type="number"
                         step="0.01"
@@ -251,11 +270,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
           </div>
         )}
 
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={loading || !selectedExpense}
-          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
-            ${loading || !selectedExpense ? 'bg-slate-700 cursor-not-allowed text-slate-500' : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500'}`}
+          className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
+            ${loading || !selectedExpense ? `${theme.colors.bgSecondary} cursor-not-allowed ${theme.colors.textMuted}` : `${theme.colors.primary} hover:${theme.colors.primaryHover} text-white`}`}
         >
           {loading ? 'Procesando...' : (
             <>
