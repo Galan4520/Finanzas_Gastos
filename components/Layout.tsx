@@ -63,7 +63,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     { id: 'metas', label: 'Metas', icon: <Target /> },
     { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true }, // Unified Action - Centered
     { id: 'deudas', label: 'Deudas', icon: <Clock /> },
-    { id: 'reportes', label: 'Reportes', icon: <BarChart3 /> },
     { id: 'config', label: 'Ajustes', icon: <Settings /> },
   ];
 

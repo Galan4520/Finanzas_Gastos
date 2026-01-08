@@ -287,15 +287,6 @@ function App() {
             </div>
         );
 
-      case 'reportes':
-        return (
-          <ReportsView
-            history={history}
-            cards={cards}
-            pendingExpenses={pendingExpenses}
-          />
-        );
-
       case 'config':
         return (
           <SettingsView

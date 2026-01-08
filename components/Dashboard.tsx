@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from '../types';
 import { formatCurrency } from '../utils/format';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line, CartesianGrid, Legend } from 'recharts';
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
+
+const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 interface DashboardProps {
   cards: CreditCard[];
@@ -320,6 +322,142 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             )}
          </div>
       </div>
+
+      {/* Category Analysis - Pie Chart */}
+      {(() => {
+        const categoryData = history
+          .filter(t => t.tipo === 'Gastos')
+          .reduce((acc: { [key: string]: number }, t) => {
+            const cat = t.categoria || 'Sin categoría';
+            acc[cat] = (acc[cat] || 0) + Number(t.monto);
+            return acc;
+          }, {});
+
+        const chartData = Object.entries(categoryData)
+          .map(([name, value]) => ({ name, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 6); // Top 6 categories
+
+        if (chartData.length === 0) return null;
+
+        return (
+          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+            <div className={`p-6 border-b ${theme.colors.border}`}>
+              <div className="flex items-center gap-2">
+                <PieIcon className={textColors.primary} size={20} />
+                <h3 className={`font-bold ${theme.colors.textPrimary}`}>Gastos por Categoría</h3>
+              </div>
+            </div>
+            <div className="p-6 grid md:grid-cols-2 gap-6">
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2">
+                {chartData.map((cat, index) => {
+                  const total = chartData.reduce((sum, c) => sum + c.value, 0);
+                  const percentage = (cat.value / total) * 100;
+                  return (
+                    <div key={cat.name} className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                          <span className={`font-medium text-sm ${theme.colors.textPrimary}`}>{cat.name}</span>
+                        </div>
+                        <span className={`font-bold text-sm ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
+                      </div>
+                      <div className={`w-full bg-gray-200 rounded-full h-1.5`}>
+                        <div
+                          className="h-1.5 rounded-full"
+                          style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Monthly Evolution */}
+      {(() => {
+        const last6Months = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date();
+          d.setMonth(d.getMonth() - (5 - i));
+          return {
+            year: d.getFullYear(),
+            month: d.getMonth(),
+            key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          };
+        });
+
+        const monthlyData = last6Months.map(({ year, month, key }) => {
+          const ingresos = history.filter(t => {
+            const d = new Date(t.timestamp || t.fecha);
+            return d.getFullYear() === year && d.getMonth() === month && t.tipo === 'Ingresos';
+          }).reduce((sum, t) => sum + Number(t.monto), 0);
+
+          const gastos = history.filter(t => {
+            const d = new Date(t.timestamp || t.fecha);
+            return d.getFullYear() === year && d.getMonth() === month && t.tipo === 'Gastos';
+          }).reduce((sum, t) => sum + Number(t.monto), 0);
+
+          return {
+            month: key.split('-')[1] + '/' + key.split('-')[0].slice(2),
+            ingresos,
+            gastos,
+            ahorro: ingresos - gastos
+          };
+        });
+
+        if (monthlyData.every(d => d.ingresos === 0 && d.gastos === 0)) return null;
+
+        return (
+          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+            <div className={`p-6 border-b ${theme.colors.border}`}>
+              <div className="flex items-center gap-2">
+                <TrendingUp className={textColors.primary} size={20} />
+                <h3 className={`font-bold ${theme.colors.textPrimary}`}>Evolución de los Últimos 6 Meses</h3>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
+                    <XAxis dataKey="month" stroke={theme.colors.textMuted} style={{ fontSize: '12px' }} />
+                    <YAxis stroke={theme.colors.textMuted} style={{ fontSize: '12px' }} tickFormatter={(value) => `S/ ${value}`} />
+                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    <Legend />
+                    <Line type="monotone" dataKey="ingresos" stroke="#10b981" strokeWidth={2} name="Ingresos" />
+                    <Line type="monotone" dataKey="gastos" stroke="#ef4444" strokeWidth={2} name="Gastos" />
+                    <Line type="monotone" dataKey="ahorro" stroke="#3b82f6" strokeWidth={2} name="Ahorro" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
