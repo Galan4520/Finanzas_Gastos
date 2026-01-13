@@ -66,6 +66,167 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
 
+  // Calculate weekly expenses comparison
+  const weeklyComparison = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Get start of this week (Sunday)
+    const thisWeekStart = new Date(todayStart);
+    thisWeekStart.setDate(todayStart.getDate() - todayStart.getDay());
+
+    // Get start of last week
+    const lastWeekStart = new Date(thisWeekStart);
+    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+
+    let thisWeekExpenses = 0;
+    let lastWeekExpenses = 0;
+
+    history.forEach(t => {
+      if (t.tipo !== 'Gastos') return;
+      const date = new Date(t.timestamp || t.fecha);
+      const monto = Number(t.monto);
+
+      if (date >= thisWeekStart) {
+        thisWeekExpenses += monto;
+      } else if (date >= lastWeekStart && date < thisWeekStart) {
+        lastWeekExpenses += monto;
+      }
+    });
+
+    const difference = thisWeekExpenses - lastWeekExpenses;
+    const percentChange = lastWeekExpenses > 0
+      ? ((difference / lastWeekExpenses) * 100)
+      : (thisWeekExpenses > 0 ? 100 : 0);
+
+    return {
+      thisWeek: thisWeekExpenses,
+      lastWeek: lastWeekExpenses,
+      difference,
+      percentChange
+    };
+  }, [history]);
+
+  // Calculate card payments for this month and next month
+  const cardPayments = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const currentDay = now.getDate();
+
+    // Next month calculation
+    const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
+    const nextMonthYear = currentMonth === 11 ? currentYear + 1 : currentYear;
+
+    let thisMonthTotal = 0;
+    let nextMonthTotal = 0;
+    let thisMonthDate: Date | null = null;
+    let nextMonthDate: Date | null = null;
+
+    const thisMonthDetails: { card: string; amount: number; date: string }[] = [];
+    const nextMonthDetails: { card: string; amount: number; date: string }[] = [];
+
+    // Group pending expenses by card
+    const byCard: { [key: string]: { expenses: PendingExpense[]; card: CreditCard | undefined } } = {};
+
+    pendingExpenses.forEach(expense => {
+      if (!byCard[expense.tarjeta]) {
+        byCard[expense.tarjeta] = {
+          expenses: [],
+          card: cards.find(c => c.alias === expense.tarjeta)
+        };
+      }
+      byCard[expense.tarjeta].expenses.push(expense);
+    });
+
+    // Calculate payment for each card
+    Object.entries(byCard).forEach(([cardName, { expenses, card }]) => {
+      if (!card) return;
+
+      const paymentDay = card.dia_pago;
+
+      // Calculate what's pending to pay for this card
+      let cardTotal = 0;
+      expenses.forEach(exp => {
+        const total = Number(exp.monto);
+        const cuotaVal = total / Number(exp.num_cuotas);
+        const pagado = cuotaVal * Number(exp.cuotas_pagadas);
+        cardTotal += (total - pagado);
+      });
+
+      // Determine if payment is this month or next month
+      const thisMonthPaymentDate = new Date(currentYear, currentMonth, paymentDay);
+      const nextMonthPaymentDate = new Date(nextMonthYear, nextMonth, paymentDay);
+
+      if (currentDay < paymentDay) {
+        // Payment is this month
+        thisMonthTotal += cardTotal;
+        thisMonthDetails.push({
+          card: cardName,
+          amount: cardTotal,
+          date: thisMonthPaymentDate.toISOString().split('T')[0]
+        });
+        if (!thisMonthDate || thisMonthPaymentDate < thisMonthDate) {
+          thisMonthDate = thisMonthPaymentDate;
+        }
+      } else {
+        // Payment is next month
+        nextMonthTotal += cardTotal;
+        nextMonthDetails.push({
+          card: cardName,
+          amount: cardTotal,
+          date: nextMonthPaymentDate.toISOString().split('T')[0]
+        });
+        if (!nextMonthDate || nextMonthPaymentDate < nextMonthDate) {
+          nextMonthDate = nextMonthPaymentDate;
+        }
+      }
+
+      // Also add for next month
+      nextMonthTotal += cardTotal;
+      nextMonthDetails.push({
+        card: cardName,
+        amount: cardTotal,
+        date: nextMonthPaymentDate.toISOString().split('T')[0]
+      });
+      if (!nextMonthDate || nextMonthPaymentDate < nextMonthDate) {
+        nextMonthDate = nextMonthPaymentDate;
+      }
+    });
+
+    return {
+      thisMonth: {
+        total: thisMonthTotal,
+        date: thisMonthDate,
+        details: thisMonthDetails
+      },
+      nextMonth: {
+        total: nextMonthTotal,
+        date: nextMonthDate,
+        details: nextMonthDetails
+      }
+    };
+  }, [cards, pendingExpenses]);
+
+  // Calculate expense distribution by card
+  const cardDistribution = useMemo(() => {
+    const distribution: { [key: string]: number } = {};
+
+    pendingExpenses.forEach(expense => {
+      if (!distribution[expense.tarjeta]) {
+        distribution[expense.tarjeta] = 0;
+      }
+      const total = Number(expense.monto);
+      const cuotaVal = total / Number(expense.num_cuotas);
+      const pagado = cuotaVal * Number(expense.cuotas_pagadas);
+      distribution[expense.tarjeta] += (total - pagado);
+    });
+
+    return Object.entries(distribution)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [pendingExpenses]);
+
   const currentStats = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -241,6 +402,207 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </div>
         </div>
       </div>
+
+      {/* NEW FEATURES ROW */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Weekly Comparison Card */}
+        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+          <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
+            Comparación Semanal
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Esta semana</p>
+              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                {formatCurrency(weeklyComparison.thisWeek)}
+              </p>
+            </div>
+
+            <div>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Semana pasada</p>
+              <p className={`text-lg font-mono font-bold ${theme.colors.textSecondary}`}>
+                {formatCurrency(weeklyComparison.lastWeek)}
+              </p>
+            </div>
+
+            <div className={`p-3 rounded-xl ${
+              weeklyComparison.difference > 0 ? 'bg-red-500/10' : 'bg-green-500/10'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className={`text-xs ${theme.colors.textMuted}`}>Variación</span>
+                <div className="flex items-center gap-1">
+                  {weeklyComparison.difference > 0 ? (
+                    <ArrowUpRight className="text-red-500" size={16} />
+                  ) : weeklyComparison.difference < 0 ? (
+                    <ArrowDownRight className="text-green-500" size={16} />
+                  ) : null}
+                  <span className={`font-bold text-sm ${
+                    weeklyComparison.difference > 0 ? 'text-red-500' :
+                    weeklyComparison.difference < 0 ? 'text-green-500' :
+                    theme.colors.textMuted
+                  }`}>
+                    {weeklyComparison.percentChange > 0 ? '+' : ''}
+                    {weeklyComparison.percentChange.toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+              {weeklyComparison.difference !== 0 && (
+                <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
+                  {weeklyComparison.difference > 0 ? '+' : ''}
+                  {formatCurrency(weeklyComparison.difference)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* This Month Payment Card */}
+        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+          <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
+            Pago Este Mes
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total a pagar</p>
+              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                {formatCurrency(cardPayments.thisMonth.total)}
+              </p>
+            </div>
+
+            {cardPayments.thisMonth.date && (
+              <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
+                    {cardPayments.thisMonth.date.split('-')[2]}/{cardPayments.thisMonth.date.split('-')[1]}/{cardPayments.thisMonth.date.split('-')[0]}
+                  </span>
+                </div>
+
+                {cardPayments.thisMonth.details.length > 0 && (
+                  <div className="space-y-1">
+                    {cardPayments.thisMonth.details.slice(0, 3).map((detail, idx) => (
+                      <div key={idx} className="flex justify-between items-center">
+                        <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
+                        <span className={`text-xs font-mono ${theme.colors.textSecondary}`}>
+                          {formatCurrency(detail.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Next Month Payment Card */}
+        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+          <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
+            Pago Próximo Mes
+          </h3>
+
+          <div className="space-y-4">
+            <div>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total estimado</p>
+              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                {formatCurrency(cardPayments.nextMonth.total)}
+              </p>
+            </div>
+
+            {cardPayments.nextMonth.date && (
+              <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
+                    {cardPayments.nextMonth.date.split('-')[2]}/{cardPayments.nextMonth.date.split('-')[1]}/{cardPayments.nextMonth.date.split('-')[0]}
+                  </span>
+                </div>
+
+                {cardPayments.nextMonth.details.length > 0 && (
+                  <div className="space-y-1">
+                    {cardPayments.nextMonth.details.slice(0, 3).map((detail, idx) => (
+                      <div key={idx} className="flex justify-between items-center">
+                        <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
+                        <span className={`text-xs font-mono ${theme.colors.textSecondary}`}>
+                          {formatCurrency(detail.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Card Distribution Chart */}
+      {cardDistribution.length > 0 && (
+        <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+          <div className={`p-6 border-b ${theme.colors.border}`}>
+            <div className="flex items-center gap-2">
+              <CreditIcon className={textColors.primary} size={20} />
+              <h3 className={`font-bold ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
+            </div>
+          </div>
+          <div className="p-6 grid md:grid-cols-2 gap-6">
+            {/* Pie Chart */}
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={cardDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {cardDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* List */}
+            <div className="space-y-2">
+              {cardDistribution.map((card, index) => {
+                const total = cardDistribution.reduce((sum, c) => sum + c.value, 0);
+                const percentage = (card.value / total) * 100;
+                return (
+                  <div key={card.name} className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                        <span className={`font-medium text-sm ${theme.colors.textPrimary}`}>{card.name}</span>
+                      </div>
+                      <span className={`font-bold text-sm ${theme.colors.textPrimary}`}>{formatCurrency(card.value)}</span>
+                    </div>
+                    <div className={`w-full bg-gray-200 rounded-full h-1.5`}>
+                      <div
+                        className="h-1.5 rounded-full"
+                        style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Balance Total Card - Destacado */}
       <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border-2 ${
