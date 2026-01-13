@@ -113,7 +113,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const currentDay = now.getDate();
 
     // Next month calculation
     const nextMonth = currentMonth === 11 ? 0 : currentMonth + 1;
@@ -121,126 +120,86 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
     let thisMonthTotal = 0;
     let nextMonthTotal = 0;
-    let thisMonthDate: Date | null = null;
-    let nextMonthDate: Date | null = null;
 
-    const thisMonthDetails: { card: string; amount: number; date: string }[] = [];
-    const nextMonthDetails: { card: string; amount: number; date: string }[] = [];
+    const thisMonthDetails: { card: string; amount: number; date: string; paymentDay: number }[] = [];
+    const nextMonthDetails: { card: string; amount: number; date: string; paymentDay: number }[] = [];
 
-    // Group pending expenses by card (only deudas, not suscripciones)
-    const byCard: { [key: string]: { expenses: PendingExpense[]; card: CreditCard | undefined } } = {};
-
+    // Process all pending expenses based on their fecha_pago
     pendingExpenses.forEach(expense => {
-      // Only process debts, not subscriptions (they're handled separately)
-      if (expense.tipo === 'suscripcion') return;
-
-      if (!byCard[expense.tarjeta]) {
-        byCard[expense.tarjeta] = {
-          expenses: [],
-          card: cards.find(c => c.alias === expense.tarjeta)
-        };
-      }
-      byCard[expense.tarjeta].expenses.push(expense);
-    });
-
-    // Calculate payment for each card (debts only)
-    Object.entries(byCard).forEach(([cardName, { expenses, card }]) => {
-      if (!card) return;
-
-      const paymentDay = card.dia_pago;
-
-      // Calculate monthly payment for this card (sum of all monthly installments)
-      let monthlyPayment = 0;
-      expenses.forEach(exp => {
-        const total = Number(exp.monto);
-        const cuotaVal = total / Number(exp.num_cuotas);
-        const cuotasPagadas = Number(exp.cuotas_pagadas);
-        const numCuotas = Number(exp.num_cuotas);
-
-        // Only add monthly payment if there are still unpaid installments
-        if (cuotasPagadas < numCuotas) {
-          monthlyPayment += cuotaVal;
-        }
-      });
-
-      // Determine if payment is this month or next month
-      const thisMonthPaymentDate = new Date(currentYear, currentMonth, paymentDay);
-      const nextMonthPaymentDate = new Date(nextMonthYear, nextMonth, paymentDay);
-
-      if (currentDay < paymentDay) {
-        // Payment is this month
-        thisMonthTotal += monthlyPayment;
-        thisMonthDetails.push({
-          card: cardName,
-          amount: monthlyPayment,
-          date: thisMonthPaymentDate.toISOString().split('T')[0]
-        });
-        if (!thisMonthDate || thisMonthPaymentDate < thisMonthDate) {
-          thisMonthDate = thisMonthPaymentDate;
-        }
-      } else {
-        // Payment is next month (already passed this month's payment day)
-        nextMonthTotal += monthlyPayment;
-        nextMonthDetails.push({
-          card: cardName,
-          amount: monthlyPayment,
-          date: nextMonthPaymentDate.toISOString().split('T')[0]
-        });
-        if (!nextMonthDate || nextMonthPaymentDate < nextMonthDate) {
-          nextMonthDate = nextMonthPaymentDate;
-        }
-      }
-    });
-
-    // Add subscriptions that are due this month and next month
-    pendingExpenses.forEach(expense => {
-      if (expense.tipo !== 'suscripcion') return;
-
       const paymentDate = new Date(expense.fecha_pago);
       const expenseMonth = paymentDate.getMonth();
       const expenseYear = paymentDate.getFullYear();
-      const monto = Number(expense.monto);
+      const paymentDay = paymentDate.getDate();
+
+      let amount = 0;
+      if (expense.tipo === 'suscripcion') {
+        // For subscriptions, use full monthly amount
+        amount = Number(expense.monto);
+      } else {
+        // For debts, calculate one monthly installment
+        const total = Number(expense.monto);
+        const cuotaVal = total / Number(expense.num_cuotas);
+        const cuotasPagadas = Number(expense.cuotas_pagadas);
+        const numCuotas = Number(expense.num_cuotas);
+
+        // Only include if there are unpaid installments
+        if (cuotasPagadas < numCuotas) {
+          amount = cuotaVal;
+        }
+      }
+
+      if (amount === 0) return;
 
       // Check if it's due this month
       if (expenseMonth === currentMonth && expenseYear === currentYear) {
-        thisMonthTotal += monto;
+        thisMonthTotal += amount;
         const existingDetail = thisMonthDetails.find(d => d.card === expense.tarjeta);
         if (existingDetail) {
-          existingDetail.amount += monto;
+          existingDetail.amount += amount;
         } else {
           thisMonthDetails.push({
             card: expense.tarjeta,
-            amount: monto,
-            date: expense.fecha_pago
+            amount: amount,
+            date: expense.fecha_pago,
+            paymentDay: paymentDay
           });
         }
       }
 
       // Check if it's due next month
       if (expenseMonth === nextMonth && expenseYear === nextMonthYear) {
-        nextMonthTotal += monto;
+        nextMonthTotal += amount;
         const existingDetail = nextMonthDetails.find(d => d.card === expense.tarjeta);
         if (existingDetail) {
-          existingDetail.amount += monto;
+          existingDetail.amount += amount;
         } else {
           nextMonthDetails.push({
             card: expense.tarjeta,
-            amount: monto,
-            date: expense.fecha_pago
+            amount: amount,
+            date: expense.fecha_pago,
+            paymentDay: paymentDay
           });
         }
       }
     });
 
+    // Sort by payment day
+    thisMonthDetails.sort((a, b) => a.paymentDay - b.paymentDay);
+    nextMonthDetails.sort((a, b) => a.paymentDay - b.paymentDay);
+
+    // Get earliest payment day for display
+    const thisMonthEarliestDay = thisMonthDetails.length > 0 ? thisMonthDetails[0].paymentDay : null;
+    const nextMonthEarliestDay = nextMonthDetails.length > 0 ? nextMonthDetails[0].paymentDay : null;
+
     return {
       thisMonth: {
         total: thisMonthTotal,
-        date: thisMonthDate,
+        paymentDay: thisMonthEarliestDay,
         details: thisMonthDetails
       },
       nextMonth: {
         total: nextMonthTotal,
-        date: nextMonthDate,
+        paymentDay: nextMonthEarliestDay,
         details: nextMonthDetails
       }
     };
@@ -538,31 +497,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </p>
             </div>
 
-            {cardPayments.thisMonth.date && (
+            {cardPayments.thisMonth.paymentDay && (
               <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                    {(() => {
-                      const dateStr = cardPayments.thisMonth.date.toISOString().split('T')[0];
-                      const parts = dateStr.split('-');
-                      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    })()}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
+                      Día de pago: {cardPayments.thisMonth.paymentDay}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-emerald-500/10 px-2 py-1 rounded`}>
+                    {cardPayments.thisMonth.details.length} {cardPayments.thisMonth.details.length === 1 ? 'tarjeta' : 'tarjetas'}
                   </span>
                 </div>
 
                 {cardPayments.thisMonth.details.length > 0 && (
-                  <div className="space-y-1">
-                    {cardPayments.thisMonth.details.slice(0, 3).map((detail, idx) => (
+                  <div className="space-y-1.5">
+                    {cardPayments.thisMonth.details.map((detail, idx) => (
                       <div key={idx} className="flex justify-between items-center">
                         <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
-                        <span className={`text-xs font-mono ${theme.colors.textSecondary}`}>
+                        <span className={`text-xs font-mono font-semibold ${theme.colors.textPrimary}`}>
                           {formatCurrency(detail.amount)}
                         </span>
                       </div>
                     ))}
+                    {cardPayments.thisMonth.details.length > 1 && (
+                      <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
+                        <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
+                        <span className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                          {formatCurrency(cardPayments.thisMonth.total)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -584,31 +552,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </p>
             </div>
 
-            {cardPayments.nextMonth.date && (
+            {cardPayments.nextMonth.paymentDay && (
               <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                    {(() => {
-                      const dateStr = cardPayments.nextMonth.date.toISOString().split('T')[0];
-                      const parts = dateStr.split('-');
-                      return `${parts[2]}/${parts[1]}/${parts[0]}`;
-                    })()}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
+                      Día de pago: {cardPayments.nextMonth.paymentDay}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-blue-500/10 px-2 py-1 rounded`}>
+                    {cardPayments.nextMonth.details.length} {cardPayments.nextMonth.details.length === 1 ? 'tarjeta' : 'tarjetas'}
                   </span>
                 </div>
 
                 {cardPayments.nextMonth.details.length > 0 && (
-                  <div className="space-y-1">
-                    {cardPayments.nextMonth.details.slice(0, 3).map((detail, idx) => (
+                  <div className="space-y-1.5">
+                    {cardPayments.nextMonth.details.map((detail, idx) => (
                       <div key={idx} className="flex justify-between items-center">
                         <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
-                        <span className={`text-xs font-mono ${theme.colors.textSecondary}`}>
+                        <span className={`text-xs font-mono font-semibold ${theme.colors.textPrimary}`}>
                           {formatCurrency(detail.amount)}
                         </span>
                       </div>
                     ))}
+                    {cardPayments.nextMonth.details.length > 1 && (
+                      <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
+                        <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
+                        <span className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                          {formatCurrency(cardPayments.nextMonth.total)}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
