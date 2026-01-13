@@ -65,6 +65,7 @@ const formatTimeLabel = (dateStr: string): string => {
 export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
+  const [distributionFilter, setDistributionFilter] = React.useState<'thisMonth' | 'total'>('total');
 
   // Calculate weekly expenses comparison
   const weeklyComparison = useMemo(() => {
@@ -126,10 +127,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     const thisMonthDetails: { card: string; amount: number; date: string }[] = [];
     const nextMonthDetails: { card: string; amount: number; date: string }[] = [];
 
-    // Group pending expenses by card
+    // Group pending expenses by card (only deudas, not suscripciones)
     const byCard: { [key: string]: { expenses: PendingExpense[]; card: CreditCard | undefined } } = {};
 
     pendingExpenses.forEach(expense => {
+      // Only process debts, not subscriptions (they're handled separately)
+      if (expense.tipo === 'suscripcion') return;
+
       if (!byCard[expense.tarjeta]) {
         byCard[expense.tarjeta] = {
           expenses: [],
@@ -139,7 +143,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       byCard[expense.tarjeta].expenses.push(expense);
     });
 
-    // Calculate payment for each card
+    // Calculate payment for each card (debts only)
     Object.entries(byCard).forEach(([cardName, { expenses, card }]) => {
       if (!card) return;
 
@@ -183,6 +187,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       }
     });
 
+    // Add subscriptions that are due this month and next month
+    pendingExpenses.forEach(expense => {
+      if (expense.tipo !== 'suscripcion') return;
+
+      const paymentDate = new Date(expense.fecha_pago);
+      const expenseMonth = paymentDate.getMonth();
+      const expenseYear = paymentDate.getFullYear();
+      const monto = Number(expense.monto);
+
+      // Check if it's due this month
+      if (expenseMonth === currentMonth && expenseYear === currentYear) {
+        thisMonthTotal += monto;
+        const existingDetail = thisMonthDetails.find(d => d.card === expense.tarjeta);
+        if (existingDetail) {
+          existingDetail.amount += monto;
+        } else {
+          thisMonthDetails.push({
+            card: expense.tarjeta,
+            amount: monto,
+            date: expense.fecha_pago
+          });
+        }
+      }
+
+      // Check if it's due next month
+      if (expenseMonth === nextMonth && expenseYear === nextMonthYear) {
+        nextMonthTotal += monto;
+        const existingDetail = nextMonthDetails.find(d => d.card === expense.tarjeta);
+        if (existingDetail) {
+          existingDetail.amount += monto;
+        } else {
+          nextMonthDetails.push({
+            card: expense.tarjeta,
+            amount: monto,
+            date: expense.fecha_pago
+          });
+        }
+      }
+    });
+
     return {
       thisMonth: {
         total: thisMonthTotal,
@@ -200,21 +244,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   // Calculate expense distribution by card
   const cardDistribution = useMemo(() => {
     const distribution: { [key: string]: number } = {};
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
     pendingExpenses.forEach(expense => {
+      // If filtering by this month, only include expenses due this month
+      if (distributionFilter === 'thisMonth') {
+        const paymentDate = new Date(expense.fecha_pago);
+        const expenseMonth = paymentDate.getMonth();
+        const expenseYear = paymentDate.getFullYear();
+
+        if (expenseMonth !== currentMonth || expenseYear !== currentYear) {
+          return; // Skip expenses not due this month
+        }
+      }
+
       if (!distribution[expense.tarjeta]) {
         distribution[expense.tarjeta] = 0;
       }
-      const total = Number(expense.monto);
-      const cuotaVal = total / Number(expense.num_cuotas);
-      const pagado = cuotaVal * Number(expense.cuotas_pagadas);
-      distribution[expense.tarjeta] += (total - pagado);
+
+      if (expense.tipo === 'suscripcion') {
+        // For subscriptions, add the full monthly amount
+        distribution[expense.tarjeta] += Number(expense.monto);
+      } else {
+        // For debts, calculate remaining amount
+        const total = Number(expense.monto);
+        const cuotaVal = total / Number(expense.num_cuotas);
+        const pagado = cuotaVal * Number(expense.cuotas_pagadas);
+
+        if (distributionFilter === 'thisMonth') {
+          // For this month filter, only add the monthly payment (one cuota)
+          distribution[expense.tarjeta] += cuotaVal;
+        } else {
+          // For total filter, add all remaining debt
+          distribution[expense.tarjeta] += (total - pagado);
+        }
+      }
     });
 
     return Object.entries(distribution)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [pendingExpenses]);
+  }, [pendingExpenses, distributionFilter]);
 
   const currentStats = useMemo(() => {
     const now = new Date();
@@ -544,9 +616,35 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {cardDistribution.length > 0 && (
         <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
           <div className={`p-6 border-b ${theme.colors.border}`}>
-            <div className="flex items-center gap-2">
-              <CreditIcon className={textColors.primary} size={20} />
-              <h3 className={`font-bold ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <CreditIcon className={textColors.primary} size={20} />
+                <h3 className={`font-bold ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
+              </div>
+
+              {/* Filter Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setDistributionFilter('thisMonth')}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    distributionFilter === 'thisMonth'
+                      ? `${theme.colors.primary} text-white shadow-md`
+                      : `${theme.colors.bgSecondary} ${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+                  }`}
+                >
+                  Este Mes
+                </button>
+                <button
+                  onClick={() => setDistributionFilter('total')}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    distributionFilter === 'total'
+                      ? `${theme.colors.primary} text-white shadow-md`
+                      : `${theme.colors.bgSecondary} ${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+                  }`}
+                >
+                  Total
+                </button>
+              </div>
             </div>
           </div>
           <div className="p-6 grid md:grid-cols-2 gap-6">
