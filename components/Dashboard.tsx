@@ -149,13 +149,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       const paymentDay = card.dia_pago;
 
-      // Calculate what's pending to pay for this card
-      let cardTotal = 0;
+      // Calculate monthly payment for this card (sum of all monthly installments)
+      let monthlyPayment = 0;
       expenses.forEach(exp => {
         const total = Number(exp.monto);
         const cuotaVal = total / Number(exp.num_cuotas);
-        const pagado = cuotaVal * Number(exp.cuotas_pagadas);
-        cardTotal += (total - pagado);
+        const cuotasPagadas = Number(exp.cuotas_pagadas);
+        const numCuotas = Number(exp.num_cuotas);
+
+        // Only add monthly payment if there are still unpaid installments
+        if (cuotasPagadas < numCuotas) {
+          monthlyPayment += cuotaVal;
+        }
       });
 
       // Determine if payment is this month or next month
@@ -164,10 +169,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       if (currentDay < paymentDay) {
         // Payment is this month
-        thisMonthTotal += cardTotal;
+        thisMonthTotal += monthlyPayment;
         thisMonthDetails.push({
           card: cardName,
-          amount: cardTotal,
+          amount: monthlyPayment,
           date: thisMonthPaymentDate.toISOString().split('T')[0]
         });
         if (!thisMonthDate || thisMonthPaymentDate < thisMonthDate) {
@@ -175,10 +180,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         }
       } else {
         // Payment is next month (already passed this month's payment day)
-        nextMonthTotal += cardTotal;
+        nextMonthTotal += monthlyPayment;
         nextMonthDetails.push({
           card: cardName,
-          amount: cardTotal,
+          amount: monthlyPayment,
           date: nextMonthPaymentDate.toISOString().split('T')[0]
         });
         if (!nextMonthDate || nextMonthPaymentDate < nextMonthDate) {
