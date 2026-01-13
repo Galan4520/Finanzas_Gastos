@@ -170,7 +170,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           thisMonthDate = thisMonthPaymentDate;
         }
       } else {
-        // Payment is next month
+        // Payment is next month (already passed this month's payment day)
         nextMonthTotal += cardTotal;
         nextMonthDetails.push({
           card: cardName,
@@ -180,17 +180,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         if (!nextMonthDate || nextMonthPaymentDate < nextMonthDate) {
           nextMonthDate = nextMonthPaymentDate;
         }
-      }
-
-      // Also add for next month
-      nextMonthTotal += cardTotal;
-      nextMonthDetails.push({
-        card: cardName,
-        amount: cardTotal,
-        date: nextMonthPaymentDate.toISOString().split('T')[0]
-      });
-      if (!nextMonthDate || nextMonthPaymentDate < nextMonthDate) {
-        nextMonthDate = nextMonthPaymentDate;
       }
     });
 
