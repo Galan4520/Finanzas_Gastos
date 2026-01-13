@@ -187,19 +187,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     thisMonthDetails.sort((a, b) => a.paymentDay - b.paymentDay);
     nextMonthDetails.sort((a, b) => a.paymentDay - b.paymentDay);
 
-    // Get earliest payment day for display
-    const thisMonthEarliestDay = thisMonthDetails.length > 0 ? thisMonthDetails[0].paymentDay : null;
-    const nextMonthEarliestDay = nextMonthDetails.length > 0 ? nextMonthDetails[0].paymentDay : null;
+    // Get unique payment days for display
+    const thisMonthPaymentDays = [...new Set(thisMonthDetails.map(d => d.paymentDay))].sort((a, b) => a - b);
+    const nextMonthPaymentDays = [...new Set(nextMonthDetails.map(d => d.paymentDay))].sort((a, b) => a - b);
 
     return {
       thisMonth: {
         total: thisMonthTotal,
-        paymentDay: thisMonthEarliestDay,
+        paymentDays: thisMonthPaymentDays,
         details: thisMonthDetails
       },
       nextMonth: {
         total: nextMonthTotal,
-        paymentDay: nextMonthEarliestDay,
+        paymentDays: nextMonthPaymentDays,
         details: nextMonthDetails
       }
     };
@@ -497,7 +497,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </p>
             </div>
 
-            {cardPayments.thisMonth.paymentDay && (
+            {cardPayments.thisMonth.paymentDays.length > 0 && (
               <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -505,7 +505,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                      Día de pago: {cardPayments.thisMonth.paymentDay}
+                      {cardPayments.thisMonth.paymentDays.length === 1
+                        ? `Día ${cardPayments.thisMonth.paymentDays[0]}`
+                        : `Días ${cardPayments.thisMonth.paymentDays.join(', ')}`
+                      }
                     </span>
                   </div>
                   <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-emerald-500/10 px-2 py-1 rounded`}>
@@ -552,7 +555,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </p>
             </div>
 
-            {cardPayments.nextMonth.paymentDay && (
+            {cardPayments.nextMonth.paymentDays.length > 0 && (
               <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -560,7 +563,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                      Día de pago: {cardPayments.nextMonth.paymentDay}
+                      {cardPayments.nextMonth.paymentDays.length === 1
+                        ? `Día ${cardPayments.nextMonth.paymentDays[0]}`
+                        : `Días ${cardPayments.nextMonth.paymentDays.join(', ')}`
+                      }
                     </span>
                   </div>
                   <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-blue-500/10 px-2 py-1 rounded`}>
@@ -639,7 +645,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={(props) => {
+                      const { cx, cy, midAngle, innerRadius, outerRadius, percent, name } = props;
+                      const RADIAN = Math.PI / 180;
+                      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+                      return (
+                        <text
+                          x={x}
+                          y={y}
+                          fill="white"
+                          textAnchor={x > cx ? 'start' : 'end'}
+                          dominantBaseline="central"
+                          style={{ fontSize: '10px', fontWeight: '600' }}
+                        >
+                          {`${name} ${(percent * 100).toFixed(0)}%`}
+                        </text>
+                      );
+                    }}
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="value"
