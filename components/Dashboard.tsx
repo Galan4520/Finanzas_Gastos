@@ -468,7 +468,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                    {cardPayments.thisMonth.date.split('-')[2]}/{cardPayments.thisMonth.date.split('-')[1]}/{cardPayments.thisMonth.date.split('-')[0]}
+                    {(() => {
+                      const dateStr = cardPayments.thisMonth.date.toISOString().split('T')[0];
+                      const parts = dateStr.split('-');
+                      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    })()}
                   </span>
                 </div>
 
@@ -510,7 +514,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                    {cardPayments.nextMonth.date.split('-')[2]}/{cardPayments.nextMonth.date.split('-')[1]}/{cardPayments.nextMonth.date.split('-')[0]}
+                    {(() => {
+                      const dateStr = cardPayments.nextMonth.date.toISOString().split('T')[0];
+                      const parts = dateStr.split('-');
+                      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                    })()}
                   </span>
                 </div>
 
