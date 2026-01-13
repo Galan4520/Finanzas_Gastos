@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
 import { SubscriptionSelector } from './SubscriptionSelector';
 import { SUBSCRIPTION_APPS, SubscriptionApp } from '../../subscriptionApps';
+import { LoadingOverlay } from '../ui/LoadingOverlay';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
@@ -137,8 +138,31 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
 
   const categories = entryType === 'ingreso' ? CATEGORIAS_INGRESOS : CATEGORIAS_GASTOS;
 
+  // Get loading message based on entry type
+  const getLoadingMessage = () => {
+    if (entryType === 'gasto') return 'Registrando gasto...';
+    if (entryType === 'ingreso') return 'Registrando ingreso...';
+    return 'Registrando cargo a tarjeta...';
+  };
+
+  const getLoadingSubmessage = () => {
+    if (entryType === 'tarjeta') {
+      if (expenseType === 'suscripcion') {
+        return 'Configurando suscripción recurrente';
+      }
+      return 'Guardando en gastos pendientes';
+    }
+    return 'Enviando información a Google Sheets';
+  };
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <>
+      <LoadingOverlay
+        isVisible={loading}
+        message={getLoadingMessage()}
+        submessage={getLoadingSubmessage()}
+      />
+      <div className="max-w-2xl mx-auto space-y-6">
 
       {/* Type Selector Tabs */}
       <div className={`${theme.colors.bgCard} p-1 rounded-2xl flex relative overflow-hidden border ${theme.colors.border}`}>
@@ -330,5 +354,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
 
       </form>
     </div>
+    </>
   );
 };
