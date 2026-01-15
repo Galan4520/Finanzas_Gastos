@@ -85,10 +85,16 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
           newEstado = 'Pagado';
         }
         else if (paymentType === 'Parcial') {
-           newCuotasPagadas += Math.floor(montoPagado / montoCuota);
+           // Permitir valores decimales para pagos parciales
+           // Ejemplo: pagar S/ 50 de una cuota de S/ 100 = 0.5 cuotas
+           newCuotasPagadas += (montoPagado / montoCuota);
         }
 
-        if (newCuotasPagadas >= numCuotas) newEstado = 'Pagado';
+        // Limitar cuotas pagadas al máximo permitido (no se puede pagar más de lo debido)
+        if (newCuotasPagadas >= numCuotas) {
+          newCuotasPagadas = numCuotas;
+          newEstado = 'Pagado';
+        }
 
         updatedExpense = {
           ...selectedExpense,
@@ -219,7 +225,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
                             <div className={`w-24 h-2 ${theme.colors.bgTertiary} rounded-full overflow-hidden`}>
                                 <div className="h-full bg-indigo-500" style={{ width: `${(selectedExpense.cuotas_pagadas / selectedExpense.num_cuotas) * 100}%`}}></div>
                             </div>
-                            <span className={`font-bold ${theme.colors.textPrimary}`}>{selectedExpense.cuotas_pagadas} / {selectedExpense.num_cuotas}</span>
+                            <span className={`font-bold ${theme.colors.textPrimary}`}>
+                              {Number(selectedExpense.cuotas_pagadas) % 1 === 0 ? selectedExpense.cuotas_pagadas : selectedExpense.cuotas_pagadas.toFixed(2)} / {selectedExpense.num_cuotas}
+                            </span>
                         </div>
                     </div>
                   </>

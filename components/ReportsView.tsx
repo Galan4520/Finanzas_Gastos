@@ -475,7 +475,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                           </div>
                           <div>
                             <p className={theme.colors.textMuted}>Cuotas</p>
-                            <p className={theme.colors.textSecondary}>{expense.cuotas_pagadas}/{expense.num_cuotas}</p>
+                            <p className={theme.colors.textSecondary}>
+                              {Number(expense.cuotas_pagadas) % 1 === 0 ? expense.cuotas_pagadas : expense.cuotas_pagadas.toFixed(2)}/{expense.num_cuotas}
+                            </p>
                           </div>
                           <div>
                             <p className={theme.colors.textMuted}>Por pagar</p>

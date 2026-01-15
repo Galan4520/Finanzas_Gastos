@@ -490,7 +490,9 @@ function App() {
                       <div className="mb-3">
                         <div className="flex justify-between items-center mb-1.5">
                           <span className={`text-xs ${theme.colors.textMuted}`}>Progreso de pago</span>
-                          <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>{p.cuotas_pagadas}/{p.num_cuotas} cuotas</span>
+                          <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
+                            {Number(p.cuotas_pagadas) % 1 === 0 ? p.cuotas_pagadas : p.cuotas_pagadas.toFixed(2)}/{p.num_cuotas} cuotas
+                          </span>
                         </div>
                         <div className={`w-full h-2.5 rounded-full overflow-hidden ${theme.colors.bgSecondary}`}>
                           <div
