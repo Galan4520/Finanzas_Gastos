@@ -84,6 +84,21 @@ export interface RealEstateInvestment {
   timestamp: string;
 }
 
+// Real Estate Catalog (Properties available for purchase)
+export interface RealEstateProperty {
+  id: string;
+  titulo: string;
+  tipo: 'Casa' | 'Departamento' | 'Terreno' | 'Local Comercial' | 'Otro';
+  zona: string; // Distrito o zona (ej: San Isidro, Miraflores, etc.)
+  precio: number;
+  area_m2?: number;
+  dormitorios?: number;
+  banos?: number;
+  descripcion?: string;
+  url_imagen?: string;
+  timestamp: string;
+}
+
 // User Profile
 export interface UserProfile {
   avatar_id: string;
