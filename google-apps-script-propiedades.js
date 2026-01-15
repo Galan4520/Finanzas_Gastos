@@ -45,28 +45,17 @@ function doGet(e) {
     // A(0): ID
     // B(1): URL
     // C(2): Fotos
-    // D(3): Portal
-    // E(4): Fecha Extracción
-    // F(5): Fecha Publicación
     // G(6): Título
     // H(7): Descripción
-    // I(8): Es Unidad de Proyecto
-    // J(9): URL Proyecto Padre
     // K(10): Distrito
     // L(11): Dirección
-    // M(12): Urbanización
-    // N(13): Referencia
-    // O(14): Latitud
-    // P(15): Longitud
     // Q(16): Área Total (m²)
     // R(17): Área Construida (m²)
-    // S(18): Área Techada (m²)
     // T(19): Dormitorios
     // U(20): Baños
-    // V(21): Medio Baño
-    // ... continúa hasta las demás columnas
     // AE(30): Precio (S/)
-    // AM(38): Tipo
+    // AG(32): Precio/m² (S/)
+    // AN(39): Tipo
 
     // Empezar desde la fila 2 (índice 1) para saltar encabezados
     for (let i = 1; i < data.length; i++) {
@@ -77,7 +66,7 @@ function doGet(e) {
         const property = {
           id: row[0] ? row[0].toString().trim() : 'PROP' + i.toString().padStart(4, '0'),
           titulo: row[6] ? row[6].toString().trim() : 'Propiedad sin título',
-          tipo: row[38] ? mapearTipo(row[38].toString().trim()) : 'Otro',
+          tipo: row[39] ? mapearTipo(row[39].toString().trim()) : 'Otro', // Columna AN = índice 39
           zona: row[10] ? row[10].toString().trim() : '',
           precio: parseFloat(row[30]) || 0,
           area_m2: parseFloat(row[16]) || parseFloat(row[17]) || null, // Área Total o Área Construida
