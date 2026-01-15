@@ -136,6 +136,19 @@ function App() {
         saveHistory(data.history);
       }
 
+      // Available Properties (Real Estate Catalog)
+      if (data.availableProperties && Array.isArray(data.availableProperties)) {
+        const cleanProperties = data.availableProperties.map((p: any) => ({
+          ...p,
+          precio: parseFloat(p.precio) || 0,
+          area_m2: p.area_m2 ? parseFloat(p.area_m2) : undefined,
+          dormitorios: p.dormitorios ? parseInt(p.dormitorios) : undefined,
+          banos: p.banos ? parseInt(p.banos) : undefined
+        }));
+        setAvailableProperties(cleanProperties);
+        localStorage.setItem('availableProperties', JSON.stringify(cleanProperties));
+      }
+
       showToast("Sincronización completada", 'success');
     } catch (error) {
       console.error(error);
@@ -172,12 +185,12 @@ function App() {
       const storedInvestments = localStorage.getItem('realEstateInvestments');
       if (storedInvestments) setRealEstateInvestments(JSON.parse(storedInvestments));
 
-      // Load available properties or initialize with mock data
+      // Load available properties from localStorage (will be synced from Google Sheets)
       const storedProperties = localStorage.getItem('availableProperties');
       if (storedProperties) {
         setAvailableProperties(JSON.parse(storedProperties));
-      } else {
-        // Initialize with sample data
+      } else if (!storedUrl || !storedPin) {
+        // Only use sample data if not connected to Google Sheets yet
         const sampleProperties: RealEstateProperty[] = [
           {
             id: 'PROP001',
