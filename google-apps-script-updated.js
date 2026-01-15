@@ -153,7 +153,7 @@ function doPost(e) {
   } else if (params.tipo === 'Gastos_Pendientes') {
     // ===== HOJA: Gastos_Pendientes (CON ID, TRACKING Y TIPO) =====
     const numCuotas = parseInt(params.num_cuotas) || 1;
-    const cuotasPagadas = parseInt(params.cuotas_pagadas) || 0;
+    const cuotasPagadas = parseFloat(params.cuotas_pagadas) || 0; // Cambiado a parseFloat para permitir valores decimales
     const gastoId = params.id || generateId();
     const tipoGasto = params.tipo_gasto || 'deuda';
 
@@ -230,7 +230,7 @@ function handleUpdate(sheet, params) {
         targetSheet.getRange(i + 1, 8).setValue(params.fecha_pago);
         targetSheet.getRange(i + 1, 9).setValue(params.estado);
         targetSheet.getRange(i + 1, 10).setValue(parseInt(params.num_cuotas) || 1);
-        targetSheet.getRange(i + 1, 11).setValue(parseInt(params.cuotas_pagadas) || 0);
+        targetSheet.getRange(i + 1, 11).setValue(parseFloat(params.cuotas_pagadas) || 0); // Cambiado a parseFloat para permitir valores decimales
         targetSheet.getRange(i + 1, 12).setValue(params.tipo || 'deuda');
         targetSheet.getRange(i + 1, 13).setValue(params.notas || '');
 

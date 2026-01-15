@@ -8,7 +8,8 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { GoalsView } from './components/GoalsView';
 import { SettingsView } from './components/SettingsView';
 import { ReportsView } from './components/ReportsView';
-import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, UserProfile, RealEstateInvestment } from './types';
+import { AssetsView } from './components/AssetsView';
+import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, UserProfile, RealEstateInvestment, RealEstateProperty } from './types';
 import { formatCurrency, formatDate } from './utils/format';
 import { fetchData, sendToSheet, updateInSheet, deleteFromSheet, saveProfile } from './services/googleSheetService';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
@@ -54,6 +55,7 @@ function App() {
   const [history, setHistory] = useState<Transaction[]>([]);
   const [savingsGoal, setSavingsGoal] = useState<SavingsGoalConfig | null>(null);
   const [realEstateInvestments, setRealEstateInvestments] = useState<RealEstateInvestment[]>([]);
+  const [availableProperties, setAvailableProperties] = useState<RealEstateProperty[]>([]);
 
   // Modal States
   const [editingSubscription, setEditingSubscription] = useState<PendingExpense | null>(null);
@@ -88,6 +90,12 @@ function App() {
     localStorage.setItem('realEstateInvestments', JSON.stringify(newInvestments));
   };
 
+  const handleAddRealEstateInvestment = (investment: RealEstateInvestment) => {
+    const updated = [...realEstateInvestments, investment];
+    saveRealEstateInvestments(updated);
+    showToast('Propiedad agregada correctamente', 'success');
+  };
+
   // Sync Logic
   const handleSync = useCallback(async () => {
     if (!scriptUrl || !pin) return;
@@ -118,7 +126,7 @@ function App() {
           ...p,
           monto: parseFloat(p.monto) || 0,
           num_cuotas: parseInt(p.num_cuotas) || 1,
-          cuotas_pagadas: parseInt(p.cuotas_pagadas) || 0
+          cuotas_pagadas: parseFloat(p.cuotas_pagadas) || 0 // Cambiado a parseFloat para permitir valores decimales
         }));
         savePending(cleanPending);
       }
@@ -163,6 +171,86 @@ function App() {
 
       const storedInvestments = localStorage.getItem('realEstateInvestments');
       if (storedInvestments) setRealEstateInvestments(JSON.parse(storedInvestments));
+
+      // Load available properties or initialize with mock data
+      const storedProperties = localStorage.getItem('availableProperties');
+      if (storedProperties) {
+        setAvailableProperties(JSON.parse(storedProperties));
+      } else {
+        // Initialize with sample data
+        const sampleProperties: RealEstateProperty[] = [
+          {
+            id: 'PROP001',
+            titulo: 'Departamento Moderno en San Isidro',
+            tipo: 'Departamento',
+            zona: 'San Isidro',
+            precio: 280000,
+            area_m2: 85,
+            dormitorios: 2,
+            banos: 2,
+            descripcion: 'Moderno departamento en zona residencial, cerca al golf y centros comerciales.',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: 'PROP002',
+            titulo: 'Casa con Jardín en Surco',
+            tipo: 'Casa',
+            zona: 'Santiago de Surco',
+            precio: 450000,
+            area_m2: 180,
+            dormitorios: 4,
+            banos: 3,
+            descripcion: 'Amplia casa con jardín, cochera para 2 autos y terraza.',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: 'PROP003',
+            titulo: 'Terreno en Pachacamac',
+            tipo: 'Terreno',
+            zona: 'Pachacamac',
+            precio: 120000,
+            area_m2: 500,
+            descripcion: 'Terreno plano ideal para proyecto residencial o casa de campo.',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: 'PROP004',
+            titulo: 'Loft en Miraflores',
+            tipo: 'Departamento',
+            zona: 'Miraflores',
+            precio: 320000,
+            area_m2: 65,
+            dormitorios: 1,
+            banos: 1,
+            descripcion: 'Moderno loft cerca al malecón, perfecto para inversionistas.',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: 'PROP005',
+            titulo: 'Local Comercial en La Molina',
+            tipo: 'Local Comercial',
+            zona: 'La Molina',
+            precio: 180000,
+            area_m2: 45,
+            descripcion: 'Local en zona comercial de alto tránsito, ideal para negocio.',
+            timestamp: new Date().toISOString()
+          },
+          {
+            id: 'PROP006',
+            titulo: 'Departamento Vista al Mar - Barranco',
+            tipo: 'Departamento',
+            zona: 'Barranco',
+            precio: 380000,
+            area_m2: 95,
+            dormitorios: 3,
+            banos: 2,
+            descripcion: 'Departamento con vista al mar, balcón amplio y acabados premium.',
+            timestamp: new Date().toISOString()
+          }
+        ];
+        setAvailableProperties(sampleProperties);
+        localStorage.setItem('availableProperties', JSON.stringify(sampleProperties));
+      }
 
       // Load profile from localStorage
       const storedProfile = localStorage.getItem('profile');
@@ -685,6 +773,16 @@ function App() {
             <button onClick={() => setActiveTab('deudas')} className={`mb-4 ${theme.colors.textMuted} hover:${theme.colors.textPrimary} text-sm flex items-center gap-1 transition-colors`}>← Volver a Deudas</button>
             <PaymentForm scriptUrl={scriptUrl} pin={pin} pendingExpenses={pendingExpenses} onUpdateExpense={handleUpdateExpense} onAddToHistory={handleAddToHistory} {...commonProps} />
           </div>
+        );
+
+      case 'activos':
+        return (
+          <AssetsView
+            realEstateInvestments={realEstateInvestments}
+            availableProperties={availableProperties}
+            onAddProperty={handleAddRealEstateInvestment}
+            {...commonProps}
+          />
         );
 
       case 'config':
