@@ -466,12 +466,37 @@ function doGet(e) {
     }
   }
 
+  // 4. Obtener Propiedades Disponibles (Catálogo Inmobiliario)
+  const propiedadesSheet = sheet.getSheetByName('Propiedades_Disponibles');
+  let availableProperties = [];
+  if (propiedadesSheet) {
+    const data = propiedadesSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]) { // Si tiene título
+        availableProperties.push({
+          id: 'PROP' + i,
+          titulo: data[i][0],
+          tipo: data[i][1],
+          zona: data[i][2],
+          precio: data[i][3],
+          area_m2: data[i][4] || null,
+          dormitorios: data[i][5] || null,
+          banos: data[i][6] || null,
+          descripcion: data[i][7] || '',
+          url_imagen: data[i][8] || '',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+  }
+
   // 🆕 Retornar JSON con perfil incluido
   return ContentService.createTextOutput(JSON.stringify({
     profile: profile,  // null si no existe, o { avatar_id, nombre }
     cards: cards,
     pending: pending,
-    history: history
+    history: history,
+    availableProperties: availableProperties // 🆕 Catálogo de propiedades
   })).setMimeType(ContentService.MimeType.JSON);
 }
 

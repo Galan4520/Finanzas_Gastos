@@ -11,7 +11,7 @@ import { ReportsView } from './components/ReportsView';
 import { AssetsView } from './components/AssetsView';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, UserProfile, RealEstateInvestment, RealEstateProperty } from './types';
 import { formatCurrency, formatDate } from './utils/format';
-import { fetchData, sendToSheet, updateInSheet, deleteFromSheet, saveProfile } from './services/googleSheetService';
+import { fetchData, sendToSheet, updateInSheet, deleteFromSheet, saveProfile, fetchProperties } from './services/googleSheetService';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
 import { Toast, ToastType } from './components/ui/Toast';
 import { useTheme } from './contexts/ThemeContext';
@@ -20,6 +20,7 @@ import { EditSubscriptionModal } from './components/ui/EditSubscriptionModal';
 import { EditCardModal } from './components/ui/EditCardModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Pencil, Trash2, CreditCard as CreditCardIcon } from 'lucide-react';
+import { PUBLIC_PROPERTIES_SCRIPT_URL } from './config';
 
 function App() {
   const { currentTheme, theme, setTheme } = useTheme();
@@ -136,6 +137,36 @@ function App() {
         saveHistory(data.history);
       }
 
+      // Available Properties (Real Estate Catalog)
+      // Fetch from public properties catalog (shared by all users)
+      if (PUBLIC_PROPERTIES_SCRIPT_URL) {
+        try {
+          const properties = await fetchProperties(PUBLIC_PROPERTIES_SCRIPT_URL);
+          const cleanProperties = properties.map((p: any) => ({
+            ...p,
+            precio: parseFloat(p.precio) || 0,
+            area_m2: p.area_m2 ? parseFloat(p.area_m2) : undefined,
+            dormitorios: p.dormitorios ? parseInt(p.dormitorios) : undefined,
+            banos: p.banos ? parseFloat(p.banos) : undefined
+          }));
+          setAvailableProperties(cleanProperties);
+          localStorage.setItem('availableProperties', JSON.stringify(cleanProperties));
+        } catch (error) {
+          console.error('Error fetching properties from public catalog:', error);
+        }
+      } else if (data.availableProperties && Array.isArray(data.availableProperties)) {
+        // Fallback: check if main sheet includes properties data
+        const cleanProperties = data.availableProperties.map((p: any) => ({
+          ...p,
+          precio: parseFloat(p.precio) || 0,
+          area_m2: p.area_m2 ? parseFloat(p.area_m2) : undefined,
+          dormitorios: p.dormitorios ? parseInt(p.dormitorios) : undefined,
+          banos: p.banos ? parseFloat(p.banos) : undefined
+        }));
+        setAvailableProperties(cleanProperties);
+        localStorage.setItem('availableProperties', JSON.stringify(cleanProperties));
+      }
+
       showToast("Sincronización completada", 'success');
     } catch (error) {
       console.error(error);
@@ -172,12 +203,12 @@ function App() {
       const storedInvestments = localStorage.getItem('realEstateInvestments');
       if (storedInvestments) setRealEstateInvestments(JSON.parse(storedInvestments));
 
-      // Load available properties or initialize with mock data
+      // Load available properties from localStorage (will be synced from Google Sheets)
       const storedProperties = localStorage.getItem('availableProperties');
       if (storedProperties) {
         setAvailableProperties(JSON.parse(storedProperties));
-      } else {
-        // Initialize with sample data
+      } else if (!storedUrl || !storedPin) {
+        // Only use sample data if not connected to Google Sheets yet
         const sampleProperties: RealEstateProperty[] = [
           {
             id: 'PROP001',
