@@ -70,6 +70,20 @@ export const BANCOS = [
   "Banbif", "Falabella", "Ripley", "Otro"
 ];
 
+// Real Estate Investments
+export interface RealEstateInvestment {
+  id: string;
+  nombre: string; // Nombre o dirección de la propiedad
+  tipo: 'Casa' | 'Departamento' | 'Terreno' | 'Local Comercial' | 'Otro';
+  valor_compra: number;
+  valor_actual: number;
+  fecha_adquisicion: string;
+  genera_renta: boolean;
+  renta_mensual?: number; // Solo si genera_renta es true
+  notas?: string;
+  timestamp: string;
+}
+
 // User Profile
 export interface UserProfile {
   avatar_id: string;

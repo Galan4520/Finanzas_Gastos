@@ -8,7 +8,7 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { GoalsView } from './components/GoalsView';
 import { SettingsView } from './components/SettingsView';
 import { ReportsView } from './components/ReportsView';
-import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, UserProfile } from './types';
+import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, UserProfile, RealEstateInvestment } from './types';
 import { formatCurrency, formatDate } from './utils/format';
 import { fetchData, sendToSheet, updateInSheet, deleteFromSheet, saveProfile } from './services/googleSheetService';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
@@ -53,6 +53,7 @@ function App() {
   const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>([]);
   const [history, setHistory] = useState<Transaction[]>([]);
   const [savingsGoal, setSavingsGoal] = useState<SavingsGoalConfig | null>(null);
+  const [realEstateInvestments, setRealEstateInvestments] = useState<RealEstateInvestment[]>([]);
 
   // Modal States
   const [editingSubscription, setEditingSubscription] = useState<PendingExpense | null>(null);
@@ -80,6 +81,11 @@ function App() {
     setSavingsGoal(newGoal);
     localStorage.setItem('savingsGoal', JSON.stringify(newGoal));
     showToast('Meta de ahorro actualizada', 'success');
+  };
+
+  const saveRealEstateInvestments = (newInvestments: RealEstateInvestment[]) => {
+    setRealEstateInvestments(newInvestments);
+    localStorage.setItem('realEstateInvestments', JSON.stringify(newInvestments));
   };
 
   // Sync Logic
@@ -154,6 +160,9 @@ function App() {
 
       const storedGoal = localStorage.getItem('savingsGoal');
       if (storedGoal) setSavingsGoal(JSON.parse(storedGoal));
+
+      const storedInvestments = localStorage.getItem('realEstateInvestments');
+      if (storedInvestments) setRealEstateInvestments(JSON.parse(storedInvestments));
 
       // Load profile from localStorage
       const storedProfile = localStorage.getItem('profile');
@@ -385,7 +394,7 @@ function App() {
 
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard cards={cards} pendingExpenses={pendingExpenses} history={history} savingsGoal={savingsGoal} />;
+        return <Dashboard cards={cards} pendingExpenses={pendingExpenses} history={history} savingsGoal={savingsGoal} realEstateInvestments={realEstateInvestments} />;
 
       case 'registrar': // Unified Entry
         return <UnifiedEntryForm scriptUrl={scriptUrl} pin={pin} cards={cards} onAddPending={handleAddPending} onSuccess={handleSync} {...commonProps} />;
