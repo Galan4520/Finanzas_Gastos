@@ -84,7 +84,8 @@ function doGet(e) {
           dormitorios: row[19] ? parseInt(row[19]) : null,
           banos: row[20] ? parseFloat(row[20]) : null,
           descripcion: row[7] ? row[7].toString().trim() : '',
-          url_imagen: row[2] ? extraerPrimeraFoto(row[2].toString()) : '', // Columna Fotos
+          imagenes: row[2] ? extraerFotos(row[2].toString()) : [], // Array de URLs de fotos
+          url_imagen: row[2] ? extraerFotos(row[2].toString())[0] : '', // Primera foto (compatibilidad)
           url_propiedad: row[1] ? row[1].toString().trim() : '',
           distrito: row[10] ? row[10].toString().trim() : '',
           direccion: row[11] ? row[11].toString().trim() : '',
@@ -132,25 +133,22 @@ function mapearTipo(tipo) {
 }
 
 /**
- * Extrae la primera foto de una lista separada por comas o espacios
+ * Extrae todas las fotos de una lista separada por comas
+ * Retorna un array de URLs
  */
-function extraerPrimeraFoto(fotos) {
-  if (!fotos) return '';
+function extraerFotos(fotos) {
+  if (!fotos) return [];
 
   const fotosTrim = fotos.toString().trim();
-  if (fotosTrim === '') return '';
+  if (fotosTrim === '') return [];
 
-  // Si hay múltiples URLs separadas por coma, tomar la primera
+  // Si hay múltiples URLs separadas por coma
   if (fotosTrim.includes(',')) {
-    return fotosTrim.split(',')[0].trim();
+    return fotosTrim.split(',').map(url => url.trim()).filter(url => url !== '');
   }
 
-  // Si hay múltiples URLs separadas por espacio, tomar la primera
-  if (fotosTrim.includes(' ')) {
-    return fotosTrim.split(' ')[0].trim();
-  }
-
-  return fotosTrim;
+  // Una sola foto
+  return [fotosTrim];
 }
 
 /**

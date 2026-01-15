@@ -95,7 +95,8 @@ export interface RealEstateProperty {
   dormitorios?: number;
   banos?: number;
   descripcion?: string;
-  url_imagen?: string;
+  url_imagen?: string; // Primera imagen (compatibilidad)
+  imagenes?: string[]; // Array de todas las imágenes para carrusel
   timestamp: string;
 }
 

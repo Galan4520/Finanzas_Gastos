@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { RealEstateInvestment, RealEstateProperty } from '../types';
 import { formatCurrency } from '../utils/format';
-import { Home, Search, Filter, Plus, TrendingUp, MapPin, Maximize2, BedDouble, Bath } from 'lucide-react';
+import { Home, Search, Filter, Plus, TrendingUp, MapPin, Maximize2, BedDouble, Bath, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 
@@ -12,6 +12,78 @@ interface AssetsViewProps {
   onBuyProperty?: (property: RealEstateProperty) => void;
   notify?: (msg: string, type: 'success' | 'error') => void;
 }
+
+// Componente de Carrusel de Imágenes
+const ImageCarousel: React.FC<{ imagenes: string[], titulo: string, theme: any }> = ({ imagenes, titulo, theme }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  if (!imagenes || imagenes.length === 0) {
+    return (
+      <div className={`h-48 ${theme.colors.gradientPrimary} flex items-center justify-center`}>
+        <Home size={48} className="text-white/50" />
+      </div>
+    );
+  }
+
+  const nextImage = () => {
+    setCurrentIndex((prev) => (prev + 1) % imagenes.length);
+  };
+
+  const prevImage = () => {
+    setCurrentIndex((prev) => (prev - 1 + imagenes.length) % imagenes.length);
+  };
+
+  return (
+    <div className="relative h-48 group">
+      <img
+        src={imagenes[currentIndex]}
+        alt={`${titulo} - Imagen ${currentIndex + 1}`}
+        className="w-full h-full object-cover"
+      />
+
+      {/* Contador de imágenes */}
+      {imagenes.length > 1 && (
+        <>
+          <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+            {currentIndex + 1} / {imagenes.length}
+          </div>
+
+          {/* Botones de navegación */}
+          <button
+            onClick={(e) => { e.stopPropagation(); prevImage(); }}
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Imagen anterior"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); nextImage(); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-label="Siguiente imagen"
+          >
+            <ChevronRight size={20} />
+          </button>
+
+          {/* Indicadores de puntos */}
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1.5">
+            {imagenes.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={(e) => { e.stopPropagation(); setCurrentIndex(idx); }}
+                className={`w-2 h-2 rounded-full transition-all ${
+                  idx === currentIndex
+                    ? 'bg-white w-6'
+                    : 'bg-white/50 hover:bg-white/75'
+                }`}
+                aria-label={`Ir a imagen ${idx + 1}`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export const AssetsView: React.FC<AssetsViewProps> = ({
   realEstateInvestments,
@@ -295,14 +367,12 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProperties.map(prop => (
                 <div key={prop.id} className={`${theme.colors.bgCard} rounded-xl border ${theme.colors.border} overflow-hidden hover:shadow-lg transition-all`}>
-                  {/* Image placeholder */}
-                  <div className={`h-48 ${theme.colors.gradientPrimary} flex items-center justify-center`}>
-                    {prop.url_imagen ? (
-                      <img src={prop.url_imagen} alt={prop.titulo} className="w-full h-full object-cover" />
-                    ) : (
-                      <Home size={48} className="text-white/50" />
-                    )}
-                  </div>
+                  {/* Carrusel de imágenes */}
+                  <ImageCarousel
+                    imagenes={prop.imagenes || (prop.url_imagen ? [prop.url_imagen] : [])}
+                    titulo={prop.titulo}
+                    theme={theme}
+                  />
 
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-2">
