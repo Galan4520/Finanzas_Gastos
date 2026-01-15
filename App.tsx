@@ -20,6 +20,7 @@ import { EditSubscriptionModal } from './components/ui/EditSubscriptionModal';
 import { EditCardModal } from './components/ui/EditCardModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Pencil, Trash2, CreditCard as CreditCardIcon } from 'lucide-react';
+import { PUBLIC_PROPERTIES_SCRIPT_URL } from './config';
 
 function App() {
   const { currentTheme, theme, setTheme } = useTheme();
@@ -27,7 +28,6 @@ function App() {
   const [debtSubTab, setDebtSubTab] = useState<'deudas' | 'suscripciones'>('deudas');
   const [scriptUrl, setScriptUrl] = useState('');
   const [pin, setPin] = useState('');
-  const [propertiesScriptUrl, setPropertiesScriptUrl] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -138,10 +138,10 @@ function App() {
       }
 
       // Available Properties (Real Estate Catalog)
-      // If separate properties URL is configured, fetch from there
-      if (propertiesScriptUrl) {
+      // Fetch from public properties catalog (shared by all users)
+      if (PUBLIC_PROPERTIES_SCRIPT_URL) {
         try {
-          const properties = await fetchProperties(propertiesScriptUrl);
+          const properties = await fetchProperties(PUBLIC_PROPERTIES_SCRIPT_URL);
           const cleanProperties = properties.map((p: any) => ({
             ...p,
             precio: parseFloat(p.precio) || 0,
@@ -152,10 +152,10 @@ function App() {
           setAvailableProperties(cleanProperties);
           localStorage.setItem('availableProperties', JSON.stringify(cleanProperties));
         } catch (error) {
-          console.error('Error fetching properties from separate sheet:', error);
+          console.error('Error fetching properties from public catalog:', error);
         }
       } else if (data.availableProperties && Array.isArray(data.availableProperties)) {
-        // Otherwise, check if main sheet includes properties data
+        // Fallback: check if main sheet includes properties data
         const cleanProperties = data.availableProperties.map((p: any) => ({
           ...p,
           precio: parseFloat(p.precio) || 0,
@@ -174,22 +174,17 @@ function App() {
     } finally {
       setIsSyncing(false);
     }
-  }, [scriptUrl, pin, propertiesScriptUrl]);
+  }, [scriptUrl, pin]);
 
   // Load Data on Mount
   useEffect(() => {
     const storedUrl = localStorage.getItem('scriptUrl');
     const storedPin = localStorage.getItem('pin');
-    const storedPropertiesUrl = localStorage.getItem('propertiesScriptUrl');
 
     if (storedUrl && storedPin) {
       setScriptUrl(storedUrl);
       setPin(storedPin);
       setShowWelcome(false);
-    }
-
-    if (storedPropertiesUrl) {
-      setPropertiesScriptUrl(storedPropertiesUrl);
     }
 
     try {
@@ -375,12 +370,6 @@ function App() {
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  const savePropertiesUrl = (url: string) => {
-    setPropertiesScriptUrl(url);
-    localStorage.setItem('propertiesScriptUrl', url);
-    showToast('URL de propiedades guardada', 'success');
   };
 
   // Update handlers
@@ -832,7 +821,6 @@ function App() {
           <SettingsView
             scriptUrl={scriptUrl}
             pin={pin}
-            propertiesScriptUrl={propertiesScriptUrl}
             cards={cards}
             savingsGoal={savingsGoal}
             currentTheme={currentTheme}
@@ -843,7 +831,6 @@ function App() {
             onSaveGoal={saveSavingsGoal}
             onSetTheme={setTheme}
             onSync={handleSync}
-            onSavePropertiesUrl={savePropertiesUrl}
             notify={showToast}
           />
         );

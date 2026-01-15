@@ -10,7 +10,6 @@ import { getAvatarById } from '../avatars';
 interface SettingsViewProps {
   scriptUrl: string;
   pin: string;
-  propertiesScriptUrl?: string;
   cards: CreditCardType[];
   savingsGoal: SavingsGoalConfig | null;
   currentTheme: string;
@@ -21,14 +20,12 @@ interface SettingsViewProps {
   onSaveGoal: (goal: SavingsGoalConfig) => void;
   onSetTheme: (theme: string) => void;
   onSync: () => void;
-  onSavePropertiesUrl?: (url: string) => void;
   notify: (msg: string, type: 'success' | 'error') => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   scriptUrl,
   pin,
-  propertiesScriptUrl = '',
   cards,
   savingsGoal,
   currentTheme,
@@ -39,13 +36,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSaveGoal,
   onSetTheme,
   onSync,
-  onSavePropertiesUrl,
   notify
 }) => {
   const { theme } = useTheme();
   const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general'>('general');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [propertiesUrlInput, setPropertiesUrlInput] = useState(propertiesScriptUrl);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
   const [goalFormData, setGoalFormData] = useState({
@@ -200,35 +195,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </div>
                 <p className={`text-xs ${theme.colors.textMuted} mt-2`}>
                   Para cambiar el PIN, actualiza la celda A2 en la hoja "Config" de tu Google Sheet
-                </p>
-              </div>
-
-              {/* Properties Script URL (Optional - for separate properties sheet) */}
-              <div>
-                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3`}>
-                  URL de Propiedades (Opcional)
-                </label>
-                <div className="flex flex-col md:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={propertiesUrlInput}
-                    onChange={(e) => setPropertiesUrlInput(e.target.value)}
-                    placeholder="https://script.google.com/.../exec (Para catálogo inmobiliario)"
-                    className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-current outline-none transition-all`}
-                  />
-                  <button
-                    onClick={() => {
-                      if (onSavePropertiesUrl) {
-                        onSavePropertiesUrl(propertiesUrlInput);
-                      }
-                    }}
-                    className={`px-6 py-3 ${theme.colors.primary} ${theme.colors.primaryHover} rounded-lg text-white font-bold transition-all shadow-lg`}
-                  >
-                    <Save size={18} />
-                  </button>
-                </div>
-                <p className={`text-xs ${theme.colors.textMuted} mt-2`}>
-                  Si tienes un Google Sheet separado para propiedades inmobiliarias, pega aquí la URL del script
                 </p>
               </div>
 

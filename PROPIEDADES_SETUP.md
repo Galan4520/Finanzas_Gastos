@@ -1,27 +1,28 @@
-# Configuración del Catálogo de Propiedades Inmobiliarias
+# Configuración del Catálogo de Propiedades Inmobiliarias (PÚBLICO)
 
-Este documento explica cómo configurar un Google Sheet separado para el catálogo de propiedades inmobiliarias.
+Este documento explica cómo configurar un Google Sheet **público** para el catálogo de propiedades inmobiliarias que será compartido por todos los usuarios de la aplicación.
 
-## 📋 Opción 1: Usar el Script Principal (Más Simple)
+## 🌐 Concepto Importante
 
-Si no quieres configurar un Google Sheet separado, puedes agregar una hoja llamada `Propiedades_Disponibles` a tu Google Sheet principal de finanzas. El script principal (`google-apps-script-updated.js`) ya está configurado para leer esta hoja.
+- **Catálogo de Propiedades**: Es PÚBLICO y compartido por TODOS los usuarios
+- **Google Sheet de Finanzas**: Es PRIVADO, cada usuario tiene el suyo
+- **Resultado**: Todos ven el mismo catálogo de propiedades, pero cada uno gestiona sus propias finanzas
 
-**Estructura de columnas:**
-```
-A: titulo
-B: tipo (Casa, Departamento, Terreno, Local Comercial, Otro)
-C: zona (ej: San Isidro, Miraflores, etc.)
-D: precio (número)
-E: area_m2 (número, opcional)
-F: dormitorios (número, opcional)
-G: banos (número, opcional)
-H: descripcion (texto, opcional)
-I: url_imagen (URL, opcional)
-```
+## 👤 Roles
 
-## 📋 Opción 2: Google Sheet Separado (Recomendado)
+### Administrador del Catálogo (TÚ)
+- Mantienes el Google Sheet público de propiedades
+- Actualizas el catálogo cuando hay nuevas propiedades
+- Configuras la URL pública en el código
 
-### Paso 1: Crear Google Sheet de Propiedades
+### Usuarios Finales
+- Solo configuran su Google Sheet personal de finanzas
+- Ven automáticamente tu catálogo público de propiedades
+- NO necesitan configurar nada relacionado a propiedades
+
+---
+
+## 📋 Paso 1: Crear Google Sheet Público de Propiedades
 
 1. Crea un nuevo Google Sheet
 2. Nombra la primera hoja: **Propiedades_Disponibles**
@@ -31,60 +32,14 @@ I: url_imagen (URL, opcional)
 |---|---|---|---|---|---|---|---|---|
 | titulo | tipo | zona | precio | area_m2 | dormitorios | banos | descripcion | url_imagen |
 
-### Paso 2: Agregar Datos de Ejemplo
-
-```
-titulo: Departamento Moderno en San Isidro
-tipo: Departamento
-zona: San Isidro
-precio: 280000
-area_m2: 85
-dormitorios: 2
-banos: 2
-descripcion: Moderno departamento en zona residencial
-url_imagen: (opcional - URL de imagen)
-```
-
-### Paso 3: Instalar el Script
-
-1. En tu Google Sheet de propiedades, ve a **Extensiones > Apps Script**
-2. Borra el código por defecto (`function myFunction() {}`)
-3. Pega el contenido del archivo `google-apps-script-propiedades.js`
-4. Guarda el proyecto con un nombre (ej: "API Propiedades")
-
-### Paso 4: Implementar como Web App
-
-1. En Apps Script, haz clic en **Implementar > Nueva implementación**
-2. Tipo: Selecciona **Aplicación web**
-3. Descripción: "API de Propiedades v1"
-4. Ejecutar como: **Yo (tu correo)**
-5. Quién tiene acceso: **Cualquier persona**
-6. Haz clic en **Implementar**
-7. **Copia la URL de la implementación** (termina en `/exec`)
-
-### Paso 5: Configurar en la Aplicación
-
-1. Abre tu aplicación de finanzas
-2. Ve a la pestaña **Configuración**
-3. En la sección **"URL de Propiedades (Opcional)"**, pega la URL que copiaste
-4. Haz clic en el botón de guardar (💾)
-5. Sincroniza la aplicación
-
-### Paso 6: Verificar
-
-1. Ve a la pestaña **Activos**
-2. Selecciona el subtab **Explorar**
-3. Deberías ver las propiedades de tu Google Sheet
-
-## 🔍 Tipos de Propiedad Válidos
-
+### Tipos de Propiedad Válidos
 - **Casa**
 - **Departamento**
 - **Terreno**
 - **Local Comercial**
 - **Otro**
 
-## 📝 Ejemplo de Datos Completos
+### Ejemplo de Datos
 
 | titulo | tipo | zona | precio | area_m2 | dormitorios | banos | descripcion | url_imagen |
 |--------|------|------|--------|---------|-------------|-------|-------------|------------|
@@ -92,51 +47,152 @@ url_imagen: (opcional - URL de imagen)
 | Loft en Miraflores | Departamento | Miraflores | 320000 | 65 | 1 | 1 | Moderno loft cerca al malecón | |
 | Terreno en Pachacamac | Terreno | Pachacamac | 120000 | 500 | | | Terreno plano ideal para proyecto | |
 
+---
+
+## 📋 Paso 2: Instalar el Script
+
+1. En tu Google Sheet de propiedades, ve a **Extensiones > Apps Script**
+2. Borra el código por defecto (`function myFunction() {}`)
+3. Pega el contenido del archivo **`google-apps-script-propiedades.js`**
+4. Guarda el proyecto con un nombre (ej: "API Pública de Propiedades")
+
+---
+
+## 📋 Paso 3: Implementar como Web App PÚBLICA
+
+1. En Apps Script, haz clic en **Implementar > Nueva implementación**
+2. Tipo: Selecciona **Aplicación web**
+3. Descripción: "Catálogo Público de Propiedades v1"
+4. **Ejecutar como**: **Yo** (tu correo)
+5. **Quién tiene acceso**: **Cualquier persona** ⚠️ IMPORTANTE
+6. Haz clic en **Implementar**
+7. **Copia la URL de la implementación** (termina en `/exec`)
+
+Ejemplo de URL:
+```
+https://script.google.com/macros/s/AKfycby...ABC123.../exec
+```
+
+---
+
+## 📋 Paso 4: Configurar la URL en el Código
+
+1. Abre el archivo **`config.ts`** en la raíz del proyecto
+2. Pega tu URL en la constante `PUBLIC_PROPERTIES_SCRIPT_URL`:
+
+```typescript
+export const PUBLIC_PROPERTIES_SCRIPT_URL = 'https://script.google.com/macros/s/ABC123.../exec';
+```
+
+3. Guarda el archivo
+4. Haz commit y push a Git:
+
+```bash
+git add config.ts
+git commit -m "feat: Configure public properties catalog URL"
+git push
+```
+
+---
+
+## 📋 Paso 5: Verificar
+
+### Como Administrador:
+1. Abre tu aplicación de finanzas
+2. Conéctate con tu Google Sheet personal
+3. Ve a la pestaña **Activos > Explorar**
+4. Deberías ver las propiedades de tu catálogo público
+
+### Como Usuario Final:
+1. Los usuarios solo conectan su Google Sheet de finanzas
+2. Automáticamente verán tu catálogo público
+3. NO necesitan hacer nada relacionado a propiedades
+
+---
+
+## 🔄 Actualizar Propiedades
+
+Para agregar o modificar propiedades:
+
+1. Edita tu Google Sheet de propiedades
+2. Agrega/modifica filas (no borres la fila 1 de encabezados)
+3. Los usuarios verán los cambios en la próxima sincronización
+
+**NO necesitas**:
+- ❌ Actualizar el código
+- ❌ Hacer nuevo deploy del script
+- ❌ Notificar a los usuarios
+
+---
+
 ## 🔧 Solución de Problemas
 
-### No veo las propiedades
+### Los usuarios no ven propiedades
 
-1. Verifica que el nombre de la hoja sea exactamente: **Propiedades_Disponibles**
-2. Verifica que la URL termine en `/exec`
-3. Verifica que el script esté implementado como "Aplicación web"
-4. Verifica que "Quién tiene acceso" esté en "Cualquier persona"
+**Verifica que:**
+1. ✅ El nombre de la hoja sea exactamente: **Propiedades_Disponibles**
+2. ✅ La URL esté configurada en **`config.ts`**
+3. ✅ El script esté implementado como **"Aplicación web"**
+4. ✅ **"Quién tiene acceso"** = **"Cualquier persona"**
+5. ✅ La URL termine en `/exec`
 
-### Error al sincronizar
+### Error 403 o "No autorizado"
 
-1. Abre la URL del script directamente en el navegador
-2. Deberías ver un JSON con `{"success": true, "properties": [...]}`
-3. Si ves un error de permisos, re-implementa el script
+Esto significa que el script NO está configurado como público:
+1. Ve a **Implementar > Administrar implementaciones**
+2. Edita la implementación
+3. Asegúrate que **"Quién tiene acceso"** = **"Cualquier persona"**
+4. Guarda
 
 ### Actualizar el Script
 
-Si haces cambios en el script:
+Si haces cambios en el código del script:
 
 1. Ve a **Implementar > Administrar implementaciones**
 2. Haz clic en el ícono de lápiz (editar)
 3. En "Nueva versión", selecciona **Nueva versión**
 4. Haz clic en **Implementar**
-
-## 💡 Consejos
-
-- **No borres la fila 1** (encabezados)
-- **Los campos opcionales** (area_m2, dormitorios, banos, descripcion, url_imagen) pueden dejarse vacíos
-- **El campo precio** debe ser un número sin símbolos (ej: 280000, no S/ 280,000)
-- **Agrega todas las propiedades** que quieras, no hay límite
-- **Actualiza cuando quieras**, la app sincronizará automáticamente
-
-## 📱 Uso en la Aplicación
-
-Una vez configurado:
-
-1. **Explorar**: Busca propiedades disponibles con filtros por zona, tipo y precio
-2. **Mis Propiedades**: Agrega propiedades que ya compraste a tu portafolio
-3. **Dashboard**: Ve el resumen de tus inversiones inmobiliarias
+5. **La URL NO cambia**, no necesitas actualizar `config.ts`
 
 ---
 
-¿Tienes problemas? Verifica que:
-- ✅ La hoja se llama exactamente "Propiedades_Disponibles"
-- ✅ Los encabezados están en la fila 1
-- ✅ El script está implementado como "Aplicación web"
-- ✅ "Quién tiene acceso" = "Cualquier persona"
-- ✅ Copiaste la URL que termina en `/exec`
+## 💡 Preguntas Frecuentes
+
+### ¿Los usuarios pueden editar el catálogo?
+No, el catálogo es de solo lectura. Solo tú (como administrador) puedes editar el Google Sheet de propiedades.
+
+### ¿Puedo tener múltiples catálogos?
+Sí, pero necesitarías modificar el código para soportar múltiples URLs o permitir que los usuarios seleccionen el catálogo.
+
+### ¿Los datos son seguros?
+El catálogo es público por diseño. No pongas información sensible. Los datos financieros personales de cada usuario están en su propio Google Sheet privado.
+
+### ¿Cuántas propiedades puedo tener?
+No hay límite práctico. Google Sheets soporta hasta 10 millones de celdas.
+
+### ¿Se actualizan en tiempo real?
+Los usuarios verán las actualizaciones la próxima vez que sincronicen su aplicación (botón de sincronizar o al recargar).
+
+---
+
+## 📱 Uso en la Aplicación (Usuario Final)
+
+Los usuarios solo necesitan:
+
+1. **Configurar su Google Sheet de finanzas personal** (con sus tarjetas, gastos, etc.)
+2. Ir a **Activos > Explorar** para ver el catálogo público de propiedades
+3. Filtrar por zona, tipo y precio
+4. Agregar propiedades a "Mis Propiedades" si las compran
+
+---
+
+## 🎯 Resumen
+
+| Concepto | Descripción |
+|----------|-------------|
+| **Catálogo de Propiedades** | Público, compartido por todos, gestionado por ti |
+| **Google Sheet de Finanzas** | Privado, uno por usuario |
+| **Configuración del Usuario** | Solo su Google Sheet personal |
+| **Tu responsabilidad** | Mantener el catálogo actualizado |
+
+¿Listo? ¡Configura la URL en `config.ts` y haz push! 🚀
