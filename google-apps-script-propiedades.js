@@ -63,10 +63,24 @@ function doGet(e) {
 
       // Solo agregar si tiene ID o Título
       if ((row[0] && row[0].toString().trim() !== '') || (row[6] && row[6].toString().trim() !== '')) {
+        // Generar título automático si está vacío
+        let titulo = row[6] ? row[6].toString().trim() : '';
+        if (!titulo || titulo === '') {
+          const distrito = row[10] ? row[10].toString().trim() : 'Lima';
+          const direccion = row[11] ? row[11].toString().trim() : '';
+          const tipo = row[39] ? row[39].toString().trim() : '';
+
+          if (direccion) {
+            titulo = `Propiedad en ${distrito} - ${direccion}`;
+          } else {
+            titulo = `Propiedad en ${distrito}`;
+          }
+        }
+
         const property = {
           id: row[0] ? row[0].toString().trim() : 'PROP' + i.toString().padStart(4, '0'),
-          titulo: row[6] ? row[6].toString().trim() : 'Propiedad sin título',
-          tipo: row[39] ? mapearTipo(row[39].toString().trim()) : 'Otro', // Columna AN = índice 39
+          titulo: titulo,
+          tipo: mapearTipo(row[39] ? row[39].toString().trim() : '', row[1] ? row[1].toString().trim() : ''), // Columna AN = índice 39, URL = índice 1
           zona: row[10] ? row[10].toString().trim() : '',
           precio: parseFloat(row[30]) || 0,
           area_m2: parseFloat(row[16]) || parseFloat(row[17]) || null, // Área Total o Área Construida
@@ -107,9 +121,20 @@ function doGet(e) {
 
 /**
  * Mapea el tipo de propiedad del portal a los tipos de la app
+ * Si el tipo es desconocido, intenta extraerlo de la URL
  */
-function mapearTipo(tipo) {
-  if (!tipo) return 'Otro';
+function mapearTipo(tipo, url) {
+  if (!tipo || tipo === '' || tipo.toLowerCase() === 'desconocido' || tipo.toLowerCase() === 'none') {
+    // Intentar extraer de la URL
+    if (url) {
+      const urlLower = url.toLowerCase();
+      if (urlLower.includes('casa')) return 'Casa';
+      if (urlLower.includes('departamento') || urlLower.includes('depa')) return 'Departamento';
+      if (urlLower.includes('terreno') || urlLower.includes('lote')) return 'Terreno';
+      if (urlLower.includes('local') || urlLower.includes('comercial') || urlLower.includes('oficina')) return 'Local Comercial';
+    }
+    return 'Otro';
+  }
 
   const tipoLower = tipo.toLowerCase();
 
