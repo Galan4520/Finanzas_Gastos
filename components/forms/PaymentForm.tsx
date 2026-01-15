@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PendingExpense, Transaction } from '../../types';
-import { sendToSheet } from '../../services/googleSheetService';
+import { sendToSheet, updateInSheet } from '../../services/googleSheetService';
 import { formatCurrency, getLocalISOString } from '../../utils/format';
 import { Banknote, Lightbulb, CheckCircle, Loader2 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -114,7 +114,13 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         timestamp: getLocalISOString()
       };
 
+      // Actualizar localmente
       onUpdateExpense(updatedExpense);
+
+      // Actualizar en Google Sheets para sincronización entre dispositivos
+      await updateInSheet(scriptUrl, pin, updatedExpense, 'Gastos_Pendientes');
+
+      // Registrar el pago en la hoja de Pagos
       await sendToSheet(scriptUrl, pin, paymentPayload, 'Pagos');
 
       // Registrar el pago como un gasto en el historial

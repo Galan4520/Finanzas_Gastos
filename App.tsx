@@ -118,7 +118,7 @@ function App() {
           ...p,
           monto: parseFloat(p.monto) || 0,
           num_cuotas: parseInt(p.num_cuotas) || 1,
-          cuotas_pagadas: parseInt(p.cuotas_pagadas) || 0
+          cuotas_pagadas: parseFloat(p.cuotas_pagadas) || 0 // Cambiado a parseFloat para permitir valores decimales
         }));
         savePending(cleanPending);
       }
