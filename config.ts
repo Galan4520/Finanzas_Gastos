@@ -8,7 +8,7 @@
 // URL PÚBLICA del catálogo de propiedades inmobiliarias
 // Esta URL es compartida por TODOS los usuarios de la aplicación
 // Solo el administrador del catálogo debe actualizar esta URL
-export const PUBLIC_PROPERTIES_SCRIPT_URL = '';
+export const PUBLIC_PROPERTIES_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzQksoQzJ7V3Iy7zGfZEwMBzxkYcTKdSdqSMgC_MG-TljCS4f-yeqQhWMf_g31jP0162A/exec';
 
 /**
  * INSTRUCCIONES PARA EL ADMINISTRADOR DEL CATÁLOGO:
