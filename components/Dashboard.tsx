@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
-import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig } from '../types';
+import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, RealEstateInvestment } from '../types';
 import { formatCurrency } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line, CartesianGrid, Legend } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 
@@ -13,6 +13,7 @@ interface DashboardProps {
   pendingExpenses: PendingExpense[];
   history: Transaction[];
   savingsGoal?: SavingsGoalConfig | null;
+  realEstateInvestments?: RealEstateInvestment[];
 }
 
 // Helper function to parse date string as local date (avoids timezone issues)
@@ -62,7 +63,7 @@ const formatTimeLabel = (dateStr: string): string => {
   return `${hours}:${minutes}`;
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal, realEstateInvestments = [] }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
   const [distributionFilter, setDistributionFilter] = React.useState<'thisMonth' | 'total'>('total');
@@ -204,6 +205,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       }
     };
   }, [cards, pendingExpenses]);
+
+  // Calculate real estate assets metrics
+  const assetsMetrics = useMemo(() => {
+    const totalInversion = realEstateInvestments.reduce((sum, inv) => sum + Number(inv.valor_compra), 0);
+    const totalValorActual = realEstateInvestments.reduce((sum, inv) => sum + Number(inv.valor_actual), 0);
+    const totalRentaMensual = realEstateInvestments
+      .filter(inv => inv.genera_renta)
+      .reduce((sum, inv) => sum + Number(inv.renta_mensual || 0), 0);
+    const plusvalia = totalValorActual - totalInversion;
+    const porcentajePlusvalia = totalInversion > 0 ? ((plusvalia / totalInversion) * 100) : 0;
+
+    return {
+      totalInversion,
+      totalValorActual,
+      totalRentaMensual,
+      plusvalia,
+      porcentajePlusvalia,
+      cantidadPropiedades: realEstateInvestments.length,
+      propiedadesConRenta: realEstateInvestments.filter(inv => inv.genera_renta).length
+    };
+  }, [realEstateInvestments]);
 
   // Calculate expense distribution by card
   const cardDistribution = useMemo(() => {
@@ -427,6 +449,100 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </div>
         </div>
       </div>
+
+      {/* ASSETS SECTION */}
+      {realEstateInvestments.length > 0 && (
+        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-xl ${theme.colors.gradientPrimary}`}>
+                <Home size={24} className="text-white" />
+              </div>
+              <div>
+                <h3 className={`text-xl font-bold ${theme.colors.textPrimary}`}>Activos Inmobiliarios</h3>
+                <p className={`text-xs ${theme.colors.textMuted}`}>
+                  {assetsMetrics.cantidadPropiedades} {assetsMetrics.cantidadPropiedades === 1 ? 'propiedad' : 'propiedades'}
+                  {assetsMetrics.propiedadesConRenta > 0 && ` • ${assetsMetrics.propiedadesConRenta} generando renta`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Inversión Total */}
+            <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Inversión Total</p>
+              <p className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                {formatCurrency(assetsMetrics.totalInversion)}
+              </p>
+            </div>
+
+            {/* Valor Actual */}
+            <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Valor Actual</p>
+              <p className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                {formatCurrency(assetsMetrics.totalValorActual)}
+              </p>
+            </div>
+
+            {/* Plusvalía */}
+            <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Plusvalía</p>
+              <div className="flex items-center gap-2">
+                <p className={`text-xl font-mono font-bold ${assetsMetrics.plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {assetsMetrics.plusvalia >= 0 ? '+' : ''}{formatCurrency(assetsMetrics.plusvalia)}
+                </p>
+                {assetsMetrics.plusvalia !== 0 && (
+                  <span className={`text-xs font-bold ${assetsMetrics.plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    ({assetsMetrics.porcentajePlusvalia > 0 ? '+' : ''}{assetsMetrics.porcentajePlusvalia.toFixed(1)}%)
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Ingresos por Renta */}
+            <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
+              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Renta Mensual</p>
+              <p className={`text-xl font-mono font-bold ${assetsMetrics.totalRentaMensual > 0 ? 'text-emerald-500' : theme.colors.textPrimary}`}>
+                {formatCurrency(assetsMetrics.totalRentaMensual)}
+              </p>
+            </div>
+          </div>
+
+          {/* List of Properties */}
+          <div className="mt-4 space-y-2">
+            {realEstateInvestments.map(inv => {
+              const plusvalia = Number(inv.valor_actual) - Number(inv.valor_compra);
+              const porcentaje = ((plusvalia / Number(inv.valor_compra)) * 100);
+
+              return (
+                <div key={inv.id} className={`p-3 rounded-lg ${theme.colors.bgSecondary} border ${theme.colors.border} flex items-center justify-between`}>
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
+                      <Home size={16} className="text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className={`text-sm font-semibold ${theme.colors.textPrimary}`}>{inv.nombre}</p>
+                      <p className={`text-xs ${theme.colors.textMuted}`}>
+                        {inv.tipo} • Compra: {formatCurrency(inv.valor_compra)}
+                        {inv.genera_renta && inv.renta_mensual && ` • Renta: ${formatCurrency(inv.renta_mensual)}/mes`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                      {formatCurrency(inv.valor_actual)}
+                    </p>
+                    <p className={`text-xs font-semibold ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {plusvalia >= 0 ? '+' : ''}{formatCurrency(plusvalia)} ({porcentaje > 0 ? '+' : ''}{porcentaje.toFixed(1)}%)
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* NEW FEATURES ROW */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
