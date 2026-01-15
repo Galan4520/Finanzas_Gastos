@@ -156,3 +156,32 @@ export const saveProfile = async (
     throw error;
   }
 };
+
+// Fetch properties from separate properties spreadsheet
+export const fetchProperties = async (propertiesScriptUrl: string) => {
+  if (!propertiesScriptUrl) {
+    throw new Error("URL de propiedades no configurada");
+  }
+
+  try {
+    const response = await fetch(`${propertiesScriptUrl}?t=${Date.now()}`, {
+      method: 'GET',
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error HTTP: ${response.status}`);
+    }
+
+    const json = await response.json();
+
+    if (json.error) {
+      throw new Error(json.error);
+    }
+
+    return json.properties || [];
+  } catch (error) {
+    console.error("Error fetching properties:", error);
+    throw error;
+  }
+};

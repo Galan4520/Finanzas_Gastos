@@ -11,7 +11,7 @@ import { ReportsView } from './components/ReportsView';
 import { AssetsView } from './components/AssetsView';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, UserProfile, RealEstateInvestment, RealEstateProperty } from './types';
 import { formatCurrency, formatDate } from './utils/format';
-import { fetchData, sendToSheet, updateInSheet, deleteFromSheet, saveProfile } from './services/googleSheetService';
+import { fetchData, sendToSheet, updateInSheet, deleteFromSheet, saveProfile, fetchProperties } from './services/googleSheetService';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
 import { Toast, ToastType } from './components/ui/Toast';
 import { useTheme } from './contexts/ThemeContext';
@@ -27,6 +27,7 @@ function App() {
   const [debtSubTab, setDebtSubTab] = useState<'deudas' | 'suscripciones'>('deudas');
   const [scriptUrl, setScriptUrl] = useState('');
   const [pin, setPin] = useState('');
+  const [propertiesScriptUrl, setPropertiesScriptUrl] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
 
@@ -137,13 +138,30 @@ function App() {
       }
 
       // Available Properties (Real Estate Catalog)
-      if (data.availableProperties && Array.isArray(data.availableProperties)) {
+      // If separate properties URL is configured, fetch from there
+      if (propertiesScriptUrl) {
+        try {
+          const properties = await fetchProperties(propertiesScriptUrl);
+          const cleanProperties = properties.map((p: any) => ({
+            ...p,
+            precio: parseFloat(p.precio) || 0,
+            area_m2: p.area_m2 ? parseFloat(p.area_m2) : undefined,
+            dormitorios: p.dormitorios ? parseInt(p.dormitorios) : undefined,
+            banos: p.banos ? parseFloat(p.banos) : undefined
+          }));
+          setAvailableProperties(cleanProperties);
+          localStorage.setItem('availableProperties', JSON.stringify(cleanProperties));
+        } catch (error) {
+          console.error('Error fetching properties from separate sheet:', error);
+        }
+      } else if (data.availableProperties && Array.isArray(data.availableProperties)) {
+        // Otherwise, check if main sheet includes properties data
         const cleanProperties = data.availableProperties.map((p: any) => ({
           ...p,
           precio: parseFloat(p.precio) || 0,
           area_m2: p.area_m2 ? parseFloat(p.area_m2) : undefined,
           dormitorios: p.dormitorios ? parseInt(p.dormitorios) : undefined,
-          banos: p.banos ? parseInt(p.banos) : undefined
+          banos: p.banos ? parseFloat(p.banos) : undefined
         }));
         setAvailableProperties(cleanProperties);
         localStorage.setItem('availableProperties', JSON.stringify(cleanProperties));
@@ -156,17 +174,22 @@ function App() {
     } finally {
       setIsSyncing(false);
     }
-  }, [scriptUrl, pin]);
+  }, [scriptUrl, pin, propertiesScriptUrl]);
 
   // Load Data on Mount
   useEffect(() => {
     const storedUrl = localStorage.getItem('scriptUrl');
     const storedPin = localStorage.getItem('pin');
+    const storedPropertiesUrl = localStorage.getItem('propertiesScriptUrl');
 
     if (storedUrl && storedPin) {
       setScriptUrl(storedUrl);
       setPin(storedPin);
       setShowWelcome(false);
+    }
+
+    if (storedPropertiesUrl) {
+      setPropertiesScriptUrl(storedPropertiesUrl);
     }
 
     try {
@@ -352,6 +375,12 @@ function App() {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  const savePropertiesUrl = (url: string) => {
+    setPropertiesScriptUrl(url);
+    localStorage.setItem('propertiesScriptUrl', url);
+    showToast('URL de propiedades guardada', 'success');
   };
 
   // Update handlers
@@ -803,6 +832,7 @@ function App() {
           <SettingsView
             scriptUrl={scriptUrl}
             pin={pin}
+            propertiesScriptUrl={propertiesScriptUrl}
             cards={cards}
             savingsGoal={savingsGoal}
             currentTheme={currentTheme}
@@ -813,6 +843,7 @@ function App() {
             onSaveGoal={saveSavingsGoal}
             onSetTheme={setTheme}
             onSync={handleSync}
+            onSavePropertiesUrl={savePropertiesUrl}
             notify={showToast}
           />
         );
