@@ -41,23 +41,54 @@ function doGet(e) {
     const data = propiedadesSheet.getDataRange().getValues();
     const properties = [];
 
+    // Mapeo de columnas basado en tu estructura:
+    // A(0): ID
+    // B(1): URL
+    // C(2): Fotos
+    // D(3): Portal
+    // E(4): Fecha Extracción
+    // F(5): Fecha Publicación
+    // G(6): Título
+    // H(7): Descripción
+    // I(8): Es Unidad de Proyecto
+    // J(9): URL Proyecto Padre
+    // K(10): Distrito
+    // L(11): Dirección
+    // M(12): Urbanización
+    // N(13): Referencia
+    // O(14): Latitud
+    // P(15): Longitud
+    // Q(16): Área Total (m²)
+    // R(17): Área Construida (m²)
+    // S(18): Área Techada (m²)
+    // T(19): Dormitorios
+    // U(20): Baños
+    // V(21): Medio Baño
+    // ... continúa hasta las demás columnas
+    // AE(30): Precio (S/)
+    // AM(38): Tipo
+
     // Empezar desde la fila 2 (índice 1) para saltar encabezados
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
 
-      // Solo agregar si tiene título (columna A)
-      if (row[0] && row[0].toString().trim() !== '') {
+      // Solo agregar si tiene ID o Título
+      if ((row[0] && row[0].toString().trim() !== '') || (row[6] && row[6].toString().trim() !== '')) {
         const property = {
-          id: 'PROP' + (i).toString().padStart(4, '0'), // Genera ID único
-          titulo: row[0].toString().trim(),
-          tipo: row[1] ? row[1].toString().trim() : 'Otro',
-          zona: row[2] ? row[2].toString().trim() : '',
-          precio: parseFloat(row[3]) || 0,
-          area_m2: row[4] ? parseFloat(row[4]) : null,
-          dormitorios: row[5] ? parseInt(row[5]) : null,
-          banos: row[6] ? parseFloat(row[6]) : null,
+          id: row[0] ? row[0].toString().trim() : 'PROP' + i.toString().padStart(4, '0'),
+          titulo: row[6] ? row[6].toString().trim() : 'Propiedad sin título',
+          tipo: row[38] ? mapearTipo(row[38].toString().trim()) : 'Otro',
+          zona: row[10] ? row[10].toString().trim() : '',
+          precio: parseFloat(row[30]) || 0,
+          area_m2: parseFloat(row[16]) || parseFloat(row[17]) || null, // Área Total o Área Construida
+          dormitorios: row[19] ? parseInt(row[19]) : null,
+          banos: row[20] ? parseFloat(row[20]) : null,
           descripcion: row[7] ? row[7].toString().trim() : '',
-          url_imagen: row[8] ? row[8].toString().trim() : '',
+          url_imagen: row[2] ? extraerPrimeraFoto(row[2].toString()) : '', // Columna Fotos
+          url_propiedad: row[1] ? row[1].toString().trim() : '',
+          distrito: row[10] ? row[10].toString().trim() : '',
+          direccion: row[11] ? row[11].toString().trim() : '',
+          precio_m2: parseFloat(row[32]) || null,
           timestamp: new Date().toISOString()
         };
 
@@ -82,6 +113,44 @@ function doGet(e) {
       success: false
     })).setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/**
+ * Mapea el tipo de propiedad del portal a los tipos de la app
+ */
+function mapearTipo(tipo) {
+  if (!tipo) return 'Otro';
+
+  const tipoLower = tipo.toLowerCase();
+
+  if (tipoLower.includes('casa')) return 'Casa';
+  if (tipoLower.includes('departamento') || tipoLower.includes('depa')) return 'Departamento';
+  if (tipoLower.includes('terreno') || tipoLower.includes('lote')) return 'Terreno';
+  if (tipoLower.includes('local') || tipoLower.includes('comercial') || tipoLower.includes('oficina')) return 'Local Comercial';
+
+  return 'Otro';
+}
+
+/**
+ * Extrae la primera foto de una lista separada por comas o espacios
+ */
+function extraerPrimeraFoto(fotos) {
+  if (!fotos) return '';
+
+  const fotosTrim = fotos.toString().trim();
+  if (fotosTrim === '') return '';
+
+  // Si hay múltiples URLs separadas por coma, tomar la primera
+  if (fotosTrim.includes(',')) {
+    return fotosTrim.split(',')[0].trim();
+  }
+
+  // Si hay múltiples URLs separadas por espacio, tomar la primera
+  if (fotosTrim.includes(' ')) {
+    return fotosTrim.split(' ')[0].trim();
+  }
+
+  return fotosTrim;
 }
 
 /**
