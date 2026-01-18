@@ -19,6 +19,19 @@ export default defineConfig(({ mode }) => {
           '@': path.resolve(__dirname, '.'),
         }
       },
+      build: {
+        // Mejorar cache busting
+        rollupOptions: {
+          output: {
+            // Agregar hash a todos los archivos para evitar caché
+            entryFileNames: 'assets/[name].[hash].js',
+            chunkFileNames: 'assets/[name].[hash].js',
+            assetFileNames: 'assets/[name].[hash].[ext]'
+          }
+        },
+        // Generar sourcemaps para debugging
+        sourcemap: mode === 'development'
+      },
       test: {
         globals: true,
         environment: 'jsdom',
