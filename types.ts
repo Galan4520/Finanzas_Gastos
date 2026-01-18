@@ -31,6 +31,7 @@ export interface PendingExpense {
   estado: 'Pendiente' | 'Pagado';
   num_cuotas: number;
   cuotas_pagadas: number;
+  monto_pagado_total?: number; // Monto total pagado acumulado (soluciona bug de pagos parciales)
   tipo?: 'deuda' | 'suscripcion'; // Nueva propiedad para diferenciar
   notas?: string;
   timestamp: string;

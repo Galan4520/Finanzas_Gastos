@@ -54,6 +54,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
         estado: 'Pendiente',
         num_cuotas: numCuotas,
         cuotas_pagadas: 0,
+        monto_pagado_total: 0,
         notas: formData.notas,
         timestamp: getLocalISOString()
       };
