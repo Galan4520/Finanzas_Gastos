@@ -573,11 +573,11 @@ function App() {
               ) : debtSubTab === 'deudas' ? (
                 // DEUDAS VIEW
                 currentData.map(p => {
-                  const monto = Number(p.monto);
-                  const cuotas = Number(p.num_cuotas);
-                  const montoPagadoTotal = p.monto_pagado_total || 0;
+                  const monto = Number(p.monto) || 0;
+                  const cuotas = Number(p.num_cuotas) || 1;
+                  const montoPagadoTotal = Number(p.monto_pagado_total) || 0;
                   const restante = monto - montoPagadoTotal;
-                  const porcentajePagado = (montoPagadoTotal / monto) * 100;
+                  const porcentajePagado = monto > 0 ? (montoPagadoTotal / monto) * 100 : 0;
 
                   // Calculate days until payment
                   const fechaVencimiento = new Date(p.fecha_pago);
@@ -785,11 +785,11 @@ function App() {
                     {formatCurrency(
                       currentData.reduce((sum, p) => {
                         if (debtSubTab === 'deudas') {
-                          const monto = Number(p.monto);
-                          const montoPagadoTotal = p.monto_pagado_total || 0;
+                          const monto = Number(p.monto) || 0;
+                          const montoPagadoTotal = Number(p.monto_pagado_total) || 0;
                           return sum + (monto - montoPagadoTotal);
                         } else {
-                          return sum + Number(p.monto);
+                          return sum + (Number(p.monto) || 0);
                         }
                       }, 0)
                     )}
