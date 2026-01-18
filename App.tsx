@@ -21,9 +21,11 @@ import { EditCardModal } from './components/ui/EditCardModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Pencil, Trash2, CreditCard as CreditCardIcon } from 'lucide-react';
 import { PUBLIC_PROPERTIES_SCRIPT_URL } from './config';
+import { useVersionCheck } from './hooks/useVersionCheck';
 
 function App() {
   const { currentTheme, theme, setTheme } = useTheme();
+  const { currentVersion, isNewVersion } = useVersionCheck();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [debtSubTab, setDebtSubTab] = useState<'deudas' | 'suscripciones'>('deudas');
   const [scriptUrl, setScriptUrl] = useState('');
