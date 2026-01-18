@@ -72,7 +72,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ pendingExpenses, onForce
       {/* Estado de Datos */}
       <div className="space-y-3 mb-4">
         <div className={`p-3 rounded-lg ${theme.colors.bgSecondary}`}>
-          <div className="text-xs font-semibold ${theme.colors.textMuted} mb-2">ESTADO DE DATOS</div>
+          <div className={`text-xs font-semibold ${theme.colors.textMuted} mb-2`}>ESTADO DE DATOS</div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className={theme.colors.textSecondary}>Deudas:</span>
