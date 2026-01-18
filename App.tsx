@@ -22,6 +22,7 @@ import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Pencil, Trash2, CreditCard as CreditCardIcon } from 'lucide-react';
 import { PUBLIC_PROPERTIES_SCRIPT_URL } from './config';
 import { useVersionCheck } from './hooks/useVersionCheck';
+import { DebugPanel } from './components/DebugPanel';
 
 function App() {
   const { currentTheme, theme, setTheme } = useTheme();
@@ -574,9 +575,9 @@ function App() {
                 currentData.map(p => {
                   const monto = Number(p.monto);
                   const cuotas = Number(p.num_cuotas);
-                  const pagado = Number(p.cuotas_pagadas) * (monto / cuotas);
-                  const restante = monto - pagado;
-                  const porcentajePagado = (pagado / monto) * 100;
+                  const montoPagadoTotal = p.monto_pagado_total || 0;
+                  const restante = monto - montoPagadoTotal;
+                  const porcentajePagado = (montoPagadoTotal / monto) * 100;
 
                   // Calculate days until payment
                   const fechaVencimiento = new Date(p.fecha_pago);
@@ -785,9 +786,8 @@ function App() {
                       currentData.reduce((sum, p) => {
                         if (debtSubTab === 'deudas') {
                           const monto = Number(p.monto);
-                          const cuotas = Number(p.num_cuotas);
-                          const pagado = Number(p.cuotas_pagadas) * (monto / cuotas);
-                          return sum + (monto - pagado);
+                          const montoPagadoTotal = p.monto_pagado_total || 0;
+                          return sum + (monto - montoPagadoTotal);
                         } else {
                           return sum + Number(p.monto);
                         }
@@ -931,6 +931,21 @@ function App() {
           showToast(`¡Bienvenido, ${nombre}!`, 'success');
         }}
       />
+
+      {/* Debug Panel */}
+      {scriptUrl && pin && (
+        <DebugPanel
+          pendingExpenses={pendingExpenses}
+          onForceSync={async () => {
+            await handleSync();
+            showToast('Sincronización completada', 'success');
+          }}
+          onClearCache={() => {
+            localStorage.clear();
+            showToast('Caché limpiado - Recargando...', 'success');
+          }}
+        />
+      )}
     </>
   );
 }

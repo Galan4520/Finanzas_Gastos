@@ -160,21 +160,21 @@ function doPost(e) {
     const tipoGasto = params.tipo_gasto || 'deuda';
 
     row = [
-      gastoId,                      // A: ID único del gasto
-      params.fecha_gasto,           // B: Fecha del gasto
-      params.tarjeta,               // C: Tarjeta utilizada
-      params.categoria,             // D: Categoría
-      params.descripcion,           // E: Descripción
-      parseFloat(params.monto),     // F: Monto total
-      params.fecha_cierre,          // G: Fecha de cierre
-      params.fecha_pago,            // H: Fecha de pago
-      params.estado,                // I: Estado (Pendiente/Pagado)
-      numCuotas,                    // J: Número de cuotas
-      cuotasPagadas,                // K: Cuotas pagadas
-      montoPagadoTotal,             // L: 🆕 Monto pagado total (suma acumulada)
-      tipoGasto,                    // M: Tipo (deuda/suscripcion)
-      params.notas || '',           // N: Notas
-      params.timestamp              // O: Timestamp
+      gastoId,                              // A: ID único del gasto
+      formatDateForSheet(params.fecha_gasto),  // B: Fecha del gasto
+      params.tarjeta,                       // C: Tarjeta utilizada
+      params.categoria,                     // D: Categoría
+      params.descripcion,                   // E: Descripción
+      parseFloat(params.monto),             // F: Monto total
+      formatDateForSheet(params.fecha_cierre), // G: Fecha de cierre
+      formatDateForSheet(params.fecha_pago),   // H: Fecha de pago
+      params.estado,                        // I: Estado (Pendiente/Pagado)
+      numCuotas,                            // J: Número de cuotas
+      cuotasPagadas,                        // K: Cuotas pagadas
+      montoPagadoTotal,                     // L: 🆕 Monto pagado total (suma acumulada)
+      tipoGasto,                            // M: Tipo (deuda/suscripcion)
+      params.notas || '',                   // N: Notas
+      params.timestamp                      // O: Timestamp
     ];
 
   } else if (params.tipo === 'Pagos') {
@@ -224,13 +224,13 @@ function handleUpdate(sheet, params) {
 
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === gastoId) {
-        targetSheet.getRange(i + 1, 2).setValue(params.fecha_gasto);
+        targetSheet.getRange(i + 1, 2).setValue(formatDateForSheet(params.fecha_gasto));
         targetSheet.getRange(i + 1, 3).setValue(params.tarjeta);
         targetSheet.getRange(i + 1, 4).setValue(params.categoria);
         targetSheet.getRange(i + 1, 5).setValue(params.descripcion);
         targetSheet.getRange(i + 1, 6).setValue(parseFloat(params.monto));
-        targetSheet.getRange(i + 1, 7).setValue(params.fecha_cierre);
-        targetSheet.getRange(i + 1, 8).setValue(params.fecha_pago);
+        targetSheet.getRange(i + 1, 7).setValue(formatDateForSheet(params.fecha_cierre));
+        targetSheet.getRange(i + 1, 8).setValue(formatDateForSheet(params.fecha_pago));
         targetSheet.getRange(i + 1, 9).setValue(params.estado);
         targetSheet.getRange(i + 1, 10).setValue(parseInt(params.num_cuotas) || 1);
         targetSheet.getRange(i + 1, 11).setValue(parseFloat(params.cuotas_pagadas) || 0);
@@ -339,8 +339,11 @@ function actualizarGastoPendiente(sheet, params) {
         const proximaFecha = new Date(fechaActual);
         proximaFecha.setMonth(proximaFecha.getMonth() + 1);
 
-        gastosSheet.getRange(i + 1, 8).setValue(proximaFecha);
-        gastosSheet.getRange(i + 1, 7).setValue(proximaFecha);
+        // Formatear fecha como YYYY-MM-DD antes de guardar
+        const fechaFormateada = formatDateForSheet(proximaFecha);
+
+        gastosSheet.getRange(i + 1, 8).setValue(fechaFormateada);  // Fecha_Pago
+        gastosSheet.getRange(i + 1, 7).setValue(fechaFormateada);  // Fecha_Cierre
         gastosSheet.getRange(i + 1, 9).setValue('Pendiente');
 
       } else {
@@ -521,7 +524,35 @@ function doGet(e) {
 function formatDate(date) {
   if (!date) return '';
   if (date instanceof Date) return date.toISOString().split('T')[0];
+  // Si es un string con formato ISO completo (2026-01-20T08:00:00.000Z), extraer solo fecha
+  if (typeof date === 'string' && date.includes('T')) {
+    return date.split('T')[0];
+  }
   return date;
+}
+
+function formatDateForSheet(dateInput) {
+  if (!dateInput) return '';
+
+  // Si es un objeto Date
+  if (dateInput instanceof Date) {
+    const year = dateInput.getFullYear();
+    const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+    const day = String(dateInput.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Si es un string
+  if (typeof dateInput === 'string') {
+    // Si tiene timestamp (2026-01-20T08:00:00.000Z), extraer solo fecha
+    if (dateInput.includes('T')) {
+      return dateInput.split('T')[0];
+    }
+    // Si ya está en formato correcto (2026-01-20)
+    return dateInput;
+  }
+
+  return '';
 }
 
 /**
