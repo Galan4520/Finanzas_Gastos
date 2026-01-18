@@ -39,8 +39,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
 
       if (paymentType === 'Cuota') setCustomAmount(cuotaAmount.toFixed(2));
       if (paymentType === 'Total') {
-          const paid = (cuotaAmount * selectedExpense.cuotas_pagadas);
-          setCustomAmount((total - paid).toFixed(2));
+          const montoPagadoTotal = selectedExpense.monto_pagado_total || 0;
+          setCustomAmount((total - montoPagadoTotal).toFixed(2));
       }
       if (paymentType === 'Parcial') setCustomAmount('');
     }
@@ -71,34 +71,35 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
           estado: 'Pendiente'
         };
       } else {
-        // LÓGICA PARA DEUDAS: Incrementar cuotas
+        // LÓGICA PARA DEUDAS: Incrementar cuotas y monto pagado total
         const montoTotal = Number(selectedExpense.monto);
         const numCuotas = Number(selectedExpense.num_cuotas);
         const montoCuota = montoTotal / numCuotas;
 
-        let newCuotasPagadas = selectedExpense.cuotas_pagadas;
+        // Obtener el monto pagado total anterior
+        const montoPagadoAnterior = selectedExpense.monto_pagado_total || 0;
+
+        // Calcular el nuevo monto pagado total
+        const nuevoMontoPagadoTotal = montoPagadoAnterior + montoPagado;
+
+        // Calcular cuotas pagadas basándose en el monto pagado total
+        const nuevasCuotasPagadas = nuevoMontoPagadoTotal / montoCuota;
+
+        // Limitar al máximo de cuotas (no puede pagar más de lo debido)
+        const cuotasPagadasFinal = Math.min(nuevasCuotasPagadas, numCuotas);
+        const montoPagadoFinal = Math.min(nuevoMontoPagadoTotal, montoTotal);
+
         let newEstado: 'Pendiente' | 'Pagado' = 'Pendiente';
 
-        if (paymentType === 'Cuota') newCuotasPagadas += 1;
-        else if (paymentType === 'Total') {
-          newCuotasPagadas = numCuotas;
-          newEstado = 'Pagado';
-        }
-        else if (paymentType === 'Parcial') {
-           // Permitir valores decimales para pagos parciales
-           // Ejemplo: pagar S/ 50 de una cuota de S/ 100 = 0.5 cuotas
-           newCuotasPagadas += (montoPagado / montoCuota);
-        }
-
-        // Limitar cuotas pagadas al máximo permitido (no se puede pagar más de lo debido)
-        if (newCuotasPagadas >= numCuotas) {
-          newCuotasPagadas = numCuotas;
+        // Si ya se pagó todo, marcar como "Pagado"
+        if (cuotasPagadasFinal >= numCuotas) {
           newEstado = 'Pagado';
         }
 
         updatedExpense = {
           ...selectedExpense,
-          cuotas_pagadas: newCuotasPagadas,
+          cuotas_pagadas: cuotasPagadasFinal,
+          monto_pagado_total: montoPagadoFinal,
           estado: newEstado
         };
       }
@@ -183,9 +184,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
             <option value="">-- Selecciona --</option>
             {activePending.map(e => {
                 const total = Number(e.monto);
-                const cuotaVal = total / Number(e.num_cuotas);
-                const paid = cuotaVal * e.cuotas_pagadas;
-                const debt = total - paid;
+                const montoPagadoTotal = e.monto_pagado_total || 0;
+                const debt = total - montoPagadoTotal;
                 return (
                     <option key={e.id} value={e.id}>
                         {e.tarjeta} - {e.descripcion} (Debe: {formatCurrency(debt)})

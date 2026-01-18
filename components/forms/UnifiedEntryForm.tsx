@@ -99,6 +99,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
           estado: 'Pendiente',
           num_cuotas: expenseType === 'suscripcion' ? 1 : (useInstallments ? parseInt(formData.num_cuotas) : 1),
           cuotas_pagadas: 0,
+          monto_pagado_total: 0,
           tipo: expenseType, // For local state
           notas: formData.notas,
           timestamp: getLocalISOString()
