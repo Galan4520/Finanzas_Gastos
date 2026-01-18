@@ -252,16 +252,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       if (expense.tipo === 'suscripcion') {
         // For subscriptions, add the full monthly amount
-        distribution[expense.tarjeta] += Number(expense.monto);
+        distribution[expense.tarjeta] += Number(expense.monto) || 0;
       } else {
         // For debts, calculate remaining amount using monto_pagado_total
-        const total = Number(expense.monto);
-        const montoPagadoTotal = expense.monto_pagado_total || 0;
+        const total = Number(expense.monto) || 0;
+        const montoPagadoTotal = Number(expense.monto_pagado_total) || 0;
         const deudaRestante = total - montoPagadoTotal;
 
         if (distributionFilter === 'thisMonth') {
           // For this month filter, only add the monthly payment (one cuota)
-          const cuotaVal = total / Number(expense.num_cuotas);
+          const numCuotas = Number(expense.num_cuotas) || 1;
+          const cuotaVal = total / numCuotas;
           distribution[expense.tarjeta] += cuotaVal;
         } else {
           // For total filter, add all remaining debt
@@ -312,8 +313,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     cards.forEach(c => limiteTotal += Number(c.limite));
 
     pendingExpenses.forEach(p => {
-        const total = Number(p.monto);
-        const montoPagadoTotal = p.monto_pagado_total || 0;
+        const total = Number(p.monto) || 0;
+        const montoPagadoTotal = Number(p.monto_pagado_total) || 0;
         const deudaRestante = total - montoPagadoTotal;
         deudaTotal += deudaRestante;
     });
