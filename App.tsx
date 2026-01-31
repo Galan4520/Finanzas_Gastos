@@ -646,7 +646,7 @@ function App() {
                         </div>
                         <div className="flex justify-between items-center mt-1.5">
                           <span className={`text-xs ${theme.colors.textMuted}`}>
-                            {formatCurrency(pagado)} pagado
+                            {formatCurrency(montoPagadoTotal)} pagado
                           </span>
                           <span className={`text-xs font-medium ${theme.colors.textSecondary}`}>
                             {porcentajePagado.toFixed(1)}%
