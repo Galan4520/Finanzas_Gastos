@@ -130,7 +130,9 @@ function App() {
           ...p,
           monto: parseFloat(p.monto) || 0,
           num_cuotas: parseInt(p.num_cuotas) || 1,
-          cuotas_pagadas: parseFloat(p.cuotas_pagadas) || 0 // Cambiado a parseFloat para permitir valores decimales
+          cuotas_pagadas: parseFloat(p.cuotas_pagadas) || 0,
+          monto_pagado_total: parseFloat(p.monto_pagado_total) || 0,
+          tipo: p.tipo || 'deuda'
         }));
         savePending(cleanPending);
       }
@@ -195,7 +197,16 @@ function App() {
       if (storedCards) setCards(JSON.parse(storedCards));
 
       const storedPending = localStorage.getItem('pendientes');
-      if (storedPending) setPendingExpenses(JSON.parse(storedPending));
+      if (storedPending) {
+        // Normalizar datos antiguos que pueden no tener monto_pagado_total
+        const parsed = JSON.parse(storedPending);
+        const normalized = parsed.map((p: PendingExpense) => ({
+          ...p,
+          monto_pagado_total: p.monto_pagado_total ?? 0,
+          tipo: p.tipo ?? 'deuda'
+        }));
+        setPendingExpenses(normalized);
+      }
 
       const storedHistory = localStorage.getItem('history');
       if (storedHistory) setHistory(JSON.parse(storedHistory));
@@ -340,7 +351,9 @@ function App() {
           ...p,
           monto: parseFloat(p.monto) || 0,
           num_cuotas: parseInt(p.num_cuotas) || 1,
-          cuotas_pagadas: parseInt(p.cuotas_pagadas) || 0
+          cuotas_pagadas: parseFloat(p.cuotas_pagadas) || 0,
+          monto_pagado_total: parseFloat(p.monto_pagado_total) || 0,
+          tipo: p.tipo || 'deuda'
         }));
         savePending(cleanPending);
       }
