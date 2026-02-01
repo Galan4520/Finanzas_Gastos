@@ -11,6 +11,15 @@ import { ReportsView } from './components/ReportsView';
 import { AssetsView } from './components/AssetsView';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, UserProfile, RealEstateInvestment, RealEstateProperty } from './types';
 import { formatCurrency, formatDate } from './utils/format';
+import {
+  normalizarDeuda,
+  filtrarDeudasActivas,
+  filtrarSuscripcionesActivas,
+  calcularSaldoPendiente,
+  calcularTotalDeudaPendiente,
+  calcularProgresoPago,
+  validarConsistenciaDeudas
+} from './utils/debtUtils';
 import { fetchData, sendToSheet, updateInSheet, deleteFromSheet, saveProfile, fetchProperties } from './services/googleSheetService';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
 import { Toast, ToastType } from './components/ui/Toast';
@@ -124,16 +133,19 @@ function App() {
         saveCards(cleanCards);
       }
 
-      // Pending Expenses
+      // Pending Expenses - USAR NORMALIZACIÓN CENTRALIZADA
       if (data.pending && Array.isArray(data.pending)) {
-        const cleanPending = data.pending.map((p: any) => ({
-          ...p,
-          monto: parseFloat(p.monto) || 0,
-          num_cuotas: parseInt(p.num_cuotas) || 1,
-          cuotas_pagadas: parseFloat(p.cuotas_pagadas) || 0,
-          monto_pagado_total: parseFloat(p.monto_pagado_total) || 0,
-          tipo: p.tipo || 'deuda'
-        }));
+        // Normalizar TODOS los campos usando la función centralizada
+        // Esto garantiza consistencia y corrige automáticamente estados inválidos
+        const cleanPending = data.pending.map((p: any) => normalizarDeuda(p));
+
+        // VALIDACIÓN: Detectar inconsistencias en los datos
+        const warnings = validarConsistenciaDeudas(cleanPending);
+        if (warnings.length > 0) {
+          console.warn('⚠️ [App.handleSync] Inconsistencias detectadas en deudas:');
+          warnings.forEach(w => console.warn(`  - ${w}`));
+        }
+
         savePending(cleanPending);
       }
 
@@ -198,13 +210,18 @@ function App() {
 
       const storedPending = localStorage.getItem('pendientes');
       if (storedPending) {
-        // Normalizar datos antiguos que pueden no tener monto_pagado_total
+        // NORMALIZACIÓN CENTRALIZADA: Garantiza consistencia de datos
+        // Corrige automáticamente estados inválidos y campos faltantes
         const parsed = JSON.parse(storedPending);
-        const normalized = parsed.map((p: PendingExpense) => ({
-          ...p,
-          monto_pagado_total: p.monto_pagado_total ?? 0,
-          tipo: p.tipo ?? 'deuda'
-        }));
+        const normalized = parsed.map((p: any) => normalizarDeuda(p));
+
+        // VALIDACIÓN: Detectar problemas al cargar desde cache
+        const warnings = validarConsistenciaDeudas(normalized);
+        if (warnings.length > 0) {
+          console.warn('⚠️ [App.init] Inconsistencias en datos de localStorage:');
+          warnings.forEach(w => console.warn(`  - ${w}`));
+        }
+
         setPendingExpenses(normalized);
       }
 
@@ -538,10 +555,30 @@ function App() {
         return <GoalsView history={history} savingsGoal={savingsGoal} onSaveGoal={saveSavingsGoal} />;
 
       case 'deudas': // Previous 'pendientes' tab, but specifically for debt management
-        // Filter data based on subtab
-        const deudasData = pendingExpenses.filter(p => !p.tipo || p.tipo === 'deuda');
-        const suscripcionesData = pendingExpenses.filter(p => p.tipo === 'suscripcion');
+        // ═══════════════════════════════════════════════════════════════
+        // FILTRADO CENTRALIZADO: Usa funciones de debtUtils.ts
+        // REGLA INVARIANTE: Una deuda se muestra si saldo_pendiente > 0
+        // Esto garantiza consistencia en TODOS los dispositivos
+        // ═══════════════════════════════════════════════════════════════
+        const deudasData = filtrarDeudasActivas(pendingExpenses);
+        const suscripcionesData = filtrarSuscripcionesActivas(pendingExpenses);
         const currentData = debtSubTab === 'deudas' ? deudasData : suscripcionesData;
+
+        // VALIDACIÓN EN DESARROLLO: Verificar que no hay deudas ocultas incorrectamente
+        if (process.env.NODE_ENV === 'development') {
+          const todasDeudas = pendingExpenses.filter(p => !p.tipo || p.tipo === 'deuda');
+          const ocultas = todasDeudas.filter(d => {
+            const saldo = calcularSaldoPendiente(d);
+            return saldo > 0.01 && !deudasData.includes(d);
+          });
+          if (ocultas.length > 0) {
+            console.error('🚨 [App.deudas] ALERTA: Deudas con saldo ocultas:', ocultas.map(d => ({
+              id: d.id,
+              descripcion: d.descripcion,
+              saldo: calcularSaldoPendiente(d)
+            })));
+          }
+        }
 
         return (
           <div className="space-y-6">
@@ -584,13 +621,14 @@ function App() {
                   {debtSubTab === 'deudas' ? 'No hay deudas activas.' : 'No hay suscripciones activas.'}
                 </div>
               ) : debtSubTab === 'deudas' ? (
-                // DEUDAS VIEW
+                // DEUDAS VIEW - Usa funciones centralizadas de debtUtils.ts
                 currentData.map(p => {
+                  // CÁLCULOS CENTRALIZADOS: Garantiza consistencia
                   const monto = Number(p.monto) || 0;
                   const cuotas = Number(p.num_cuotas) || 1;
                   const montoPagadoTotal = Number(p.monto_pagado_total) || 0;
-                  const restante = monto - montoPagadoTotal;
-                  const porcentajePagado = monto > 0 ? (montoPagadoTotal / monto) * 100 : 0;
+                  const restante = calcularSaldoPendiente(p); // Función centralizada
+                  const porcentajePagado = calcularProgresoPago(p); // Función centralizada
 
                   // Calculate days until payment
                   const fechaVencimiento = new Date(p.fecha_pago);
@@ -787,7 +825,7 @@ function App() {
               )}
             </div>
 
-            {/* Summary Footer */}
+            {/* Summary Footer - CÁLCULO CENTRALIZADO */}
             {currentData.length > 0 && (
               <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
                 <div className="flex justify-between items-center">
@@ -796,15 +834,9 @@ function App() {
                   </span>
                   <span className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>
                     {formatCurrency(
-                      currentData.reduce((sum, p) => {
-                        if (debtSubTab === 'deudas') {
-                          const monto = Number(p.monto) || 0;
-                          const montoPagadoTotal = Number(p.monto_pagado_total) || 0;
-                          return sum + (monto - montoPagadoTotal);
-                        } else {
-                          return sum + (Number(p.monto) || 0);
-                        }
-                      }, 0)
+                      debtSubTab === 'deudas'
+                        ? calcularTotalDeudaPendiente(currentData) // Función centralizada
+                        : currentData.reduce((sum, p) => sum + (Number(p.monto) || 0), 0)
                     )}
                   </span>
                 </div>
