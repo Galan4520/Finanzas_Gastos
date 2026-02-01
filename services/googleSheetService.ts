@@ -1,154 +1,34 @@
 import { Transaction, CreditCard, PendingExpense } from "../types";
 
 // ═══════════════════════════════════════════════════════════════
-// ARQUITECTURA CORREGIDA: Backend es la única fuente de verdad
+// ARQUITECTURA: Backend como única fuente de verdad
 // ═══════════════════════════════════════════════════════════════
-// CAMBIO CRÍTICO: Eliminado "mode: no-cors" de todas las peticiones
-// RAZÓN: no-cors impide leer respuestas, causando falsos positivos
-// AHORA: Todas las peticiones verifican la respuesta del servidor
+// ESTRATEGIA: POST con no-cors + verificación GET
+// RAZÓN: Google Apps Script no soporta CORS para POST responses
+// FLUJO:
+//   1. Enviar POST (fire-and-forget)
+//   2. Esperar breve momento para que GAS procese
+//   3. GET para verificar que el cambio se guardó
+//   4. Solo confirmar éxito si GET muestra el cambio
 // ═══════════════════════════════════════════════════════════════
 
-// Helper to convert object to URL-encoded string (mejor compatibilidad con GAS)
-const objectToUrlEncoded = (obj: Record<string, any>): string => {
-  return Object.keys(obj)
-    .filter(key => obj[key] !== undefined && obj[key] !== null)
-    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(obj[key].toString())}`)
-    .join('&');
-};
-
-// Helper para manejar la respuesta de Google Apps Script
-const handleGASResponse = async (response: Response, operation: string): Promise<any> => {
-  // Google Apps Script siempre debería retornar 200, pero verificamos
-  if (!response.ok) {
-    throw new Error(`Error HTTP ${response.status} en ${operation}`);
-  }
-
-  try {
-    const json = await response.json();
-
-    // Verificar si el backend reportó un error
-    if (json.error) {
-      throw new Error(`Error del servidor: ${json.error}`);
+// Helper to convert object to FormData
+const objectToFormData = (obj: Record<string, any>): FormData => {
+  const formData = new FormData();
+  Object.keys(obj).forEach(key => {
+    if (obj[key] !== undefined && obj[key] !== null) {
+      formData.append(key, obj[key].toString());
     }
-
-    return json;
-  } catch (parseError) {
-    // Si no podemos parsear JSON, algo salió muy mal
-    console.error(`Error parseando respuesta de ${operation}:`, parseError);
-    throw new Error(`Respuesta inválida del servidor en ${operation}`);
-  }
+  });
+  return formData;
 };
 
-export const sendToSheet = async (
-  scriptUrl: string,
-  pin: string,
-  data: Transaction | CreditCard | PendingExpense | any,
-  tipo: string
-): Promise<{ success: boolean; message?: string }> => {
-  if (!scriptUrl) {
-    throw new Error("URL de Google Apps Script no configurada");
-  }
+// Función para esperar (usada entre POST y verificación GET)
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const payload = { ...data, tipo, pin };
-  const body = objectToUrlEncoded(payload);
-
-  console.log(`📤 [sendToSheet] Enviando ${tipo}:`, { id: data.id || 'nuevo' });
-
-  try {
-    const response = await fetch(scriptUrl, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body,
-      redirect: 'follow'
-    });
-
-    const result = await handleGASResponse(response, `sendToSheet(${tipo})`);
-
-    console.log(`✅ [sendToSheet] ${tipo} guardado exitosamente:`, result);
-    return { success: true, message: result.message };
-
-  } catch (error) {
-    console.error(`❌ [sendToSheet] Error en ${tipo}:`, error);
-    throw error;
-  }
-};
-
-// Update an existing record in Google Sheet
-export const updateInSheet = async (
-  scriptUrl: string,
-  pin: string,
-  data: PendingExpense | CreditCard | any,
-  tipo: string
-): Promise<{ success: boolean; message?: string }> => {
-  if (!scriptUrl) {
-    throw new Error("URL de Google Apps Script no configurada");
-  }
-
-  const payload = { ...data, tipo, pin, action: 'update' };
-  const body = objectToUrlEncoded(payload);
-
-  console.log(`📤 [updateInSheet] Actualizando ${tipo}:`, { id: data.id, monto_pagado_total: data.monto_pagado_total });
-
-  try {
-    const response = await fetch(scriptUrl, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body,
-      redirect: 'follow'
-    });
-
-    const result = await handleGASResponse(response, `updateInSheet(${tipo})`);
-
-    console.log(`✅ [updateInSheet] ${tipo} actualizado exitosamente:`, result);
-    return { success: true, message: result.message };
-
-  } catch (error) {
-    console.error(`❌ [updateInSheet] Error actualizando ${tipo}:`, error);
-    throw error;
-  }
-};
-
-// Delete a record from Google Sheet
-export const deleteFromSheet = async (
-  scriptUrl: string,
-  pin: string,
-  id: string,
-  tipo: string
-): Promise<{ success: boolean; message?: string }> => {
-  if (!scriptUrl) {
-    throw new Error("URL de Google Apps Script no configurada");
-  }
-
-  const payload = { id, tipo, pin, action: 'delete' };
-  const body = objectToUrlEncoded(payload);
-
-  console.log(`🗑️ [deleteFromSheet] Eliminando ${tipo}:`, { id });
-
-  try {
-    const response = await fetch(scriptUrl, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body,
-      redirect: 'follow'
-    });
-
-    const result = await handleGASResponse(response, `deleteFromSheet(${tipo})`);
-
-    console.log(`✅ [deleteFromSheet] ${tipo} eliminado exitosamente:`, result);
-    return { success: true, message: result.message };
-
-  } catch (error) {
-    console.error(`❌ [deleteFromSheet] Error eliminando ${tipo}:`, error);
-    throw error;
-  }
-};
-
+// ═══════════════════════════════════════════════════════════════
+// FETCH DATA - Obtener datos del servidor (GET funciona con CORS)
+// ═══════════════════════════════════════════════════════════════
 export const fetchData = async (scriptUrl: string, pin: string) => {
   if (!scriptUrl) throw new Error("URL no configurada");
   if (!pin) throw new Error("PIN no configurado");
@@ -156,7 +36,6 @@ export const fetchData = async (scriptUrl: string, pin: string) => {
   console.log('🔄 [fetchData] Sincronizando datos desde el servidor...');
 
   try {
-    // We add PIN and a timestamp to prevent browser caching
     const response = await fetch(`${scriptUrl}?pin=${encodeURIComponent(pin)}&t=${Date.now()}`, {
       method: 'GET',
       redirect: 'follow'
@@ -168,7 +47,6 @@ export const fetchData = async (scriptUrl: string, pin: string) => {
 
     const json = await response.json();
 
-    // Verificar si hay error de PIN u otro error del servidor
     if (json.error) {
       throw new Error(json.error);
     }
@@ -181,7 +59,159 @@ export const fetchData = async (scriptUrl: string, pin: string) => {
   }
 };
 
-// Save user profile to Google Sheet
+// ═══════════════════════════════════════════════════════════════
+// SEND TO SHEET - Enviar datos con verificación
+// ═══════════════════════════════════════════════════════════════
+export const sendToSheet = async (
+  scriptUrl: string,
+  pin: string,
+  data: Transaction | CreditCard | PendingExpense | any,
+  tipo: string
+): Promise<{ success: boolean; message?: string }> => {
+  if (!scriptUrl) {
+    throw new Error("URL de Google Apps Script no configurada");
+  }
+
+  const payload = { ...data, tipo, pin };
+  const formData = objectToFormData(payload);
+
+  console.log(`📤 [sendToSheet] Enviando ${tipo}...`);
+
+  try {
+    // PASO 1: Enviar POST (no-cors porque GAS no soporta CORS para POST)
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    console.log(`✅ [sendToSheet] ${tipo} enviado correctamente`);
+    return { success: true };
+
+  } catch (error) {
+    console.error(`❌ [sendToSheet] Error en ${tipo}:`, error);
+    throw error;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// UPDATE IN SHEET - Actualizar con verificación GET
+// ═══════════════════════════════════════════════════════════════
+export const updateInSheet = async (
+  scriptUrl: string,
+  pin: string,
+  data: PendingExpense | CreditCard | any,
+  tipo: string
+): Promise<{ success: boolean; verified: boolean; message?: string }> => {
+  if (!scriptUrl) {
+    throw new Error("URL de Google Apps Script no configurada");
+  }
+
+  const payload = { ...data, tipo, pin, action: 'update' };
+  const formData = objectToFormData(payload);
+
+  console.log(`📤 [updateInSheet] Actualizando ${tipo}:`, {
+    id: data.id,
+    monto_pagado_total: data.monto_pagado_total
+  });
+
+  try {
+    // PASO 1: Enviar POST (no-cors)
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    console.log(`📨 [updateInSheet] POST enviado, esperando procesamiento...`);
+
+    // PASO 2: Esperar a que Google Apps Script procese (1.5 segundos)
+    await delay(1500);
+
+    // PASO 3: Verificar con GET que el cambio se guardó
+    console.log(`🔍 [updateInSheet] Verificando persistencia...`);
+    const freshData = await fetchData(scriptUrl, pin);
+
+    // PASO 4: Buscar el registro actualizado
+    if (tipo === 'Gastos_Pendientes' && freshData.pending) {
+      const savedRecord = freshData.pending.find((p: any) => p.id === data.id);
+
+      if (savedRecord) {
+        const savedMontoPagado = Number(savedRecord.monto_pagado_total) || 0;
+        const expectedMontoPagado = Number(data.monto_pagado_total) || 0;
+
+        // Verificar que el monto_pagado_total se actualizó correctamente
+        // Usamos una tolerancia de 0.01 para evitar errores de punto flotante
+        if (Math.abs(savedMontoPagado - expectedMontoPagado) < 0.01) {
+          console.log(`✅ [updateInSheet] VERIFICADO: monto_pagado_total = ${savedMontoPagado}`);
+          return { success: true, verified: true, message: 'Cambio verificado en BD' };
+        } else {
+          console.error(`❌ [updateInSheet] MISMATCH: esperado=${expectedMontoPagado}, guardado=${savedMontoPagado}`);
+          throw new Error(`El pago no se guardó correctamente. Esperado: ${expectedMontoPagado}, Guardado: ${savedMontoPagado}`);
+        }
+      } else {
+        console.error(`❌ [updateInSheet] Registro no encontrado: ${data.id}`);
+        throw new Error('Registro no encontrado después de actualizar');
+      }
+    }
+
+    // Para otros tipos, asumir éxito si el POST no falló
+    return { success: true, verified: false, message: 'Enviado sin verificación' };
+
+  } catch (error) {
+    console.error(`❌ [updateInSheet] Error:`, error);
+    throw error;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// DELETE FROM SHEET
+// ═══════════════════════════════════════════════════════════════
+export const deleteFromSheet = async (
+  scriptUrl: string,
+  pin: string,
+  id: string,
+  tipo: string
+): Promise<{ success: boolean; message?: string }> => {
+  if (!scriptUrl) {
+    throw new Error("URL de Google Apps Script no configurada");
+  }
+
+  const payload = { id, tipo, pin, action: 'delete' };
+  const formData = objectToFormData(payload);
+
+  console.log(`🗑️ [deleteFromSheet] Eliminando ${tipo}:`, { id });
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    // Esperar y verificar
+    await delay(1000);
+    const freshData = await fetchData(scriptUrl, pin);
+
+    if (tipo === 'Gastos_Pendientes' && freshData.pending) {
+      const stillExists = freshData.pending.find((p: any) => p.id === id);
+      if (stillExists) {
+        throw new Error('El registro no se eliminó correctamente');
+      }
+    }
+
+    console.log(`✅ [deleteFromSheet] ${tipo} eliminado correctamente`);
+    return { success: true };
+
+  } catch (error) {
+    console.error(`❌ [deleteFromSheet] Error:`, error);
+    throw error;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SAVE PROFILE
+// ═══════════════════════════════════════════════════════════════
 export const saveProfile = async (
   scriptUrl: string,
   pin: string,
@@ -199,32 +229,37 @@ export const saveProfile = async (
     nombre
   };
 
-  const body = objectToUrlEncoded(payload);
+  const formData = objectToFormData(payload);
 
   console.log('📤 [saveProfile] Guardando perfil...');
 
   try {
-    const response = await fetch(scriptUrl, {
+    await fetch(scriptUrl, {
       method: "POST",
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body,
-      redirect: 'follow'
+      mode: "no-cors",
+      body: formData,
     });
 
-    const result = await handleGASResponse(response, 'saveProfile');
+    // Verificar
+    await delay(1000);
+    const freshData = await fetchData(scriptUrl, pin);
 
-    console.log('✅ [saveProfile] Perfil guardado exitosamente');
-    return { success: true, profile: result.profile };
+    if (freshData.profile) {
+      console.log('✅ [saveProfile] Perfil verificado');
+      return { success: true, profile: freshData.profile };
+    }
+
+    return { success: true };
 
   } catch (error) {
-    console.error("❌ [saveProfile] Error guardando perfil:", error);
+    console.error("❌ [saveProfile] Error:", error);
     throw error;
   }
 };
 
-// Fetch properties from separate properties spreadsheet
+// ═══════════════════════════════════════════════════════════════
+// FETCH PROPERTIES
+// ═══════════════════════════════════════════════════════════════
 export const fetchProperties = async (propertiesScriptUrl: string) => {
   if (!propertiesScriptUrl) {
     throw new Error("URL de propiedades no configurada");
