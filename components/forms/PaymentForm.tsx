@@ -51,6 +51,16 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
     if (!scriptUrl || !selectedExpense) return;
     setLoading(true);
 
+    // ═══════════════════════════════════════════════════════════════
+    // ARQUITECTURA CORREGIDA: Backend es la única fuente de verdad
+    // ═══════════════════════════════════════════════════════════════
+    // FLUJO CORRECTO:
+    // 1. Calcular el nuevo estado
+    // 2. PRIMERO guardar en BD (updateInSheet, sendToSheet)
+    // 3. SOLO SI BD confirma éxito → actualizar estado local
+    // 4. Si BD falla → NO actualizar nada, mostrar error
+    // ═══════════════════════════════════════════════════════════════
+
     try {
       const montoPagado = parseFloat(customAmount);
       const esSuscripcion = selectedExpense.tipo === 'suscripcion';
@@ -67,7 +77,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
           ...selectedExpense,
           fecha_pago: proximaFecha.toISOString().split('T')[0],
           fecha_cierre: proximaFecha.toISOString().split('T')[0],
-          // Suscripciones siempre quedan como Pendiente (no se eliminan)
           estado: 'Pendiente'
         };
       } else {
@@ -76,22 +85,14 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         const numCuotas = Number(selectedExpense.num_cuotas);
         const montoCuota = montoTotal / numCuotas;
 
-        // Obtener el monto pagado total anterior
         const montoPagadoAnterior = selectedExpense.monto_pagado_total || 0;
-
-        // Calcular el nuevo monto pagado total
         const nuevoMontoPagadoTotal = montoPagadoAnterior + montoPagado;
-
-        // Calcular cuotas pagadas basándose en el monto pagado total
         const nuevasCuotasPagadas = nuevoMontoPagadoTotal / montoCuota;
 
-        // Limitar al máximo de cuotas (no puede pagar más de lo debido)
         const cuotasPagadasFinal = Math.min(nuevasCuotasPagadas, numCuotas);
         const montoPagadoFinal = Math.min(nuevoMontoPagadoTotal, montoTotal);
 
         let newEstado: 'Pendiente' | 'Pagado' = 'Pendiente';
-
-        // Si ya se pagó todo, marcar como "Pagado"
         if (cuotasPagadasFinal >= numCuotas) {
           newEstado = 'Pagado';
         }
@@ -115,16 +116,6 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         timestamp: getLocalISOString()
       };
 
-      // Actualizar localmente
-      onUpdateExpense(updatedExpense);
-
-      // Actualizar en Google Sheets para sincronización entre dispositivos
-      await updateInSheet(scriptUrl, pin, updatedExpense, 'Gastos_Pendientes');
-
-      // Registrar el pago en la hoja de Pagos
-      await sendToSheet(scriptUrl, pin, paymentPayload, 'Pagos');
-
-      // Registrar el pago como un gasto en el historial
       const gastoEntry = {
         fecha: new Date().toISOString().split('T')[0],
         categoria: selectedExpense.categoria,
@@ -136,25 +127,54 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         timestamp: getLocalISOString()
       };
 
-      // Agregar al historial si la función está disponible
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 1: GUARDAR EN BASE DE DATOS (Backend primero)
+      // ═══════════════════════════════════════════════════════════════
+      console.log('💾 [PaymentForm] Guardando pago en base de datos...');
+
+      // Actualizar el gasto pendiente en Google Sheets
+      await updateInSheet(scriptUrl, pin, updatedExpense, 'Gastos_Pendientes');
+
+      // Registrar el pago en la hoja de Pagos
+      await sendToSheet(scriptUrl, pin, paymentPayload, 'Pagos');
+
+      // Registrar el gasto en el historial
+      await sendToSheet(scriptUrl, pin, gastoEntry, 'Gastos');
+
+      // ═══════════════════════════════════════════════════════════════
+      // PASO 2: SOLO SI BD CONFIRMÓ ÉXITO → Actualizar estado local
+      // ═══════════════════════════════════════════════════════════════
+      console.log('✅ [PaymentForm] BD confirmó éxito, actualizando estado local...');
+
+      // Ahora sí actualizamos el estado local (React + localStorage)
+      onUpdateExpense(updatedExpense);
+
+      // Agregar al historial local si la función está disponible
       if (onAddToHistory) {
         onAddToHistory({ ...gastoEntry, tipo: 'Gastos' } as Transaction);
       }
 
-      // También enviar a la hoja de Gastos
-      await sendToSheet(scriptUrl, pin, gastoEntry, 'Gastos');
-
+      // Limpiar formulario
       setSelectedExpenseId('');
       setCustomAmount('');
 
+      // Notificar éxito
       if (esSuscripcion) {
-        notify?.('Pago de suscripción registrado - Próximo cargo actualizado', 'success');
+        notify?.('Pago de suscripción registrado correctamente', 'success');
       } else {
-        notify?.('Pago registrado correctamente', 'success');
+        notify?.('Pago registrado y sincronizado correctamente', 'success');
       }
 
     } catch (error) {
-      notify?.("Error al procesar pago", 'error');
+      // ═══════════════════════════════════════════════════════════════
+      // SI BD FALLA → NO actualizar nada local, mostrar error claro
+      // ═══════════════════════════════════════════════════════════════
+      console.error('❌ [PaymentForm] Error guardando pago:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      notify?.(`Error al guardar pago: ${errorMessage}. Por favor intenta de nuevo.`, 'error');
+
+      // IMPORTANTE: No actualizamos estado local, el pago NO se registró
     } finally {
       setLoading(false);
     }
