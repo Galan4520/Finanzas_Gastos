@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v4.3
-// Sistema de Pagos con Tracking de Cuotas, Deuda Restante, 
-// PIN Security, SUSCRIPCIONES, CRUD (UPDATE/DELETE) y PERFIL
+// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v4.4
+// Sistema de Pagos con Tracking de Cuotas, Deuda Restante,
+// PIN Security, SUSCRIPCIONES, CRUD (UPDATE/DELETE), PERFIL y TEA
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════
@@ -139,6 +139,8 @@ function doPost(e) {
 
   } else if (params.tipo === 'Tarjetas') {
     // ===== HOJA: Tarjetas =====
+    // Columnas: banco | tipo_tarjeta | alias | url_imagen | dia_cierre | dia_pago | limite | TEA | timestamp
+    var teaValue = params.tea ? parseFloat(params.tea) : null;
     row = [
       params.banco,
       params.tipo_tarjeta,
@@ -147,6 +149,7 @@ function doPost(e) {
       parseInt(params.dia_cierre),
       parseInt(params.dia_pago),
       parseFloat(params.limite),
+      teaValue,                         // H: TEA (Tasa Efectiva Anual, ej: 60 = 60%)
       params.timestamp
     ];
 
@@ -252,6 +255,10 @@ function handleUpdate(sheet, params) {
         targetSheet.getRange(i + 1, 5).setValue(parseInt(params.dia_cierre));
         targetSheet.getRange(i + 1, 6).setValue(parseInt(params.dia_pago));
         targetSheet.getRange(i + 1, 7).setValue(parseFloat(params.limite));
+        // TEA: Solo actualizar si se envía el campo (compatibilidad hacia atrás)
+        if (params.tea !== undefined && params.tea !== null && params.tea !== '') {
+          targetSheet.getRange(i + 1, 8).setValue(parseFloat(params.tea));
+        }
 
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
@@ -387,6 +394,16 @@ function doGet(e) {
     const data = tarjetasSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) {
+        // Columnas: banco(0) | tipo_tarjeta(1) | alias(2) | url_imagen(3) | dia_cierre(4) | dia_pago(5) | limite(6) | TEA(7) | timestamp(8)
+        var teaVal = data[i][7];
+        var timestampVal = data[i][8];
+        // Compatibilidad: si la columna TEA no existe (tarjetas antiguas sin TEA),
+        // data[i][7] será el timestamp (string ISO). Detectar este caso.
+        if (typeof teaVal === 'string' && teaVal.indexOf('T') !== -1) {
+          // Es un timestamp, no hay TEA
+          timestampVal = teaVal;
+          teaVal = null;
+        }
         cards.push({
           banco: data[i][0],
           tipo_tarjeta: data[i][1],
@@ -395,7 +412,8 @@ function doGet(e) {
           dia_cierre: data[i][4],
           dia_pago: data[i][5],
           limite: data[i][6],
-          timestamp: data[i][7]
+          tea: (teaVal !== null && teaVal !== undefined && teaVal !== '') ? Number(teaVal) : null,
+          timestamp: timestampVal || ''
         });
       }
     }
@@ -557,6 +575,61 @@ function obtenerResumenGasto(gastoId) {
   gasto.totalPagado = totalPagado;
 
   return gasto;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIMULACIÓN DE COMPRA EN CUOTAS CON INTERÉS (TEA)
+// ═══════════════════════════════════════════════════════════════
+// SOLO INFORMATIVO - NO modifica pagos, cuotas ni registros.
+// Fórmula: Sistema francés (cuota fija).
+// TEA = Tasa Efectiva Anual (porcentaje, ej: 60 = 60%).
+// Tasa mensual = (1 + TEA/100)^(1/12) - 1   (PROHIBIDO usar TEA/12)
+//
+// Ejemplo con TEA=60%, monto=1200, cuotas=12:
+//   tasaMensual = (1 + 60/100)^(1/12) - 1 = (1.6)^(0.0833) - 1 ≈ 0.03987
+//   cuota = 1200 * 0.03987 / (1 - (1 + 0.03987)^(-12)) ≈ 121.41
+//   totalAPagar = 121.41 * 12 = 1456.92
+//   interesesTotales = 1456.92 - 1200 = 256.92
+//   porcentajeExtraPagado = (256.92 / 1200) * 100 ≈ 21.41%
+// ═══════════════════════════════════════════════════════════════
+function simularCompraEnCuotas(monto, numCuotas, tea) {
+  if (!tea || tea <= 0) {
+    return { error: 'TEA no disponible para esta tarjeta. Configura la TEA en los datos de la tarjeta.' };
+  }
+  if (!monto || monto <= 0) {
+    return { error: 'El monto debe ser mayor a 0.' };
+  }
+  if (!numCuotas || numCuotas < 1) {
+    return { error: 'El número de cuotas debe ser al menos 1.' };
+  }
+
+  // Si es 1 cuota, no hay interés
+  if (numCuotas === 1) {
+    return {
+      cuotaMensual: monto,
+      totalAPagar: monto,
+      interesesTotales: 0,
+      porcentajeExtraPagado: 0
+    };
+  }
+
+  // Calcular tasa mensual desde TEA (fórmula correcta, NO TEA/12)
+  var tasaMensual = Math.pow(1 + tea / 100, 1 / 12) - 1;
+
+  // Cuota fija - Sistema francés
+  // cuota = monto * i / (1 - (1 + i)^(-n))
+  var cuotaMensual = monto * tasaMensual / (1 - Math.pow(1 + tasaMensual, -numCuotas));
+
+  var totalAPagar = cuotaMensual * numCuotas;
+  var interesesTotales = totalAPagar - monto;
+  var porcentajeExtraPagado = (interesesTotales / monto) * 100;
+
+  return {
+    cuotaMensual: Math.round(cuotaMensual * 100) / 100,
+    totalAPagar: Math.round(totalAPagar * 100) / 100,
+    interesesTotales: Math.round(interesesTotales * 100) / 100,
+    porcentajeExtraPagado: Math.round(porcentajeExtraPagado * 100) / 100
+  };
 }
 
 /**

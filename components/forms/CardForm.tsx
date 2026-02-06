@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { BANCOS, CreditCard } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { formatCurrency, getLocalISOString } from '../../utils/format';
-import { Plus, X, CreditCard as CardIcon, Calendar, Wallet, Layers } from 'lucide-react';
+import { Plus, X, CreditCard as CardIcon, Calendar, Wallet, Layers, Percent } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { PERUVIAN_BANK_CARDS, getCardsByBankAndType, getGradientByBank, TIPOS_TARJETA, BankCard } from '../../peruBankCards';
 
@@ -27,6 +27,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
     dia_cierre: undefined,
     dia_pago: undefined,
     limite: undefined,
+    tea: undefined,
     selectedCardId: ''
   });
 
@@ -66,6 +67,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
         dia_cierre: Number(formData.dia_cierre),
         dia_pago: Number(formData.dia_pago),
         limite: Number(formData.limite),
+        tea: formData.tea ? Number(formData.tea) : null,
         timestamp: getLocalISOString()
       };
 
@@ -75,7 +77,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       setFormData({
         banco: '', tipo_tarjeta: '', alias: '', url_imagen: '',
         dia_cierre: undefined, dia_pago: undefined, limite: undefined,
-        selectedCardId: ''
+        tea: undefined, selectedCardId: ''
       });
       notify?.('Tarjeta agregada correctamente', 'success');
       setShowForm(false);
@@ -185,6 +187,12 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                           <Calendar size={10} /> Día {card.dia_cierre}
                         </span>
                       </div>
+                      <div className="flex flex-col items-center">
+                        <span className="opacity-70 uppercase text-[10px]">TEA</span>
+                        <span className="font-bold">
+                          {card.tea ? `${card.tea}%` : '—'}
+                        </span>
+                      </div>
                       <div className="flex flex-col text-right">
                         <span className="opacity-70 uppercase text-[10px]">Pago Aprox.</span>
                         <span className="font-bold flex items-center justify-end gap-1">
@@ -276,8 +284,8 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
             />
           </div>
 
-          {/* Días y Límite */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* Días, Límite y TEA */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <label className={labelClass}>Día Cierre</label>
               <input
@@ -315,6 +323,24 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                 required
                 className={inputClass}
               />
+            </div>
+            <div>
+              <label className={labelClass}>
+                <Percent size={10} className="inline mr-1" />
+                TEA (%)
+              </label>
+              <input
+                type="number"
+                name="tea"
+                step="0.01"
+                min="0"
+                max="999"
+                placeholder="Ej: 60"
+                value={formData.tea || ''}
+                onChange={handleChange}
+                className={inputClass}
+              />
+              <p className={`text-[10px] ${theme.colors.textMuted} mt-1`}>Tasa Efectiva Anual</p>
             </div>
           </div>
 

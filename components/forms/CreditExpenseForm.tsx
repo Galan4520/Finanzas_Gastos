@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { CreditCard, CATEGORIAS_GASTOS, PendingExpense } from '../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { CreditCard, CATEGORIAS_GASTOS, PendingExpense, simularCompraEnCuotas } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
-import { CreditCard as CreditCardIcon } from 'lucide-react';
+import { CreditCard as CreditCardIcon, Info } from 'lucide-react';
 
 interface CreditExpenseFormProps {
   scriptUrl: string;
@@ -79,9 +79,23 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const montoCuota = formData.monto && formData.num_cuotas
+  const montoCuotaSinInteres = formData.monto && formData.num_cuotas
     ? (parseFloat(formData.monto) / parseInt(formData.num_cuotas)).toFixed(2)
     : '0.00';
+
+  // Simulación con interés: obtener TEA de la tarjeta seleccionada
+  const selectedCardTea = useMemo(() => {
+    if (!formData.tarjetaAlias) return null;
+    const card = cards.find(c => c.alias === formData.tarjetaAlias);
+    return card?.tea ?? null;
+  }, [formData.tarjetaAlias, cards]);
+
+  const simulacion = useMemo(() => {
+    if (!formData.monto || !useInstallments) return null;
+    const monto = parseFloat(formData.monto);
+    const numCuotas = parseInt(formData.num_cuotas);
+    return simularCompraEnCuotas(monto, numCuotas, selectedCardTea);
+  }, [formData.monto, formData.num_cuotas, selectedCardTea, useInstallments]);
 
   const inputClass = "w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all";
   const labelClass = "text-xs font-bold text-slate-400 uppercase tracking-wide ml-1 mb-1 block";
@@ -127,19 +141,61 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
           </div>
 
           {useInstallments && (
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
-              <div>
-                <label className={labelClass}>N° Cuotas</label>
-                <select name="num_cuotas" value={formData.num_cuotas} onChange={handleChange} className={inputClass}>
-                  {[2, 3, 6, 9, 12, 18, 24, 36, 48].map(n => <option key={n} value={n}>{n} cuotas</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Monto / Mes</label>
-                <div className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-emerald-400 font-mono text-right">
-                  {formatCurrency(parseFloat(montoCuota))}
+            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>N° Cuotas</label>
+                  <select name="num_cuotas" value={formData.num_cuotas} onChange={handleChange} className={inputClass}>
+                    {[2, 3, 6, 9, 12, 18, 24, 36, 48].map(n => <option key={n} value={n}>{n} cuotas</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Cuota sin interés</label>
+                  <div className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-emerald-400 font-mono text-right">
+                    {formatCurrency(parseFloat(montoCuotaSinInteres))}
+                  </div>
                 </div>
               </div>
+
+              {/* Simulación con interés */}
+              {selectedCardTea && simulacion ? (
+                <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-900/10 space-y-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Info size={14} className="text-amber-400" />
+                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">
+                      Simulación con interés (TEA {selectedCardTea}%)
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase">Cuota/Mes</p>
+                      <p className="text-sm font-mono font-bold text-amber-300">{formatCurrency(simulacion.cuotaMensual)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase">Total a pagar</p>
+                      <p className="text-sm font-mono font-bold text-white">{formatCurrency(simulacion.totalAPagar)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase">Intereses</p>
+                      <p className="text-sm font-mono font-bold text-rose-400">{formatCurrency(simulacion.interesesTotales)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase">% Extra</p>
+                      <p className="text-sm font-mono font-bold text-rose-400">+{simulacion.porcentajeExtraPagado.toFixed(2)}%</p>
+                    </div>
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Los valores mostrados son referenciales y dependen de la tasa aplicada por el banco.
+                  </p>
+                </div>
+              ) : useInstallments && formData.tarjetaAlias && !selectedCardTea ? (
+                <div className="p-3 rounded-xl border border-slate-600/50 bg-slate-800/30">
+                  <p className="text-[10px] text-slate-500 flex items-center gap-1">
+                    <Info size={12} />
+                    Esta tarjeta no tiene TEA configurada. Edítala para ver la simulación con interés.
+                  </p>
+                </div>
+              ) : null}
             </div>
           )}
         </div>

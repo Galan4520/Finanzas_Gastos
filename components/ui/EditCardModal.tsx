@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CreditCard, BANCOS } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
-import { X, Save, CreditCard as CardIcon, Calendar, Wallet } from 'lucide-react';
+import { X, Save, CreditCard as CardIcon, Calendar, Wallet, Percent } from 'lucide-react';
 import { PERUVIAN_BANK_CARDS, BankCard } from '../../peruBankCards';
 
 interface EditCardModalProps {
@@ -28,6 +28,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
         dia_cierre: '',
         dia_pago: '',
         limite: '',
+        tea: '',
         selectedCardId: ''
     });
 
@@ -60,6 +61,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                 dia_cierre: card.dia_cierre.toString(),
                 dia_pago: card.dia_pago.toString(),
                 limite: card.limite.toString(),
+                tea: card.tea ? card.tea.toString() : '',
                 selectedCardId: matchingCard?.id || ''
             });
         }
@@ -80,7 +82,8 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                 url_imagen: selectedCard?.imagen || formData.url_imagen,
                 dia_cierre: parseInt(formData.dia_cierre),
                 dia_pago: parseInt(formData.dia_pago),
-                limite: parseFloat(formData.limite)
+                limite: parseFloat(formData.limite),
+                tea: formData.tea ? parseFloat(formData.tea) : null
             };
 
             // Pass both the updated card AND the original alias
@@ -202,8 +205,8 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                             />
                         </div>
 
-                        {/* Días y Límite */}
-                        <div className="grid grid-cols-3 gap-4">
+                        {/* Días, Límite y TEA */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div>
                                 <label className={labelClass}>
                                     <Calendar size={12} className="inline mr-1" />
@@ -253,6 +256,25 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                                     disabled={loading}
                                     className={inputClass}
                                 />
+                            </div>
+                            <div>
+                                <label className={labelClass}>
+                                    <Percent size={12} className="inline mr-1" />
+                                    TEA (%)
+                                </label>
+                                <input
+                                    type="number"
+                                    name="tea"
+                                    step="0.01"
+                                    min="0"
+                                    max="999"
+                                    placeholder="Ej: 60"
+                                    value={formData.tea}
+                                    onChange={handleChange}
+                                    disabled={loading}
+                                    className={inputClass}
+                                />
+                                <p className={`text-[10px] ${theme.colors.textMuted} mt-1`}>Tasa Efectiva Anual</p>
                             </div>
                         </div>
 
