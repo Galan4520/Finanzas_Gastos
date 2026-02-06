@@ -6,7 +6,54 @@ export interface CreditCard {
   dia_cierre: number;
   dia_pago: number;
   limite: number;
+  tea?: number | null; // TEA: Tasa Efectiva Anual (porcentaje, ej: 60 = 60%). Ingresada por el usuario.
   timestamp: string;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIMULACIÓN DE CUOTAS CON INTERÉS (TEA)
+// Solo informativo. NO altera monto_pagado_total ni cuotas_pagadas.
+// ═══════════════════════════════════════════════════════════════
+export interface SimulacionCuotas {
+  cuotaMensual: number;
+  totalAPagar: number;
+  interesesTotales: number;
+  porcentajeExtraPagado: number;
+}
+
+/**
+ * Simula una compra en cuotas con interés usando sistema francés (cuota fija).
+ *
+ * @param monto - Monto total de la compra
+ * @param numCuotas - Número de cuotas
+ * @param tea - Tasa Efectiva Anual (porcentaje, ej: 60 = 60%)
+ * @returns SimulacionCuotas o null si la TEA no está disponible
+ */
+export function simularCompraEnCuotas(monto: number, numCuotas: number, tea: number | null | undefined): SimulacionCuotas | null {
+  if (!tea || tea <= 0 || !monto || monto <= 0 || !numCuotas || numCuotas < 1) {
+    return null;
+  }
+
+  if (numCuotas === 1) {
+    return { cuotaMensual: monto, totalAPagar: monto, interesesTotales: 0, porcentajeExtraPagado: 0 };
+  }
+
+  // Tasa mensual = (1 + TEA/100)^(1/12) - 1   (PROHIBIDO usar TEA/12)
+  const tasaMensual = Math.pow(1 + tea / 100, 1 / 12) - 1;
+
+  // Cuota fija - Sistema francés: cuota = monto * i / (1 - (1 + i)^(-n))
+  const cuotaMensual = monto * tasaMensual / (1 - Math.pow(1 + tasaMensual, -numCuotas));
+
+  const totalAPagar = cuotaMensual * numCuotas;
+  const interesesTotales = totalAPagar - monto;
+  const porcentajeExtraPagado = (interesesTotales / monto) * 100;
+
+  return {
+    cuotaMensual: Math.round(cuotaMensual * 100) / 100,
+    totalAPagar: Math.round(totalAPagar * 100) / 100,
+    interesesTotales: Math.round(interesesTotales * 100) / 100,
+    porcentajeExtraPagado: Math.round(porcentajeExtraPagado * 100) / 100,
+  };
 }
 
 export interface Transaction {
