@@ -15,6 +15,7 @@ interface CreditExpenseFormProps {
 export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl, pin, cards, onAddExpense, notify }) => {
   const [loading, setLoading] = useState(false);
   const [useInstallments, setUseInstallments] = useState(false);
+  const [withInterest, setWithInterest] = useState(false);
   const today = new Date().toISOString().split('T')[0];
 
   const [formData, setFormData] = useState({
@@ -67,6 +68,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
         tarjetaAlias: '', categoria: ''
       }));
       setUseInstallments(false);
+      setWithInterest(false);
       notify?.('Gasto con tarjeta registrado', 'success');
     } catch (error) {
       notify?.("Error al guardar", 'error');
@@ -91,11 +93,11 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
   }, [formData.tarjetaAlias, cards]);
 
   const simulacion = useMemo(() => {
-    if (!formData.monto || !useInstallments) return null;
+    if (!formData.monto || !useInstallments || !withInterest) return null;
     const monto = parseFloat(formData.monto);
     const numCuotas = parseInt(formData.num_cuotas);
     return simularCompraEnCuotas(monto, numCuotas, selectedCardTea);
-  }, [formData.monto, formData.num_cuotas, selectedCardTea, useInstallments]);
+  }, [formData.monto, formData.num_cuotas, selectedCardTea, useInstallments, withInterest]);
 
   const inputClass = "w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all";
   const labelClass = "text-xs font-bold text-slate-400 uppercase tracking-wide ml-1 mb-1 block";
@@ -150,52 +152,92 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>Cuota sin interés</label>
+                  <label className={labelClass}>Monto / Mes (aprox.)</label>
                   <div className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-emerald-400 font-mono text-right">
                     {formatCurrency(parseFloat(montoCuotaSinInteres))}
                   </div>
                 </div>
               </div>
 
-              {/* Simulación con interés */}
-              {selectedCardTea && simulacion ? (
-                <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-900/10 space-y-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Info size={14} className="text-amber-400" />
-                    <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">
-                      Simulación con interés (TEA {selectedCardTea}%)
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase">Cuota/Mes</p>
-                      <p className="text-sm font-mono font-bold text-amber-300">{formatCurrency(simulacion.cuotaMensual)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase">Total a pagar</p>
-                      <p className="text-sm font-mono font-bold text-white">{formatCurrency(simulacion.totalAPagar)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase">Intereses</p>
-                      <p className="text-sm font-mono font-bold text-rose-400">{formatCurrency(simulacion.interesesTotales)}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase">% Extra</p>
-                      <p className="text-sm font-mono font-bold text-rose-400">+{simulacion.porcentajeExtraPagado.toFixed(2)}%</p>
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    Los valores mostrados son referenciales y dependen de la tasa aplicada por el banco.
-                  </p>
+              {/* Tipo de cuota: sin interés / con interés */}
+              <div>
+                <label className={labelClass}>Tipo de cuotas</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setWithInterest(false)}
+                    className={`p-3 rounded-xl border-2 text-center text-sm font-semibold transition-all ${
+                      !withInterest
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                        : 'border-slate-600 bg-slate-800/30 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    Sin interés
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWithInterest(true)}
+                    className={`p-3 rounded-xl border-2 text-center text-sm font-semibold transition-all ${
+                      withInterest
+                        ? 'border-amber-500 bg-amber-500/10 text-amber-400'
+                        : 'border-slate-600 bg-slate-800/30 text-slate-400 hover:border-slate-500'
+                    }`}
+                  >
+                    Con interés
+                  </button>
                 </div>
-              ) : useInstallments && formData.tarjetaAlias && !selectedCardTea ? (
-                <div className="p-3 rounded-xl border border-slate-600/50 bg-slate-800/30">
-                  <p className="text-[10px] text-slate-500 flex items-center gap-1">
-                    <Info size={12} />
-                    Esta tarjeta no tiene TEA configurada. Edítala para ver la simulación con interés.
-                  </p>
-                </div>
-              ) : null}
+              </div>
+
+              {/* Simulación con interés: solo visible cuando el usuario elige "Con interés" */}
+              {withInterest && (
+                <>
+                  {selectedCardTea && simulacion ? (
+                    <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-900/10 space-y-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Info size={14} className="text-amber-400" />
+                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wide">
+                          Simulación con interés (TEA {selectedCardTea}%)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase">Cuota/Mes</p>
+                          <p className="text-sm font-mono font-bold text-amber-300">{formatCurrency(simulacion.cuotaMensual)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase">Total a pagar</p>
+                          <p className="text-sm font-mono font-bold text-white">{formatCurrency(simulacion.totalAPagar)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase">Intereses</p>
+                          <p className="text-sm font-mono font-bold text-rose-400">{formatCurrency(simulacion.interesesTotales)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase">% Extra</p>
+                          <p className="text-sm font-mono font-bold text-rose-400">+{simulacion.porcentajeExtraPagado.toFixed(2)}%</p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1">
+                        Los valores mostrados son referenciales y dependen de la tasa aplicada por el banco.
+                      </p>
+                    </div>
+                  ) : formData.tarjetaAlias && !selectedCardTea ? (
+                    <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-900/10">
+                      <p className="text-xs text-amber-400 flex items-center gap-1">
+                        <Info size={12} />
+                        Esta tarjeta no tiene TEA configurada. Edítala para ver la simulación con interés.
+                      </p>
+                    </div>
+                  ) : !formData.tarjetaAlias ? (
+                    <div className="p-3 rounded-xl border border-slate-600/50 bg-slate-800/30">
+                      <p className="text-xs text-slate-500 flex items-center gap-1">
+                        <Info size={12} />
+                        Selecciona una tarjeta para ver la simulación.
+                      </p>
+                    </div>
+                  ) : null}
+                </>
+              )}
             </div>
           )}
         </div>
