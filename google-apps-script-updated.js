@@ -140,7 +140,11 @@ function doPost(e) {
   } else if (params.tipo === 'Tarjetas') {
     // ===== HOJA: Tarjetas =====
     // Columnas: banco | tipo_tarjeta | alias | url_imagen | dia_cierre | dia_pago | limite | TEA | timestamp
-    var teaValue = params.tea ? parseFloat(params.tea) : null;
+    // TEA es opcional. Si no se envía, se guarda como string vacío (safe para appendRow).
+    var teaRaw = params.tea;
+    var teaValue = (teaRaw !== undefined && teaRaw !== null && teaRaw !== '' && !isNaN(parseFloat(teaRaw)))
+      ? parseFloat(teaRaw)
+      : '';
     row = [
       params.banco,
       params.tipo_tarjeta,
@@ -149,7 +153,7 @@ function doPost(e) {
       parseInt(params.dia_cierre),
       parseInt(params.dia_pago),
       parseFloat(params.limite),
-      teaValue,                         // H: TEA (Tasa Efectiva Anual, ej: 60 = 60%)
+      teaValue,                         // H: TEA (Tasa Efectiva Anual, ej: 60 = 60%). Vacío si no se proporciona.
       params.timestamp
     ];
 
