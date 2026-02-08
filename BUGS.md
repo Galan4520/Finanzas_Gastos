@@ -2,34 +2,32 @@
 
 Este documento lista los bugs y problemas encontrados en el código de la aplicación de Control Financiero.
 
-## 🔴 Bugs Críticos
+## ✅ Bugs Resueltos (2026-02-08)
 
-### 1. Error en Cálculo de Fecha de Cierre de Tarjeta
-**Ubicación:** `components/forms/UnifiedEntryForm.tsx:50`
+### 1. Error en Cálculo de Fecha de Cierre de Tarjeta ✅ RESUELTO
+**Ubicación:** `components/forms/UnifiedEntryForm.tsx:65`
 
 **Problema:**
 ```typescript
 const cierreDate = new Date(anio, dia <= card.dia_cierre ? mes : mes + 1, card.dia_cierre);
 ```
 
-La lógica está usando `dia` (día del gasto) para determinar en qué mes cae el cierre, pero debería comparar el día del gasto con el día de cierre de la tarjeta para decidir si el cierre es en el mes actual o el siguiente.
+La lógica usaba `dia` sin definirla primero.
 
-**Impacto:** Las fechas de cierre y pago de tarjetas se calculan incorrectamente, afectando la gestión de deudas.
+**Impacto:** Las fechas de cierre y pago de tarjetas se calculaban incorrectamente.
 
-**Solución Sugerida:**
-```typescript
-const cierreDate = new Date(anio, dia <= card.dia_cierre ? mes : mes + 1, card.dia_cierre);
-```
-Debería ser:
+**Solución Aplicada:**
 ```typescript
 const dia_gasto = hoy.getDate();
 const cierreDate = new Date(anio, dia_gasto <= card.dia_cierre ? mes : mes + 1, card.dia_cierre);
 ```
 
+**Estado:** ✅ RESUELTO
+
 ---
 
-### 2. Función generateId() Puede Generar IDs Duplicados
-**Ubicación:** `utils/format.ts:20-21`
+### 2. Función generateId() Puede Generar IDs Duplicados ✅ RESUELTO
+**Ubicación:** `utils/format.ts:20-23`
 
 **Problema:**
 ```typescript
@@ -39,19 +37,18 @@ export const generateId = () => {
 ```
 
 - Si se llama múltiples veces en el mismo milisegundo, genera IDs duplicados
-- El `.substring(7)` puede generar IDs muy cortos o incluso vacíos en timestamps pequeños
-- No hay garantía de unicidad
+- El `.substring(7)` puede generar IDs muy cortos
 
-**Impacto:** Posibles colisiones de IDs en transacciones, especialmente al importar datos en lote.
+**Impacto:** Posibles colisiones de IDs en transacciones.
 
-**Test que lo demuestra:** `utils/format.test.ts` - "BUG TEST: may generate duplicate IDs in quick succession"
-
-**Solución Sugerida:**
+**Solución Aplicada:**
 ```typescript
 export const generateId = () => {
   return 'GP' + Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9);
 };
 ```
+
+**Estado:** ✅ RESUELTO
 
 ---
 

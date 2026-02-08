@@ -179,7 +179,7 @@ function doPost(e) {
 
   } else if (params.tipo === 'Pagos') {
     // ===== HOJA NUEVA: Pagos =====
-    const numCuota = params.num_cuota ? parseInt(params.num_cuota) : null;
+    const numCuota = params.num_cuota && params.num_cuota !== '0' ? parseInt(params.num_cuota) : null;
 
     row = [
       params.fecha_pago,            // A: Fecha del pago
@@ -235,7 +235,7 @@ function handleUpdate(sheet, params) {
         targetSheet.getRange(i + 1, 10).setValue(parseInt(params.num_cuotas) || 1);
         targetSheet.getRange(i + 1, 11).setValue(parseFloat(params.cuotas_pagadas) || 0);
         targetSheet.getRange(i + 1, 12).setValue(parseFloat(params.monto_pagado_total) || 0); // 🆕 NUEVA COLUMNA
-        targetSheet.getRange(i + 1, 13).setValue(params.tipo || 'deuda');
+        targetSheet.getRange(i + 1, 13).setValue(params.tipo_original || params.tipo_gasto || 'deuda');
         targetSheet.getRange(i + 1, 14).setValue(params.notas || '');
 
         return ContentService.createTextOutput(JSON.stringify({
@@ -260,6 +260,26 @@ function handleUpdate(sheet, params) {
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
           message: 'Tarjeta actualizada'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  } else if (tipo === 'Gastos' || tipo === 'Ingresos') {
+    // Buscar por timestamp (columna F, index 5) como identificador único
+    const timestampOriginal = params.timestamp_original;
+
+    for (let i = 1; i < data.length; i++) {
+      const rowTimestamp = data[i][5] ? data[i][5].toString() : '';
+      if (rowTimestamp === timestampOriginal) {
+        targetSheet.getRange(i + 1, 1).setValue(formatDateForSheet(params.fecha));
+        targetSheet.getRange(i + 1, 2).setValue(params.categoria);
+        targetSheet.getRange(i + 1, 3).setValue(params.descripcion);
+        targetSheet.getRange(i + 1, 4).setValue(parseFloat(params.monto));
+        targetSheet.getRange(i + 1, 5).setValue(params.notas || '');
+        // Mantener el timestamp original (columna F) para no perder la referencia
+
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Registro actualizado'
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -306,6 +326,18 @@ function handleDelete(sheet, params) {
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }
+  } else if (tipo === 'Gastos' || tipo === 'Ingresos') {
+    // Buscar por timestamp (columna F, index 5) como identificador único
+    for (let i = 1; i < data.length; i++) {
+      const rowTimestamp = data[i][5] ? data[i][5].toString() : '';
+      if (rowTimestamp === idToDelete) {
+        targetSheet.deleteRow(i + 1);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Registro eliminado'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
   }
 
   return ContentService.createTextOutput(JSON.stringify({
@@ -336,8 +368,13 @@ function actualizarGastoPendiente(sheet, params) {
       if (tipoGasto === 'suscripcion') {
         // LÓGICA PARA SUSCRIPCIONES: Renovar al próximo mes
         const fechaActual = new Date(data[i][7]);
+        const diaOriginal = fechaActual.getDate();
         const proximaFecha = new Date(fechaActual);
         proximaFecha.setMonth(proximaFecha.getMonth() + 1);
+        // Fix month overflow (e.g., Jan 31 → setMonth(1) = Mar 3 → clamp to Feb 28)
+        if (proximaFecha.getDate() !== diaOriginal) {
+          proximaFecha.setDate(0); // Last day of previous month
+        }
 
         // Formatear fecha como YYYY-MM-DD antes de guardar
         const fechaFormateada = formatDateForSheet(proximaFecha);

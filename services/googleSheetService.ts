@@ -107,7 +107,9 @@ export const updateInSheet = async (
     throw new Error("URL de Google Apps Script no configurada");
   }
 
-  const payload = { ...data, tipo, pin, action: 'update' };
+  // Preservar el campo 'tipo' original del objeto (ej: 'deuda', 'suscripcion')
+  // usando 'tipo_original', y usar 'tipo' para el routing de la hoja destino
+  const payload = { ...data, tipo_original: data.tipo, tipo, pin, action: 'update' };
   const formData = objectToFormData(payload);
 
   console.log(`📤 [updateInSheet] Actualizando ${tipo}:`, {

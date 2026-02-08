@@ -150,6 +150,12 @@ export interface RealEstateProperty {
 
 // User Profile
 export interface UserProfile {
+  id: string;
   avatar_id: string;
   nombre: string;
+  email?: string;
+  preferences?: {
+    theme: 'light' | 'dark' | 'system';
+    notifications: boolean;
+  };
 }

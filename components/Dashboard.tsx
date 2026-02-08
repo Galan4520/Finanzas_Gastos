@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, RealEstateInvestment } from '../types';
 import { formatCurrency } from '../utils/format';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LineChart, Line, CartesianGrid, Legend } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home, Pencil, Trash2 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 
@@ -14,6 +14,8 @@ interface DashboardProps {
   history: Transaction[];
   savingsGoal?: SavingsGoalConfig | null;
   realEstateInvestments?: RealEstateInvestment[];
+  onEditTransaction?: (transaction: Transaction) => void;
+  onDeleteTransaction?: (transaction: Transaction) => void;
 }
 
 // Helper function to parse date string as local date (avoids timezone issues)
@@ -63,10 +65,11 @@ const formatTimeLabel = (dateStr: string): string => {
   return `${hours}:${minutes}`;
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal, realEstateInvestments = [] }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal, realEstateInvestments = [], onEditTransaction, onDeleteTransaction }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
   const [distributionFilter, setDistributionFilter] = React.useState<'thisMonth' | 'total'>('total');
+  const [categoryPeriod, setCategoryPeriod] = React.useState<'week' | 'month' | 'year'>('month');
 
   // Calculate weekly expenses comparison
   const weeklyComparison = useMemo(() => {
@@ -718,111 +721,80 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </div>
       </div>
 
-      {/* Card Distribution Chart */}
-      {cardDistribution.length > 0 && (
-        <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
-          <div className={`p-6 border-b ${theme.colors.border}`}>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <CreditIcon className={textColors.primary} size={20} />
-                <h3 className={`font-bold ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
-              </div>
-
-              {/* Filter Buttons */}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setDistributionFilter('thisMonth')}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    distributionFilter === 'thisMonth'
-                      ? `${theme.colors.primary} text-white shadow-md`
-                      : `${theme.colors.bgSecondary} ${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
-                  }`}
-                >
-                  Este Mes
-                </button>
-                <button
-                  onClick={() => setDistributionFilter('total')}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-                    distributionFilter === 'total'
-                      ? `${theme.colors.primary} text-white shadow-md`
-                      : `${theme.colors.bgSecondary} ${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
-                  }`}
-                >
-                  Total
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="p-6 grid md:grid-cols-2 gap-6">
-            {/* Pie Chart */}
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={cardDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={(props) => {
-                      const { cx, cy, midAngle, innerRadius, outerRadius, percent, name } = props;
-                      const RADIAN = Math.PI / 180;
-                      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                      const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                      const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-                      return (
-                        <text
-                          x={x}
-                          y={y}
-                          fill="white"
-                          textAnchor={x > cx ? 'start' : 'end'}
-                          dominantBaseline="central"
-                          style={{ fontSize: '10px', fontWeight: '600' }}
-                        >
-                          {`${name} ${(percent * 100).toFixed(0)}%`}
-                        </text>
-                      );
-                    }}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {cardDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* List */}
-            <div className="space-y-2">
-              {cardDistribution.map((card, index) => {
-                const total = cardDistribution.reduce((sum, c) => sum + c.value, 0);
-                const percentage = (card.value / total) * 100;
-                return (
-                  <div key={card.name} className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                        <span className={`font-medium text-sm ${theme.colors.textPrimary}`}>{card.name}</span>
-                      </div>
-                      <span className={`font-bold text-sm ${theme.colors.textPrimary}`}>{formatCurrency(card.value)}</span>
-                    </div>
-                    <div className={`w-full bg-gray-200 rounded-full h-1.5`}>
-                      <div
-                        className="h-1.5 rounded-full"
-                        style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
-                      ></div>
-                    </div>
+      {/* Card Distribution */}
+      {pendingExpenses.length > 0 && (() => {
+        const totalDistribution = cardDistribution.reduce((sum, c) => sum + c.value, 0);
+        return (
+          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+            <div className={`p-6 border-b ${theme.colors.border}`}>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <CreditIcon className={textColors.primary} size={20} />
+                    <h3 className={`font-bold ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
                   </div>
-                );
-              })}
+                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
+                    {totalDistribution > 0
+                      ? `${formatCurrency(totalDistribution)} ${distributionFilter === 'thisMonth' ? 'este mes' : 'en total'}`
+                      : `Sin deudas ${distributionFilter === 'thisMonth' ? 'este mes' : ''}`
+                    }
+                  </p>
+                </div>
+
+                <div className={`flex rounded-xl ${theme.colors.bgSecondary} p-1`}>
+                  {([['thisMonth', 'Este Mes'], ['total', 'Total']] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setDistributionFilter(key)}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        distributionFilter === key
+                          ? `${theme.colors.primary} text-white shadow-md`
+                          : `${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
+
+            {cardDistribution.length === 0 ? (
+              <div className={`p-12 text-center ${theme.colors.textMuted} text-sm`}>
+                No hay pagos programados para este mes.
+              </div>
+            ) : (
+              <div className="p-6 space-y-3">
+                {cardDistribution.map((card, index) => {
+                  const percentage = (card.value / totalDistribution) * 100;
+                  return (
+                    <div key={card.name} className={`p-4 rounded-2xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${COLORS[index % COLORS.length]}20` }}>
+                            <CreditIcon size={18} style={{ color: COLORS[index % COLORS.length] }} />
+                          </div>
+                          <div>
+                            <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{card.name}</p>
+                            <p className={`text-xs ${theme.colors.textMuted}`}>{percentage.toFixed(1)}% del total</p>
+                          </div>
+                        </div>
+                        <p className={`font-bold font-mono text-lg ${theme.colors.textPrimary}`}>{formatCurrency(card.value)}</p>
+                      </div>
+                      <div className={`w-full h-2 rounded-full overflow-hidden`} style={{ backgroundColor: `${COLORS[index % COLORS.length]}15` }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Balance Total Card - Destacado */}
       <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border-2 ${
@@ -950,8 +922,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                         </div>
                         {/* Transactions for this day */}
                         <div className={`divide-y ${theme.colors.border}`}>
-                            {transactions.map((t: any, idx) => (
-                                <div key={idx} className={`p-4 flex items-center justify-between hover:${theme.colors.bgCardHover} transition-colors`}>
+                            {transactions.map((t: any, idx) => {
+                                const isEditable = !t.isCredit && (t.tipo === 'Gastos' || t.tipo === 'Ingresos');
+                                return (
+                                <div key={idx} className={`group p-4 flex items-center justify-between hover:${theme.colors.bgCardHover} transition-colors`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
                                             ${t.tipo === 'Ingresos' ? 'bg-emerald-100 text-emerald-600' :
@@ -963,11 +937,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                             <p className={`text-xs ${theme.colors.textMuted}`}>{formatTimeLabel(t.timestamp || t.fecha)} • {t.categoria}</p>
                                         </div>
                                     </div>
-                                    <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : theme.colors.textPrimary}`}>
-                                        {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        {isEditable && (
+                                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => onEditTransaction?.(t as Transaction)}
+                                                    className={`p-1.5 rounded-lg ${theme.colors.bgSecondary} hover:bg-blue-500/20 transition-colors`}
+                                                    title="Editar"
+                                                >
+                                                    <Pencil size={14} className="text-blue-400" />
+                                                </button>
+                                                <button
+                                                    onClick={() => onDeleteTransaction?.(t as Transaction)}
+                                                    className={`p-1.5 rounded-lg ${theme.colors.bgSecondary} hover:bg-red-500/20 transition-colors`}
+                                                    title="Eliminar"
+                                                >
+                                                    <Trash2 size={14} className="text-red-400" />
+                                                </button>
+                                            </div>
+                                        )}
+                                        <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : theme.colors.textPrimary}`}>
+                                            {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
+                                        </span>
+                                    </div>
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 ))
@@ -975,77 +970,128 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
          </div>
       </div>
 
-      {/* Category Analysis - Pie Chart */}
+      {/* Category Analysis - Bar Chart with Period Filter */}
       {(() => {
-        const categoryData = history
-          .filter(t => t.tipo === 'Gastos')
-          .reduce((acc: { [key: string]: number }, t) => {
-            const cat = t.categoria || 'Sin categoría';
-            acc[cat] = (acc[cat] || 0) + Number(t.monto);
-            return acc;
-          }, {});
+        const now = new Date();
+        const filteredHistory = history.filter(t => {
+          if (t.tipo !== 'Gastos') return false;
+          const d = new Date(t.timestamp || t.fecha);
+          if (categoryPeriod === 'week') {
+            const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+            return d >= weekStart;
+          } else if (categoryPeriod === 'month') {
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+          } else {
+            return d.getFullYear() === now.getFullYear();
+          }
+        });
+
+        const categoryData = filteredHistory.reduce((acc: { [key: string]: number }, t) => {
+          const cat = t.categoria || 'Sin categoría';
+          acc[cat] = (acc[cat] || 0) + Number(t.monto);
+          return acc;
+        }, {});
 
         const chartData = Object.entries(categoryData)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value)
-          .slice(0, 6); // Top 6 categories
+          .slice(0, 8);
 
-        if (chartData.length === 0) return null;
+        const totalGastos = chartData.reduce((sum, c) => sum + c.value, 0);
+
+        const periodLabels = { week: 'esta semana', month: 'este mes', year: 'este año' };
 
         return (
           <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
             <div className={`p-6 border-b ${theme.colors.border}`}>
-              <div className="flex items-center gap-2">
-                <PieIcon className={textColors.primary} size={20} />
-                <h3 className={`font-bold ${theme.colors.textPrimary}`}>Gastos por Categoría</h3>
-              </div>
-            </div>
-            <div className="p-6 grid md:grid-cols-2 gap-6">
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <PieIcon className={textColors.primary} size={20} />
+                    <h3 className={`font-bold ${theme.colors.textPrimary}`}>Gastos por Categoría</h3>
+                  </div>
+                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
+                    {totalGastos > 0 ? `${formatCurrency(totalGastos)} ${periodLabels[categoryPeriod]}` : `Sin gastos ${periodLabels[categoryPeriod]}`}
+                  </p>
+                </div>
+
+                <div className={`flex rounded-xl ${theme.colors.bgSecondary} p-1`}>
+                  {([['week', 'Semana'], ['month', 'Mes'], ['year', 'Año']] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setCategoryPeriod(key)}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        categoryPeriod === key
+                          ? `${theme.colors.primary} text-white shadow-md`
+                          : `${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+                      }`}
                     >
-                      {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2">
-                {chartData.map((cat, index) => {
-                  const total = chartData.reduce((sum, c) => sum + c.value, 0);
-                  const percentage = (cat.value / total) * 100;
-                  return (
-                    <div key={cat.name} className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                          <span className={`font-medium text-sm ${theme.colors.textPrimary}`}>{cat.name}</span>
-                        </div>
-                        <span className={`font-bold text-sm ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
-                      </div>
-                      <div className={`w-full bg-gray-200 rounded-full h-1.5`}>
-                        <div
-                          className="h-1.5 rounded-full"
-                          style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
+
+            {chartData.length === 0 ? (
+              <div className={`p-12 text-center ${theme.colors.textMuted} text-sm`}>
+                No hay gastos registrados {periodLabels[categoryPeriod]}.
+              </div>
+            ) : (
+              <div className="p-6">
+                {/* Bar Chart */}
+                <div className="h-64 mb-6">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} layout="vertical" barSize={20} margin={{ left: 10, right: 20 }}>
+                      <XAxis type="number" hide />
+                      <YAxis
+                        dataKey="name"
+                        type="category"
+                        width={120}
+                        tick={{ fill: currentTheme === 'light-premium' ? '#475569' : '#94a3b8', fontSize: 12 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'transparent' }}
+                        contentStyle={{
+                          backgroundColor: currentTheme === 'light-premium' ? '#ffffff' : '#1e293b',
+                          borderRadius: '12px',
+                          border: `1px solid ${currentTheme === 'light-premium' ? '#e2e8f0' : '#334155'}`,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        }}
+                        itemStyle={{ color: currentTheme === 'light-premium' ? '#0f172a' : '#f1f5f9' }}
+                        formatter={(val: number) => formatCurrency(val)}
+                      />
+                      <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                        {chartData.map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Category List */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {chartData.map((cat, index) => {
+                    const percentage = (cat.value / totalGastos) * 100;
+                    return (
+                      <div key={cat.name} className={`flex items-center justify-between p-3 rounded-xl ${theme.colors.bgSecondary}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <span className={`font-medium text-sm ${theme.colors.textPrimary} truncate`}>{cat.name}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                          <span className={`text-xs ${theme.colors.textMuted}`}>{percentage.toFixed(0)}%</span>
+                          <span className={`font-bold text-sm font-mono ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}

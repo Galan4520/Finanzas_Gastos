@@ -139,22 +139,25 @@ function doPost(e) {
 
   } else if (params.tipo === 'Tarjetas') {
     // ===== HOJA: Tarjetas =====
-    // Columnas: banco | tipo_tarjeta | alias | url_imagen | dia_cierre | dia_pago | limite | TEA | timestamp
+    // Columnas: banco | tipo_tarjeta | alias | url_imagen | dia_cierre | dia_pago | linea_credito | credito_disponible | TEA | timestamp
     // TEA es opcional. Si no se envía, se guarda como string vacío (safe para appendRow).
     var teaRaw = params.tea;
     var teaValue = (teaRaw !== undefined && teaRaw !== null && teaRaw !== '' && !isNaN(parseFloat(teaRaw)))
       ? parseFloat(teaRaw)
       : '';
+    // Credito_Disponible por defecto es igual al límite (será actualizado por la app al registrar gastos)
+    var creditoDisponible = parseFloat(params.limite);
     row = [
-      params.banco,
-      params.tipo_tarjeta,
-      params.alias,
-      params.url_imagen || '',
-      parseInt(params.dia_cierre),
-      parseInt(params.dia_pago),
-      parseFloat(params.limite),
-      teaValue,                         // H: TEA (Tasa Efectiva Anual, ej: 60 = 60%). Vacío si no se proporciona.
-      params.timestamp
+      params.banco,                       // A: Banco
+      params.tipo_tarjeta,                // B: Tipo
+      params.alias,                       // C: Alias
+      params.url_imagen || '',            // D: URL_Imagen
+      parseInt(params.dia_cierre),        // E: Dia_Cierre
+      parseInt(params.dia_pago),          // F: Dia_Pago
+      parseFloat(params.limite),          // G: Linea_Credito
+      creditoDisponible,                  // H: Credito_Disponible
+      teaValue,                           // I: TEA (Tasa Efectiva Anual, ej: 60 = 60%). Vacío si no se proporciona.
+      params.timestamp                    // J: Timestamp
     ];
 
   } else if (params.tipo === 'Gastos_Pendientes') {
@@ -259,9 +262,13 @@ function handleUpdate(sheet, params) {
         targetSheet.getRange(i + 1, 5).setValue(parseInt(params.dia_cierre));
         targetSheet.getRange(i + 1, 6).setValue(parseInt(params.dia_pago));
         targetSheet.getRange(i + 1, 7).setValue(parseFloat(params.limite));
-        // TEA: Solo actualizar si se envía el campo (compatibilidad hacia atrás)
+        // H: Credito_Disponible - Actualizar solo si se proporciona, sino dejar como está
+        if (params.credito_disponible !== undefined && params.credito_disponible !== null && params.credito_disponible !== '') {
+          targetSheet.getRange(i + 1, 8).setValue(parseFloat(params.credito_disponible));
+        }
+        // I: TEA - Solo actualizar si se envía el campo (compatibilidad hacia atrás)
         if (params.tea !== undefined && params.tea !== null && params.tea !== '') {
-          targetSheet.getRange(i + 1, 8).setValue(parseFloat(params.tea));
+          targetSheet.getRange(i + 1, 9).setValue(parseFloat(params.tea));
         }
 
         return ContentService.createTextOutput(JSON.stringify({
@@ -398,16 +405,24 @@ function doGet(e) {
     const data = tarjetasSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) {
-        // Columnas: banco(0) | tipo_tarjeta(1) | alias(2) | url_imagen(3) | dia_cierre(4) | dia_pago(5) | limite(6) | TEA(7) | timestamp(8)
-        var teaVal = data[i][7];
-        var timestampVal = data[i][8];
-        // Compatibilidad: si la columna TEA no existe (tarjetas antiguas sin TEA),
-        // data[i][7] será el timestamp (string ISO). Detectar este caso.
-        if (typeof teaVal === 'string' && teaVal.indexOf('T') !== -1) {
-          // Es un timestamp, no hay TEA
+        // Columnas: banco(0) | tipo_tarjeta(1) | alias(2) | url_imagen(3) | dia_cierre(4) | dia_pago(5) | limite(6) | credito_disponible(7) | TEA(8) | timestamp(9)
+        var creditoDisp = data[i][7];
+        var teaVal = data[i][8];
+        var timestampVal = data[i][9];
+
+        // Compatibilidad: si la columna 7 es un timestamp (tarjetas antiguas),
+        // significa que no tienen credito_disponible ni TEA
+        if (typeof creditoDisp === 'string' && creditoDisp.indexOf('T') !== -1) {
+          // Es un timestamp en columna 7, estructura antigua
+          timestampVal = creditoDisp;
+          creditoDisp = null;
+          teaVal = null;
+        } else if (typeof teaVal === 'string' && teaVal.indexOf('T') !== -1) {
+          // TEA (columna 8) es timestamp, estructura sin TEA pero con credito_disponible
           timestampVal = teaVal;
           teaVal = null;
         }
+
         cards.push({
           banco: data[i][0],
           tipo_tarjeta: data[i][1],
@@ -416,6 +431,7 @@ function doGet(e) {
           dia_cierre: data[i][4],
           dia_pago: data[i][5],
           limite: data[i][6],
+          credito_disponible: (creditoDisp !== null && creditoDisp !== undefined && creditoDisp !== '') ? Number(creditoDisp) : data[i][6],
           tea: (teaVal !== null && teaVal !== undefined && teaVal !== '') ? Number(teaVal) : null,
           timestamp: timestampVal || ''
         });
@@ -444,7 +460,9 @@ function doGet(e) {
           cuotas_pagadas: data[i][10],
           tipo: data[i][11] || 'deuda',
           notas: data[i][12],
-          timestamp: data[i][13]
+          timestamp: data[i][13],
+          // Calcular monto_pagado_total basado en cuotas_pagadas
+          monto_pagado_total: (data[i][10] || 0) * (data[i][5] / (data[i][9] || 1))
         });
       }
     }

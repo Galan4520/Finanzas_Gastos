@@ -1,4 +1,5 @@
 import { PendingExpense } from '../types';
+import { parseNumber } from './format';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // UTILIDADES CENTRALIZADAS PARA DEUDAS
@@ -60,6 +61,39 @@ export function isSuscripcionActiva(item: PendingExpense): boolean {
 }
 
 /**
+ * Calcula los días de retraso de una deuda.
+ * Si es negativo, faltan días para vencer.
+ * Si es positivo, son días de retraso.
+ * 
+ * @param fechaPago - Fecha de vencimiento (YYYY-MM-DD)
+ * @returns número de días (positivo = vencido)
+ */
+export function getDiasVencidos(fechaPago: string): number {
+  if (!fechaPago) return 0;
+
+  const fechaVencimiento = new Date(fechaPago);
+  const hoy = new Date();
+
+  // Resetear horas para comparar solo fechas
+  fechaVencimiento.setHours(0, 0, 0, 0);
+  hoy.setHours(0, 0, 0, 0);
+
+  const diffTime = hoy.getTime() - fechaVencimiento.getTime();
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Determina si una deuda está vencida (fecha de pago anterior a hoy).
+ * 
+ * @param deuda - El objeto de deuda
+ * @returns true si está vencida
+ */
+export function isDeudaVencida(deuda: PendingExpense): boolean {
+  if (deuda.estado === 'Pagado') return false;
+  return getDiasVencidos(deuda.fecha_pago) > 0;
+}
+
+/**
  * Normaliza una deuda asegurando que todos los campos críticos existan.
  * DEBE usarse al cargar datos del backend o localStorage.
  *
@@ -67,9 +101,24 @@ export function isSuscripcionActiva(item: PendingExpense): boolean {
  * @returns Objeto de deuda con todos los campos normalizados
  */
 export function normalizarDeuda(deuda: Partial<PendingExpense>): PendingExpense {
-  const monto = Number(deuda.monto) || 0;
-  const montoPagadoTotal = Number(deuda.monto_pagado_total) || 0;
+  console.log(`🔍 [normalizarDeuda] Procesando "${deuda.descripcion}": monto=${deuda.monto}, monto_pagado_total=${deuda.monto_pagado_total}, cuotas_pagadas=${deuda.cuotas_pagadas}, num_cuotas=${deuda.num_cuotas}, tipo=${deuda.tipo}`);
+
+  const monto = parseNumber(deuda.monto);
+  const numCuotas = Number(deuda.num_cuotas) || 1;
+  const cuotasPagadas = Number(deuda.cuotas_pagadas) || 0;
+
+  // CORRECCIÓN: Si monto_pagado_total no existe, calcularlo basado en cuotas
+  let montoPagadoTotal = parseNumber(deuda.monto_pagado_total);
+  if (montoPagadoTotal === 0 && cuotasPagadas > 0) {
+    // Calcular basado en cuotas pagadas
+    const montoCuota = monto / numCuotas;
+    montoPagadoTotal = cuotasPagadas * montoCuota;
+    console.log(`🔍 [normalizarDeuda] monto_pagado_total calculado: ${cuotasPagadas} cuotas * ${montoCuota} = ${montoPagadoTotal}`);
+  }
+
   const saldoPendiente = Math.max(0, monto - montoPagadoTotal);
+
+  console.log(`🔍 [normalizarDeuda] Después de parsear: monto=${monto}, montoPagado=${montoPagadoTotal}, saldo=${saldoPendiente}, cuotasPagadas=${cuotasPagadas}/${numCuotas}`);
 
   // Determinar estado basado en saldo (el saldo es la verdad)
   let estadoNormalizado: 'Pendiente' | 'Pagado' = deuda.estado as 'Pendiente' | 'Pagado';

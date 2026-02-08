@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3, User, Home } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3, User } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { UserProfile } from '../types';
@@ -54,10 +54,22 @@ interface LayoutProps {
   onSync: () => void;
   isSyncing: boolean;
   profile?: UserProfile | null;
+  lastSyncTime?: Date | null;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, connected, onSync, isSyncing, profile }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, connected, onSync, isSyncing, profile, lastSyncTime }) => {
   const { theme, currentTheme } = useTheme();
+
+  // Helper to format time relative
+  const getRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 60000); // minutes
+    if (diff < 1) return 'Hace un momento';
+    if (diff === 1) return 'Hace 1 minuto';
+    if (diff < 60) return `Hace ${diff} minutos`;
+    return `Hace ${Math.floor(diff / 60)} horas`;
+  };
+
   const textColors = getTextColor(currentTheme);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
@@ -67,7 +79,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     { id: 'metas', label: 'Metas', icon: <Target /> },
     { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true }, // Unified Action - Centered
     { id: 'deudas', label: 'Deudas', icon: <Clock /> },
-    { id: 'activos', label: 'Activos', icon: <Home /> },
     { id: 'config', label: 'Ajustes', icon: <Settings /> },
   ];
 
@@ -117,12 +128,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               onClick={onSync}
               disabled={isSyncing}
               className={`w-full py-2.5 rounded-lg font-medium text-xs uppercase tracking-wider transition-all ${isSyncing
-                  ? `${theme.colors.bgSecondary} ${theme.colors.textMuted}`
-                  : `${theme.colors.bgSecondary} ${theme.colors.primary} hover:text-white ${theme.colors.textSecondary}`
+                ? `${theme.colors.bgSecondary} ${theme.colors.textMuted}`
+                : `${theme.colors.bgSecondary} ${theme.colors.primary} hover:text-white ${theme.colors.textSecondary}`
                 }`}
             >
               {isSyncing ? 'Sincronizando...' : '↻ Sincronizar'}
             </button>
+            {lastSyncTime && (
+              <p className={`text-[10px] text-center mt-2 ${theme.colors.textMuted}`}>
+                Actualizado: {getRelativeTime(lastSyncTime)}
+              </p>
+            )}
           </div>
         )}
       </aside>
