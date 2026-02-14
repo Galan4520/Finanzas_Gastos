@@ -266,7 +266,7 @@ export const saveNotificationConfig = async (
   scriptUrl: string,
   pin: string,
   config: NotificationConfig
-): Promise<{ success: boolean }> => {
+): Promise<{ success: boolean; verified: boolean }> => {
   if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
 
   const payload = {
@@ -288,20 +288,39 @@ export const saveNotificationConfig = async (
       body: formData,
     });
 
-    await delay(1000);
-    console.log('✅ [saveNotificationConfig] Configuración guardada');
-    return { success: true };
+    // Verificar que se guardó via GET
+    await delay(1500);
+    const freshData = await fetchData(scriptUrl, pin);
+    const savedConfig = freshData.notificationConfig;
+
+    if (savedConfig && savedConfig.email === config.email) {
+      console.log('✅ [saveNotificationConfig] Configuración verificada en BD');
+      return { success: true, verified: true };
+    } else {
+      console.warn('⚠️ [saveNotificationConfig] No se pudo verificar. ¿Actualizaste el código de Apps Script?');
+      return { success: true, verified: false };
+    }
   } catch (error) {
     console.error('❌ [saveNotificationConfig] Error:', error);
     throw error;
   }
 };
 
+/**
+ * Envía email de prueba y verifica que se envió checando lastEmailSent en Config.
+ */
 export const sendTestEmail = async (
   scriptUrl: string,
   pin: string
-): Promise<{ enviado: boolean; email?: string; razon?: string }> => {
+): Promise<{ enviado: boolean; verified: boolean; razon?: string }> => {
   if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  // Capturar timestamp anterior para comparar
+  let previousTimestamp = '';
+  try {
+    const beforeData = await fetchData(scriptUrl, pin);
+    previousTimestamp = beforeData.notificationConfig?.lastEmailSent || '';
+  } catch { /* ignorar */ }
 
   const payload = { action: 'sendTestEmail', pin };
   const formData = objectToFormData(payload);
@@ -315,21 +334,38 @@ export const sendTestEmail = async (
       body: formData,
     });
 
-    // Can't read no-cors response, so we assume success
-    await delay(2000);
-    console.log('✅ [sendTestEmail] Solicitud enviada');
-    return { enviado: true };
+    // Esperar que Apps Script procese y verificar
+    await delay(3000);
+    const afterData = await fetchData(scriptUrl, pin);
+    const newTimestamp = afterData.notificationConfig?.lastEmailSent || '';
+
+    if (newTimestamp && newTimestamp !== previousTimestamp) {
+      console.log('✅ [sendTestEmail] Email enviado y verificado');
+      return { enviado: true, verified: true };
+    } else {
+      console.warn('⚠️ [sendTestEmail] No se detectó envío. Posibles causas: código no actualizado o permisos no autorizados.');
+      return { enviado: false, verified: false, razon: 'No se pudo verificar el envío. Revisa la guía de configuración.' };
+    }
   } catch (error) {
     console.error('❌ [sendTestEmail] Error:', error);
     throw error;
   }
 };
 
+/**
+ * Envía notificaciones de vencimiento y verifica.
+ */
 export const sendNotificationsNow = async (
   scriptUrl: string,
   pin: string
-): Promise<{ enviado: boolean }> => {
+): Promise<{ enviado: boolean; verified: boolean; razon?: string }> => {
   if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  let previousTimestamp = '';
+  try {
+    const beforeData = await fetchData(scriptUrl, pin);
+    previousTimestamp = beforeData.notificationConfig?.lastEmailSent || '';
+  } catch { /* ignorar */ }
 
   const payload = { action: 'sendNotifications', pin };
   const formData = objectToFormData(payload);
@@ -343,9 +379,17 @@ export const sendNotificationsNow = async (
       body: formData,
     });
 
-    await delay(2000);
-    console.log('✅ [sendNotificationsNow] Solicitud enviada');
-    return { enviado: true };
+    await delay(3000);
+    const afterData = await fetchData(scriptUrl, pin);
+    const newTimestamp = afterData.notificationConfig?.lastEmailSent || '';
+
+    if (newTimestamp && newTimestamp !== previousTimestamp) {
+      console.log('✅ [sendNotificationsNow] Notificaciones enviadas y verificadas');
+      return { enviado: true, verified: true };
+    } else {
+      console.warn('⚠️ [sendNotificationsNow] No se detectó envío.');
+      return { enviado: false, verified: false, razon: 'No se verificó el envío. Puede que no haya pagos próximos o el código no está actualizado.' };
+    }
   } catch (error) {
     console.error('❌ [sendNotificationsNow] Error:', error);
     throw error;

@@ -22,9 +22,9 @@ interface SettingsViewProps {
   onSaveGoal: (goal: SavingsGoalConfig) => void;
   onSetTheme: (theme: string) => void;
   onSync: () => void;
-  onSaveNotificationConfig: (config: NotificationConfig) => Promise<void>;
-  onSendTestEmail: () => Promise<void>;
-  onSendNotifications: () => Promise<void>;
+  onSaveNotificationConfig: (config: NotificationConfig) => Promise<{ success: boolean; verified: boolean }>;
+  onSendTestEmail: () => Promise<{ enviado: boolean; verified: boolean; razon?: string }>;
+  onSendNotifications: () => Promise<{ enviado: boolean; verified: boolean; razon?: string }>;
   onSetupDailyTrigger: () => Promise<void>;
   notify: (msg: string, type: 'success' | 'error') => void;
 }
