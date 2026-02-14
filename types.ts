@@ -159,3 +159,10 @@ export interface UserProfile {
     notifications: boolean;
   };
 }
+
+// Notification Config (from Google Sheet Config tab)
+export interface NotificationConfig {
+  email: string;
+  diasAnticipacion: number;
+  notificacionesActivas: boolean;
+}

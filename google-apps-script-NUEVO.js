@@ -108,6 +108,45 @@ function doPost(e) {
     return saveProfile(sheet, params);
   }
 
+  // 📧 Guardar configuración de notificaciones
+  if (action === 'saveNotificationConfig') {
+    saveNotificationConfig(params);
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Configuración de notificaciones guardada'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 📧 Enviar notificaciones manualmente
+  if (action === 'sendNotifications') {
+    var result = enviarNotificacionesVencimiento();
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 📧 Enviar email de prueba
+  if (action === 'sendTestEmail') {
+    var testResult = enviarEmailPrueba();
+    return ContentService.createTextOutput(JSON.stringify(testResult))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 📧 Configurar trigger diario
+  if (action === 'setupDailyTrigger') {
+    try {
+      configurarTriggerDiario();
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: 'Trigger diario configurado para las 8:00 AM'
+      })).setMimeType(ContentService.MimeType.JSON);
+    } catch (error) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: error.toString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   if (action === 'update') {
     return handleUpdate(sheet, params);
   }
@@ -545,13 +584,17 @@ function doGet(e) {
     }
   }
 
+  // 📧 Obtener configuración de notificaciones
+  var notificationConfig = getNotificationConfig();
+
   // 🆕 Retornar JSON con perfil incluido
   return ContentService.createTextOutput(JSON.stringify({
     profile: profile,  // null si no existe, o { avatar_id, nombre }
     cards: cards,
     pending: pending,
     history: history,
-    availableProperties: availableProperties // 🆕 Catálogo de propiedades
+    availableProperties: availableProperties, // 🆕 Catálogo de propiedades
+    notificationConfig: notificationConfig    // 📧 Config de notificaciones
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -646,6 +689,320 @@ function obtenerResumenGasto(gastoId) {
   gasto.totalPagadoHistorial = totalPagadoHistorial;
 
   return gasto;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICACIONES POR EMAIL - Vencimiento de Tarjetas de Crédito
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Obtiene el email de notificación desde la hoja Config.
+ * Celda B1 = "email_notificacion", B2 = email del usuario.
+ * Celda C1 = "dias_anticipacion", C2 = días antes del vencimiento (default: 3).
+ */
+function getNotificationConfig() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName('Config');
+  if (!configSheet) return null;
+
+  var email = '';
+  var diasAnticipacion = 3;
+  var notificacionesActivas = true;
+
+  // Leer email (B2)
+  try { email = configSheet.getRange('B2').getValue().toString().trim(); } catch(e) {}
+  // Leer días de anticipación (C2)
+  try {
+    var dias = parseInt(configSheet.getRange('C2').getValue());
+    if (!isNaN(dias) && dias > 0) diasAnticipacion = dias;
+  } catch(e) {}
+  // Leer si notificaciones están activas (D2)
+  try {
+    var activas = configSheet.getRange('D2').getValue();
+    if (activas === false || activas === 'false' || activas === 'no' || activas === 0) {
+      notificacionesActivas = false;
+    }
+  } catch(e) {}
+
+  return {
+    email: email,
+    diasAnticipacion: diasAnticipacion,
+    notificacionesActivas: notificacionesActivas
+  };
+}
+
+/**
+ * Guarda la configuración de notificaciones en la hoja Config.
+ */
+function saveNotificationConfig(params) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName('Config');
+  if (!configSheet) return;
+
+  // Asegurar encabezados
+  configSheet.getRange('B1').setValue('email_notificacion');
+  configSheet.getRange('C1').setValue('dias_anticipacion');
+  configSheet.getRange('D1').setValue('notificaciones_activas');
+
+  if (params.email !== undefined) configSheet.getRange('B2').setValue(params.email);
+  if (params.dias_anticipacion !== undefined) configSheet.getRange('C2').setValue(parseInt(params.dias_anticipacion) || 3);
+  if (params.notificaciones_activas !== undefined) {
+    configSheet.getRange('D2').setValue(params.notificaciones_activas === 'true' || params.notificaciones_activas === true);
+  }
+}
+
+/**
+ * Función principal: Revisa deudas próximas a vencer y envía email.
+ * Se puede llamar manualmente o con un trigger diario.
+ */
+function enviarNotificacionesVencimiento() {
+  var config = getNotificationConfig();
+  if (!config || !config.email || !config.notificacionesActivas) {
+    Logger.log('Notificaciones desactivadas o email no configurado');
+    return { enviado: false, razon: 'Notificaciones desactivadas o email no configurado' };
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var pendientesSheet = ss.getSheetByName('Gastos_Pendientes');
+  var tarjetasSheet = ss.getSheetByName('Tarjetas');
+
+  if (!pendientesSheet) {
+    return { enviado: false, razon: 'No existe hoja Gastos_Pendientes' };
+  }
+
+  var hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  var diasAnticipacion = config.diasAnticipacion;
+
+  // Obtener datos de tarjetas para info extra
+  var tarjetas = {};
+  if (tarjetasSheet) {
+    var tarjetasData = tarjetasSheet.getDataRange().getValues();
+    for (var t = 1; t < tarjetasData.length; t++) {
+      if (tarjetasData[t][2]) {
+        tarjetas[tarjetasData[t][2]] = {
+          banco: tarjetasData[t][0],
+          tipo: tarjetasData[t][1],
+          dia_pago: tarjetasData[t][5],
+          limite: tarjetasData[t][6]
+        };
+      }
+    }
+  }
+
+  // Buscar deudas próximas a vencer
+  var data = pendientesSheet.getDataRange().getValues();
+  var porVencer = [];
+  var vencidas = [];
+
+  for (var i = 1; i < data.length; i++) {
+    var estado = data[i][8];
+    if (estado === 'Pagado') continue;
+
+    var fechaPagoStr = data[i][7];
+    if (!fechaPagoStr) continue;
+
+    var fechaPago = new Date(fechaPagoStr);
+    fechaPago.setHours(0, 0, 0, 0);
+
+    var diffDias = Math.floor((fechaPago - hoy) / (1000 * 60 * 60 * 24));
+    var montoTotal = parseFloat(data[i][5]) || 0;
+    var montoPagado = parseFloat(data[i][11]) || 0;
+    var saldoPendiente = montoTotal - montoPagado;
+
+    if (saldoPendiente <= 0) continue;
+
+    var item = {
+      descripcion: data[i][4],
+      tarjeta: data[i][2],
+      monto: montoTotal,
+      saldo_pendiente: saldoPendiente,
+      fecha_pago: formatDate(fechaPagoStr),
+      dias_restantes: diffDias,
+      num_cuotas: data[i][9],
+      cuotas_pagadas: data[i][10],
+      tipo: data[i][12] || 'deuda',
+      banco: tarjetas[data[i][2]] ? tarjetas[data[i][2]].banco : ''
+    };
+
+    if (diffDias < 0) {
+      vencidas.push(item);
+    } else if (diffDias <= diasAnticipacion) {
+      porVencer.push(item);
+    }
+  }
+
+  if (porVencer.length === 0 && vencidas.length === 0) {
+    Logger.log('No hay pagos próximos a vencer');
+    return { enviado: false, razon: 'No hay pagos próximos a vencer', revisados: data.length - 1 };
+  }
+
+  // Construir email HTML
+  var htmlBody = construirEmailHTML(porVencer, vencidas, config.diasAnticipacion);
+  var asunto = '';
+
+  if (vencidas.length > 0 && porVencer.length > 0) {
+    asunto = '⚠️ Tienes ' + vencidas.length + ' pago(s) vencido(s) y ' + porVencer.length + ' próximo(s) a vencer';
+  } else if (vencidas.length > 0) {
+    asunto = '🔴 Tienes ' + vencidas.length + ' pago(s) vencido(s)';
+  } else {
+    asunto = '📅 Tienes ' + porVencer.length + ' pago(s) próximo(s) a vencer';
+  }
+
+  try {
+    MailApp.sendEmail({
+      to: config.email,
+      subject: asunto + ' - MoneyCrock',
+      htmlBody: htmlBody
+    });
+
+    Logger.log('Email enviado a ' + config.email);
+    return {
+      enviado: true,
+      email: config.email,
+      por_vencer: porVencer.length,
+      vencidas: vencidas.length,
+      asunto: asunto
+    };
+  } catch (error) {
+    Logger.log('Error enviando email: ' + error);
+    return { enviado: false, razon: error.toString() };
+  }
+}
+
+/**
+ * Construye el HTML del email de notificación.
+ */
+function construirEmailHTML(porVencer, vencidas, diasAnticipacion) {
+  var html = '<div style="font-family: \'Segoe UI\', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 20px;">';
+
+  // Header
+  html += '<div style="background: linear-gradient(135deg, #10b981, #059669); padding: 24px; border-radius: 16px 16px 0 0; text-align: center;">';
+  html += '<h1 style="color: white; margin: 0; font-size: 24px;">💳 MoneyCrock</h1>';
+  html += '<p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 14px;">Recordatorio de Pagos</p>';
+  html += '</div>';
+
+  html += '<div style="background: white; padding: 24px; border-radius: 0 0 16px 16px; border: 1px solid #e2e8f0;">';
+
+  // Vencidas (urgentes)
+  if (vencidas.length > 0) {
+    html += '<div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px; margin-bottom: 16px;">';
+    html += '<h2 style="color: #dc2626; margin: 0 0 12px 0; font-size: 18px;">🔴 Pagos Vencidos</h2>';
+
+    for (var v = 0; v < vencidas.length; v++) {
+      var item = vencidas[v];
+      html += '<div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 8px; border-left: 4px solid #dc2626;">';
+      html += '<strong style="color: #1e293b;">' + item.descripcion + '</strong>';
+      if (item.banco) html += ' <span style="color: #64748b; font-size: 12px;">(' + item.banco + ' - ' + item.tarjeta + ')</span>';
+      html += '<br>';
+      html += '<span style="color: #dc2626; font-weight: bold; font-size: 18px;">S/ ' + item.saldo_pendiente.toFixed(2) + '</span>';
+      html += ' <span style="color: #64748b; font-size: 12px;">pendiente</span><br>';
+      html += '<span style="color: #dc2626; font-size: 12px;">Venció hace ' + Math.abs(item.dias_restantes) + ' día(s) - Fecha: ' + item.fecha_pago + '</span>';
+      if (item.tipo === 'suscripcion') {
+        html += ' <span style="background: #7c3aed; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Suscripción</span>';
+      } else if (item.num_cuotas > 1) {
+        html += ' <span style="color: #64748b; font-size: 11px;">(Cuota ' + (Math.floor(item.cuotas_pagadas) + 1) + '/' + item.num_cuotas + ')</span>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Por vencer
+  if (porVencer.length > 0) {
+    html += '<div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin-bottom: 16px;">';
+    html += '<h2 style="color: #d97706; margin: 0 0 12px 0; font-size: 18px;">📅 Próximos a Vencer (' + diasAnticipacion + ' días)</h2>';
+
+    for (var p = 0; p < porVencer.length; p++) {
+      var pItem = porVencer[p];
+      var urgencia = pItem.dias_restantes === 0 ? '#dc2626' : pItem.dias_restantes === 1 ? '#ea580c' : '#d97706';
+      html += '<div style="background: white; border-radius: 8px; padding: 12px; margin-bottom: 8px; border-left: 4px solid ' + urgencia + ';">';
+      html += '<strong style="color: #1e293b;">' + pItem.descripcion + '</strong>';
+      if (pItem.banco) html += ' <span style="color: #64748b; font-size: 12px;">(' + pItem.banco + ' - ' + pItem.tarjeta + ')</span>';
+      html += '<br>';
+      html += '<span style="color: ' + urgencia + '; font-weight: bold; font-size: 18px;">S/ ' + pItem.saldo_pendiente.toFixed(2) + '</span>';
+      html += ' <span style="color: #64748b; font-size: 12px;">pendiente</span><br>';
+      if (pItem.dias_restantes === 0) {
+        html += '<span style="color: #dc2626; font-weight: bold; font-size: 12px;">¡VENCE HOY! - ' + pItem.fecha_pago + '</span>';
+      } else if (pItem.dias_restantes === 1) {
+        html += '<span style="color: #ea580c; font-weight: bold; font-size: 12px;">Vence MAÑANA - ' + pItem.fecha_pago + '</span>';
+      } else {
+        html += '<span style="color: #d97706; font-size: 12px;">Vence en ' + pItem.dias_restantes + ' día(s) - ' + pItem.fecha_pago + '</span>';
+      }
+      if (pItem.tipo === 'suscripcion') {
+        html += ' <span style="background: #7c3aed; color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px;">Suscripción</span>';
+      } else if (pItem.num_cuotas > 1) {
+        html += ' <span style="color: #64748b; font-size: 11px;">(Cuota ' + (Math.floor(pItem.cuotas_pagadas) + 1) + '/' + pItem.num_cuotas + ')</span>';
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  // Footer
+  html += '<div style="text-align: center; padding-top: 16px; border-top: 1px solid #e2e8f0;">';
+  html += '<p style="color: #94a3b8; font-size: 12px; margin: 0;">Enviado automáticamente por MoneyCrock</p>';
+  html += '<p style="color: #94a3b8; font-size: 11px; margin: 4px 0 0 0;">Para desactivar estas notificaciones, ve a Configuración en la app.</p>';
+  html += '</div>';
+
+  html += '</div></div>';
+
+  return html;
+}
+
+/**
+ * Configura el trigger diario automático para notificaciones.
+ * Ejecutar UNA VEZ manualmente desde el editor de Apps Script.
+ */
+function configurarTriggerDiario() {
+  // Eliminar triggers anteriores de esta función
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'enviarNotificacionesVencimiento') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  // Crear nuevo trigger diario a las 8:00 AM
+  ScriptApp.newTrigger('enviarNotificacionesVencimiento')
+    .timeBased()
+    .everyDays(1)
+    .atHour(8)
+    .create();
+
+  Logger.log('Trigger diario configurado para las 8:00 AM');
+}
+
+/**
+ * Envía un email de prueba para verificar que la configuración funciona.
+ */
+function enviarEmailPrueba() {
+  var config = getNotificationConfig();
+  if (!config || !config.email) {
+    return { enviado: false, razon: 'Email no configurado en Config (celda B2)' };
+  }
+
+  try {
+    MailApp.sendEmail({
+      to: config.email,
+      subject: '✅ Prueba de Notificaciones - MoneyCrock',
+      htmlBody: '<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">' +
+        '<div style="background: linear-gradient(135deg, #10b981, #059669); padding: 24px; border-radius: 16px; text-align: center;">' +
+        '<h1 style="color: white; margin: 0;">💳 MoneyCrock</h1>' +
+        '<p style="color: #d1fae5; margin: 8px 0 0 0;">¡Notificaciones configuradas correctamente!</p>' +
+        '</div>' +
+        '<div style="background: white; padding: 24px; border: 1px solid #e2e8f0; border-radius: 0 0 16px 16px; text-align: center;">' +
+        '<p style="color: #10b981; font-size: 48px; margin: 0;">✓</p>' +
+        '<h2 style="color: #1e293b;">Prueba Exitosa</h2>' +
+        '<p style="color: #64748b;">Recibirás notificaciones cuando tus pagos estén próximos a vencer (' + config.diasAnticipacion + ' días antes).</p>' +
+        '</div></div>'
+    });
+
+    return { enviado: true, email: config.email };
+  } catch (error) {
+    return { enviado: false, razon: error.toString() };
+  }
 }
 
 /**
