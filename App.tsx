@@ -235,17 +235,20 @@ function App() {
   };
 
   // Notification handlers
-  const handleSaveNotificationConfig = async (config: NotificationConfig) => {
-    await googleSheetService.saveNotificationConfig(scriptUrl, pin, config);
-    setNotificationConfig(config);
+  const handleSaveNotificationConfig = async (config: NotificationConfig): Promise<{ success: boolean; verified: boolean }> => {
+    const result = await googleSheetService.saveNotificationConfig(scriptUrl, pin, config);
+    if (result.verified) {
+      setNotificationConfig(config);
+    }
+    return result;
   };
 
-  const handleSendTestEmail = async () => {
-    await googleSheetService.sendTestEmail(scriptUrl, pin);
+  const handleSendTestEmail = async (): Promise<{ enviado: boolean; verified: boolean; razon?: string }> => {
+    return await googleSheetService.sendTestEmail(scriptUrl, pin);
   };
 
-  const handleSendNotifications = async () => {
-    await googleSheetService.sendNotificationsNow(scriptUrl, pin);
+  const handleSendNotifications = async (): Promise<{ enviado: boolean; verified: boolean; razon?: string }> => {
+    return await googleSheetService.sendNotificationsNow(scriptUrl, pin);
   };
 
   const handleSetupDailyTrigger = async () => {

@@ -724,10 +724,15 @@ function getNotificationConfig() {
     }
   } catch(e) {}
 
+  // Leer último email enviado (E2)
+  var lastEmailSent = '';
+  try { lastEmailSent = configSheet.getRange('E2').getValue().toString().trim(); } catch(e) {}
+
   return {
     email: email,
     diasAnticipacion: diasAnticipacion,
-    notificacionesActivas: notificacionesActivas
+    notificacionesActivas: notificacionesActivas,
+    lastEmailSent: lastEmailSent
   };
 }
 
@@ -744,10 +749,24 @@ function saveNotificationConfig(params) {
   configSheet.getRange('C1').setValue('dias_anticipacion');
   configSheet.getRange('D1').setValue('notificaciones_activas');
 
+  configSheet.getRange('E1').setValue('last_email_sent');
+
   if (params.email !== undefined) configSheet.getRange('B2').setValue(params.email);
   if (params.dias_anticipacion !== undefined) configSheet.getRange('C2').setValue(parseInt(params.dias_anticipacion) || 3);
   if (params.notificaciones_activas !== undefined) {
     configSheet.getRange('D2').setValue(params.notificaciones_activas === 'true' || params.notificaciones_activas === true);
+  }
+}
+
+/**
+ * Registra el timestamp del último email enviado exitosamente.
+ */
+function registrarEmailEnviado() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var configSheet = ss.getSheetByName('Config');
+  if (configSheet) {
+    configSheet.getRange('E1').setValue('last_email_sent');
+    configSheet.getRange('E2').setValue(new Date().toISOString());
   }
 }
 
@@ -857,6 +876,7 @@ function enviarNotificacionesVencimiento() {
       htmlBody: htmlBody
     });
 
+    registrarEmailEnviado();
     Logger.log('Email enviado a ' + config.email);
     return {
       enviado: true,
@@ -999,6 +1019,7 @@ function enviarEmailPrueba() {
         '</div></div>'
     });
 
+    registrarEmailEnviado();
     return { enviado: true, email: config.email };
   } catch (error) {
     return { enviado: false, razon: error.toString() };

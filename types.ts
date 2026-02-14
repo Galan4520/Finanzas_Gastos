@@ -165,4 +165,5 @@ export interface NotificationConfig {
   email: string;
   diasAnticipacion: number;
   notificacionesActivas: boolean;
+  lastEmailSent?: string; // ISO timestamp of last successfully sent email
 }
