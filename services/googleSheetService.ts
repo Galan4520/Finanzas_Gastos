@@ -1,4 +1,4 @@
-import { Transaction, CreditCard, PendingExpense } from "../types";
+import { Transaction, CreditCard, PendingExpense, NotificationConfig } from "../types";
 
 // ═══════════════════════════════════════════════════════════════
 // ARQUITECTURA: Backend como única fuente de verdad
@@ -255,6 +255,126 @@ export const saveProfile = async (
 
   } catch (error) {
     console.error("❌ [saveProfile] Error:", error);
+    throw error;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// NOTIFICATION CONFIG - Guardar/enviar notificaciones
+// ═══════════════════════════════════════════════════════════════
+export const saveNotificationConfig = async (
+  scriptUrl: string,
+  pin: string,
+  config: NotificationConfig
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const payload = {
+    action: 'saveNotificationConfig',
+    pin,
+    email: config.email,
+    dias_anticipacion: config.diasAnticipacion.toString(),
+    notificaciones_activas: config.notificacionesActivas.toString()
+  };
+
+  const formData = objectToFormData(payload);
+
+  console.log('📧 [saveNotificationConfig] Guardando configuración...');
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    await delay(1000);
+    console.log('✅ [saveNotificationConfig] Configuración guardada');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [saveNotificationConfig] Error:', error);
+    throw error;
+  }
+};
+
+export const sendTestEmail = async (
+  scriptUrl: string,
+  pin: string
+): Promise<{ enviado: boolean; email?: string; razon?: string }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const payload = { action: 'sendTestEmail', pin };
+  const formData = objectToFormData(payload);
+
+  console.log('📧 [sendTestEmail] Enviando email de prueba...');
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    // Can't read no-cors response, so we assume success
+    await delay(2000);
+    console.log('✅ [sendTestEmail] Solicitud enviada');
+    return { enviado: true };
+  } catch (error) {
+    console.error('❌ [sendTestEmail] Error:', error);
+    throw error;
+  }
+};
+
+export const sendNotificationsNow = async (
+  scriptUrl: string,
+  pin: string
+): Promise<{ enviado: boolean }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const payload = { action: 'sendNotifications', pin };
+  const formData = objectToFormData(payload);
+
+  console.log('📧 [sendNotificationsNow] Enviando notificaciones...');
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    await delay(2000);
+    console.log('✅ [sendNotificationsNow] Solicitud enviada');
+    return { enviado: true };
+  } catch (error) {
+    console.error('❌ [sendNotificationsNow] Error:', error);
+    throw error;
+  }
+};
+
+export const setupDailyTrigger = async (
+  scriptUrl: string,
+  pin: string
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const payload = { action: 'setupDailyTrigger', pin };
+  const formData = objectToFormData(payload);
+
+  console.log('📧 [setupDailyTrigger] Configurando trigger diario...');
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    await delay(1500);
+    console.log('✅ [setupDailyTrigger] Trigger configurado');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [setupDailyTrigger] Error:', error);
     throw error;
   }
 };

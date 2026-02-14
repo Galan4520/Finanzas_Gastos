@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { CreditCard as CreditCardType, SavingsGoalConfig, UserProfile } from '../types';
+import { CreditCard as CreditCardType, SavingsGoalConfig, UserProfile, NotificationConfig } from '../types';
 import { CardForm } from './forms/CardForm';
+import { NotificationSettings } from './NotificationSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../themes';
-import { CreditCard, Target, Settings as SettingsIcon, Save, X, Pencil, Trash2, AlertTriangle, PiggyBank } from 'lucide-react';
+import { CreditCard, Target, Settings as SettingsIcon, Save, X, Pencil, Trash2, AlertTriangle, PiggyBank, Bell } from 'lucide-react';
 import { formatCurrency, getLocalISOString } from '../utils/format';
 import { getAvatarById } from '../avatars';
 
@@ -14,12 +15,17 @@ interface SettingsViewProps {
   savingsGoal: SavingsGoalConfig | null;
   currentTheme: string;
   profile?: UserProfile | null;
+  notificationConfig?: NotificationConfig | null;
   onAddCard: (card: CreditCardType) => void;
   onEditCard: (card: CreditCardType) => void;
   onDeleteCard: (card: CreditCardType) => void;
   onSaveGoal: (goal: SavingsGoalConfig) => void;
   onSetTheme: (theme: string) => void;
   onSync: () => void;
+  onSaveNotificationConfig: (config: NotificationConfig) => Promise<void>;
+  onSendTestEmail: () => Promise<void>;
+  onSendNotifications: () => Promise<void>;
+  onSetupDailyTrigger: () => Promise<void>;
   notify: (msg: string, type: 'success' | 'error') => void;
 }
 
@@ -36,10 +42,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSaveGoal,
   onSetTheme,
   onSync,
+  notificationConfig,
+  onSaveNotificationConfig,
+  onSendTestEmail,
+  onSendNotifications,
+  onSetupDailyTrigger,
   notify
 }) => {
   const { theme } = useTheme();
-  const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general'>('general');
+  const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
@@ -65,6 +76,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { id: 'general' as const, label: 'General', icon: <SettingsIcon size={18} /> },
     { id: 'tarjetas' as const, label: 'Tarjetas', icon: <CreditCard size={18} /> },
     { id: 'meta' as const, label: 'Meta de Ahorro', icon: <Target size={18} /> },
+    { id: 'notificaciones' as const, label: 'Notificaciones', icon: <Bell size={18} /> },
   ];
 
   return (
@@ -287,6 +299,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   notify={notify}
                 />
               </div>
+            </div>
+          )}
+
+          {/* NOTIFICACIONES SECTION */}
+          {activeSection === 'notificaciones' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className={`text-lg font-bold ${theme.colors.textPrimary} mb-2`}>
+                  Notificaciones de Vencimiento
+                </h3>
+                <p className={`text-sm ${theme.colors.textMuted}`}>
+                  Recibe un email cuando tus pagos de tarjeta de crédito estén por vencer
+                </p>
+              </div>
+              <NotificationSettings
+                scriptUrl={scriptUrl}
+                pin={pin}
+                notificationConfig={notificationConfig || null}
+                onSaveConfig={onSaveNotificationConfig}
+                onSendTest={onSendTestEmail}
+                onSendNotifications={onSendNotifications}
+                onSetupTrigger={onSetupDailyTrigger}
+                notify={notify}
+              />
             </div>
           )}
 

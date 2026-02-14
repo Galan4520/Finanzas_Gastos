@@ -15,7 +15,7 @@ import { EditTransactionModal } from './components/ui/EditTransactionModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Toast } from './components/ui/Toast';
 import { useTheme } from './contexts/ThemeContext';
-import { UserProfile, CreditCard, PendingExpense, SavingsGoalConfig, Transaction, RealEstateInvestment, RealEstateProperty } from './types';
+import { UserProfile, CreditCard, PendingExpense, SavingsGoalConfig, Transaction, RealEstateInvestment, RealEstateProperty, NotificationConfig } from './types';
 import * as googleSheetService from './services/googleSheetService';
 import { normalizarDeuda, isDeudaVencida } from './utils/debtUtils';
 
@@ -77,6 +77,7 @@ function App() {
   const [savingsGoal, setSavingsGoal] = useState<SavingsGoalConfig | null>(null);
   const [realEstateInvestments, setRealEstateInvestments] = useState<RealEstateInvestment[]>([]);
   const [availableProperties] = useState<RealEstateProperty[]>(MOCK_PROPERTIES);
+  const [notificationConfig, setNotificationConfig] = useState<NotificationConfig | null>(null);
 
   // UI State
   const [toast, setToast] = useState({ msg: '', type: 'success' as 'success' | 'error', visible: false });
@@ -145,6 +146,11 @@ function App() {
           };
           setProfile(profileData);
           localStorage.setItem('profile', JSON.stringify(profileData));
+        }
+
+        // Load notification config
+        if (data.notificationConfig) {
+          setNotificationConfig(data.notificationConfig);
         }
 
         // Check for version migration or missing profile
@@ -226,6 +232,24 @@ function App() {
         console.error('Error eliminando transacción:', error);
         showToast('Error al eliminar en la nube. Sincroniza para verificar.', 'error');
       });
+  };
+
+  // Notification handlers
+  const handleSaveNotificationConfig = async (config: NotificationConfig) => {
+    await googleSheetService.saveNotificationConfig(scriptUrl, pin, config);
+    setNotificationConfig(config);
+  };
+
+  const handleSendTestEmail = async () => {
+    await googleSheetService.sendTestEmail(scriptUrl, pin);
+  };
+
+  const handleSendNotifications = async () => {
+    await googleSheetService.sendNotificationsNow(scriptUrl, pin);
+  };
+
+  const handleSetupDailyTrigger = async () => {
+    await googleSheetService.setupDailyTrigger(scriptUrl, pin);
   };
 
   const handleAddRealEstateInvestment = (investment: RealEstateInvestment) => {
@@ -424,12 +448,17 @@ function App() {
             currentTheme={currentTheme}
             cards={cards}
             savingsGoal={savingsGoal}
+            notificationConfig={notificationConfig}
             onAddCard={handleAddCard}
             onEditCard={handleEditCard}
             onDeleteCard={(card) => setDeleteTarget({ type: 'card', item: card })}
             onSaveGoal={saveSavingsGoal}
             onSetTheme={setTheme}
             onSync={handleSync}
+            onSaveNotificationConfig={handleSaveNotificationConfig}
+            onSendTestEmail={handleSendTestEmail}
+            onSendNotifications={handleSendNotifications}
+            onSetupDailyTrigger={handleSetupDailyTrigger}
             notify={showToast}
           />
         );
