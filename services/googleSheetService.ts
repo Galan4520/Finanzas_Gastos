@@ -1,4 +1,4 @@
-import { Transaction, CreditCard, PendingExpense, NotificationConfig } from "../types";
+import { Transaction, CreditCard, PendingExpense, NotificationConfig, Goal } from "../types";
 
 // ═══════════════════════════════════════════════════════════════
 // ARQUITECTURA: Backend como única fuente de verdad
@@ -419,6 +419,167 @@ export const setupDailyTrigger = async (
     return { success: true };
   } catch (error) {
     console.error('❌ [setupDailyTrigger] Error:', error);
+    throw error;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// GOALS (METAS DE AHORRO) - CRUD
+// ═══════════════════════════════════════════════════════════════
+export const createGoal = async (
+  scriptUrl: string,
+  pin: string,
+  goal: Goal
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL no configurada");
+
+  const payload = {
+    tipo: 'Metas',
+    pin,
+    id: goal.id,
+    nombre: goal.nombre,
+    monto_objetivo: goal.monto_objetivo.toString(),
+    monto_ahorrado: goal.monto_ahorrado.toString(),
+    notas: goal.notas || '',
+    estado: goal.estado,
+    icono: goal.icono || '',
+    timestamp: goal.timestamp
+  };
+
+  const formData = objectToFormData(payload);
+
+  console.log('📤 [createGoal] Creando meta:', goal.nombre);
+
+  try {
+    await fetch(scriptUrl, { method: "POST", mode: "no-cors", body: formData });
+    console.log('✅ [createGoal] Meta enviada');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [createGoal] Error:', error);
+    throw error;
+  }
+};
+
+export const updateGoal = async (
+  scriptUrl: string,
+  pin: string,
+  goal: Goal
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL no configurada");
+
+  const payload = {
+    action: 'update',
+    tipo: 'Metas',
+    pin,
+    id: goal.id,
+    nombre: goal.nombre,
+    monto_objetivo: goal.monto_objetivo.toString(),
+    monto_ahorrado: goal.monto_ahorrado.toString(),
+    notas: goal.notas || '',
+    estado: goal.estado,
+    icono: goal.icono || ''
+  };
+
+  const formData = objectToFormData(payload);
+
+  console.log('📤 [updateGoal] Actualizando meta:', goal.nombre);
+
+  try {
+    await fetch(scriptUrl, { method: "POST", mode: "no-cors", body: formData });
+    console.log('✅ [updateGoal] Meta actualizada');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [updateGoal] Error:', error);
+    throw error;
+  }
+};
+
+export const deleteGoal = async (
+  scriptUrl: string,
+  pin: string,
+  goalId: string
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL no configurada");
+
+  const payload = { action: 'delete', tipo: 'Metas', pin, id: goalId };
+  const formData = objectToFormData(payload);
+
+  console.log('🗑️ [deleteGoal] Eliminando meta:', goalId);
+
+  try {
+    await fetch(scriptUrl, { method: "POST", mode: "no-cors", body: formData });
+    console.log('✅ [deleteGoal] Meta eliminada');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [deleteGoal] Error:', error);
+    throw error;
+  }
+};
+
+export const contributeToGoal = async (
+  scriptUrl: string,
+  pin: string,
+  metaId: string,
+  monto: number,
+  cuenta?: string,
+  nombreMeta?: string
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL no configurada");
+
+  const payload: Record<string, string> = {
+    tipo: 'Aporte_Meta',
+    pin,
+    meta_id: metaId,
+    monto: monto.toString(),
+    timestamp: new Date().toISOString()
+  };
+  if (cuenta) payload.cuenta = cuenta;
+  if (nombreMeta) payload.nombre_meta = nombreMeta;
+
+  const formData = objectToFormData(payload);
+
+  console.log('📤 [contributeToGoal] Aportando a meta:', metaId, monto);
+
+  try {
+    await fetch(scriptUrl, { method: "POST", mode: "no-cors", body: formData });
+    console.log('✅ [contributeToGoal] Aporte registrado');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [contributeToGoal] Error:', error);
+    throw error;
+  }
+};
+
+export const romperMeta = async (
+  scriptUrl: string,
+  pin: string,
+  metaId: string,
+  monto: number,
+  cuenta?: string,
+  nombreMeta?: string
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL no configurada");
+
+  const payload: Record<string, string> = {
+    tipo: 'Ruptura_Meta',
+    pin,
+    meta_id: metaId,
+    monto: monto.toString(),
+    timestamp: new Date().toISOString()
+  };
+  if (cuenta) payload.cuenta = cuenta;
+  if (nombreMeta) payload.nombre_meta = nombreMeta;
+
+  const formData = objectToFormData(payload);
+
+  console.log('📤 [romperMeta] Rompiendo meta:', metaId, monto);
+
+  try {
+    await fetch(scriptUrl, { method: "POST", mode: "no-cors", body: formData });
+    console.log('✅ [romperMeta] Ruptura registrada');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [romperMeta] Error:', error);
     throw error;
   }
 };

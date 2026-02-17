@@ -1,10 +1,14 @@
-import React, { useMemo } from 'react';
-import { CreditCard, PendingExpense, Transaction, SavingsGoalConfig, RealEstateInvestment } from '../types';
+import React, { useMemo, useState } from 'react';
+import { CreditCard, PendingExpense, Transaction, Goal, RealEstateInvestment, getCardType } from '../types';
 import { formatCurrency } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
-import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home, Pencil, Trash2 } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home, Pencil, Trash2, Calendar } from 'lucide-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faWallet, faCreditCard, faMoneyBillWave, faLandmark } from '@fortawesome/free-solid-svg-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
+
+type DateFilterType = 'thisMonth' | 'quarter' | 'year' | 'custom';
 
 const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
@@ -12,7 +16,7 @@ interface DashboardProps {
   cards: CreditCard[];
   pendingExpenses: PendingExpense[];
   history: Transaction[];
-  savingsGoal?: SavingsGoalConfig | null;
+  goals?: Goal[];
   realEstateInvestments?: RealEstateInvestment[];
   onEditTransaction?: (transaction: Transaction) => void;
   onDeleteTransaction?: (transaction: Transaction) => void;
@@ -65,11 +69,61 @@ const formatTimeLabel = (dateStr: string): string => {
   return `${hours}:${minutes}`;
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, savingsGoal, realEstateInvestments = [], onEditTransaction, onDeleteTransaction }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, goals = [], realEstateInvestments = [], onEditTransaction, onDeleteTransaction }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
   const [distributionFilter, setDistributionFilter] = React.useState<'thisMonth' | 'total'>('total');
   const [categoryPeriod, setCategoryPeriod] = React.useState<'week' | 'month' | 'year'>('month');
+  const [dateFilter, setDateFilter] = useState<DateFilterType>('thisMonth');
+  const [customRange, setCustomRange] = useState({ from: '', to: '' });
+  const [visibleTransactions, setVisibleTransactions] = useState(10);
+
+  // Compute date range boundaries
+  const dateRange = useMemo(() => {
+    const now = new Date();
+    let from: Date;
+    let to: Date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    switch (dateFilter) {
+      case 'thisMonth':
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'quarter':
+        from = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+        break;
+      case 'year':
+        from = new Date(now.getFullYear(), 0, 1);
+        break;
+      case 'custom':
+        from = customRange.from ? new Date(customRange.from + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
+        to = customRange.to ? new Date(customRange.to + 'T23:59:59') : to;
+        break;
+      default:
+        from = new Date(now.getFullYear(), now.getMonth(), 1);
+    }
+    return { from, to };
+  }, [dateFilter, customRange]);
+
+  // Date range label for subtitle
+  const dateRangeLabel = useMemo(() => {
+    const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' };
+    const optsYear: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
+    switch (dateFilter) {
+      case 'thisMonth':
+        return new Date().toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+      case 'quarter':
+        return `${dateRange.from.toLocaleDateString('es-ES', opts)} - ${dateRange.to.toLocaleDateString('es-ES', optsYear)}`;
+      case 'year':
+        return `Año ${new Date().getFullYear()}`;
+      case 'custom':
+        if (customRange.from && customRange.to) {
+          return `${new Date(customRange.from).toLocaleDateString('es-ES', opts)} - ${new Date(customRange.to).toLocaleDateString('es-ES', optsYear)}`;
+        }
+        return 'Selecciona un rango';
+      default:
+        return '';
+    }
+  }, [dateFilter, dateRange, customRange]);
 
   // Calculate weekly expenses comparison
   const weeklyComparison = useMemo(() => {
@@ -280,40 +334,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   }, [pendingExpenses, distributionFilter]);
 
   const currentStats = useMemo(() => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    // 1. Monthly Cash Flow (From History)
+    // 1. Cash Flow filtered by date range
     let ingresosMes = 0;
-    let gastosMes = 0; // Cash expenses only
+    let gastosMes = 0;
     let ingresosTotal = 0;
     let gastosTotal = 0;
+
+    const INGRESO_TYPES = ['Ingresos', 'Ruptura_Meta'];
+    const GASTO_TYPES = ['Gastos', 'Aporte_Meta'];
 
     if (history) {
         history.forEach(t => {
             const d = new Date(t.fecha);
             const monto = Number(t.monto);
 
-            // Monthly totals
-            if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            // Filtered period totals (solo transacciones reales para gráfico)
+            if (d >= dateRange.from && d <= dateRange.to) {
                 if (t.tipo === 'Ingresos') ingresosMes += monto;
                 if (t.tipo === 'Gastos') gastosMes += monto;
             }
 
-            // All-time totals
-            if (t.tipo === 'Ingresos') ingresosTotal += monto;
-            if (t.tipo === 'Gastos') gastosTotal += monto;
+            // All-time totals (incluye aportes/rupturas para saldo real)
+            if (INGRESO_TYPES.includes(t.tipo)) ingresosTotal += monto;
+            if (GASTO_TYPES.includes(t.tipo)) gastosTotal += monto;
         });
     }
 
-    const balanceTotal = ingresosTotal - gastosTotal;
+    // Debit card saldo inicial (card.limite) — not tracked in history, must be added separately
+    const debitCardsForBalance = cards.filter(c => getCardType(c) === 'debito');
+    const debitSaldoInicial = debitCardsForBalance.reduce((sum, c) => sum + Number(c.limite || 0), 0);
 
-    // 2. Credit Card Usage
+    const balanceTotal = ingresosTotal - gastosTotal + debitSaldoInicial;
+
+    // 2. Credit Card Usage — only credit cards, NOT debit
     let deudaTotal = 0;
     let limiteTotal = 0;
 
-    cards.forEach(c => limiteTotal += Number(c.limite));
+    cards.filter(c => getCardType(c) === 'credito').forEach(c => limiteTotal += Number(c.limite));
 
     pendingExpenses.forEach(p => {
         const total = Number(p.monto) || 0;
@@ -336,7 +393,47 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       usoCredito,
       limiteTotal
     };
-  }, [cards, pendingExpenses, history]);
+  }, [cards, pendingExpenses, history, dateRange]);
+
+  // Per-account balance breakdown for Balance Total section
+  const accountBreakdown = useMemo(() => {
+    const INGRESO_TYPES = ['Ingresos', 'Ruptura_Meta'];
+    const GASTO_TYPES = ['Gastos', 'Aporte_Meta'];
+
+    // Billetera
+    const billeteraIngresos = history
+      .filter(t => INGRESO_TYPES.includes(t.tipo) && t.cuenta === 'Billetera')
+      .reduce((sum, t) => sum + Number(t.monto), 0);
+    const billeteraGastos = history
+      .filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === 'Billetera')
+      .reduce((sum, t) => sum + Number(t.monto), 0);
+    const billeteraBalance = billeteraIngresos - billeteraGastos;
+
+    // Debit cards: saldo_inicial + ingresos - gastos (incluye aportes/rupturas)
+    const debitAccounts = cards
+      .filter(c => getCardType(c) === 'debito')
+      .map(c => {
+        const ingresos = history
+          .filter(t => INGRESO_TYPES.includes(t.tipo) && t.cuenta === c.alias)
+          .reduce((sum, t) => sum + Number(t.monto), 0);
+        const gastos = history
+          .filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === c.alias)
+          .reduce((sum, t) => sum + Number(t.monto), 0);
+        return { alias: c.alias, banco: c.banco, balance: Number(c.limite || 0) + ingresos - gastos };
+      });
+
+    // Credit cards: limite - deuda pendiente
+    const creditAccounts = cards
+      .filter(c => getCardType(c) === 'credito')
+      .map(c => {
+        const deuda = pendingExpenses
+          .filter(p => p.tarjeta === c.alias)
+          .reduce((sum, p) => sum + Math.max(0, Number(p.monto) - Number(p.monto_pagado_total || 0)), 0);
+        return { alias: c.alias, banco: c.banco, disponible: Math.max(0, Number(c.limite || 0) - deuda), deuda };
+      });
+
+    return { billeteraBalance, debitAccounts, creditAccounts };
+  }, [history, cards, pendingExpenses]);
 
   // Chart Data
   const barData = [
@@ -353,19 +450,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         monto: p.monto,
         tipo: 'Gasto Tarjeta',
         isCredit: true,
+        isSuscripcion: p.tipo === 'suscripcion',
         timestamp: p.timestamp
     }))
-  ].sort((a, b) => {
+  ].filter(t => {
+    const d = new Date(t.timestamp || t.fecha);
+    return d >= dateRange.from && d <= dateRange.to;
+  }).sort((a, b) => {
     const dateA = new Date(a.timestamp || a.fecha).getTime();
     const dateB = new Date(b.timestamp || b.fecha).getTime();
     return dateB - dateA;
-  })
-   .slice(0, 10);
+  });
+
+  const paginatedTransactions = recentTransactions.slice(0, visibleTransactions);
+  const hasMoreTransactions = recentTransactions.length > visibleTransactions;
 
   // Group transactions by day
   const groupedTransactions = useMemo(() => {
     const groups: { [key: string]: any[] } = {};
-    recentTransactions.forEach(t => {
+    paginatedTransactions.forEach(t => {
       const dayLabel = formatDateLabel(t.timestamp || t.fecha);
       if (!groups[dayLabel]) {
         groups[dayLabel] = [];
@@ -373,16 +476,57 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       groups[dayLabel].push(t);
     });
     return groups;
-  }, [recentTransactions]);
+  }, [paginatedTransactions]);
 
   return (
     <div className="space-y-6">
 
-      {/* Welcome & Month Context */}
-      <div className="flex justify-between items-end mb-2">
+      {/* Welcome & Date Filter */}
+      <div className="space-y-4 mb-2">
         <div>
-            <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>Resumen Mensual</h2>
-            <p className={`${theme.colors.textMuted} text-sm`}>Panorama financiero de {new Date().toLocaleString('es-ES', { month: 'long' })}</p>
+            <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>Panel Financiero</h2>
+            <p className={`${theme.colors.textMuted} text-sm`}>Panorama financiero — {dateRangeLabel}</p>
+        </div>
+
+        {/* Date Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          {([
+            ['thisMonth', 'Este mes'],
+            ['quarter', 'Último trimestre'],
+            ['year', 'Este año'],
+            ['custom', 'Personalizado'],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => { setDateFilter(key); setVisibleTransactions(10); }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                dateFilter === key
+                  ? `${theme.colors.primary} text-white shadow-md`
+                  : `${theme.colors.bgSecondary} ${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+              }`}
+            >
+              {key === 'custom' && <Calendar size={12} className="inline mr-1 -mt-0.5" />}
+              {label}
+            </button>
+          ))}
+
+          {dateFilter === 'custom' && (
+            <div className="flex items-center gap-2 ml-1">
+              <input
+                type="date"
+                value={customRange.from}
+                onChange={e => setCustomRange(prev => ({ ...prev, from: e.target.value }))}
+                className={`px-2 py-1.5 rounded-lg text-xs border ${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textPrimary}`}
+              />
+              <span className={`text-xs ${theme.colors.textMuted}`}>—</span>
+              <input
+                type="date"
+                value={customRange.to}
+                onChange={e => setCustomRange(prev => ({ ...prev, to: e.target.value }))}
+                className={`px-2 py-1.5 rounded-lg text-xs border ${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textPrimary}`}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -391,20 +535,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
         {/* Cash Flow Card */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl relative overflow-hidden`}>
-            <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>Flujo de Efectivo (Mes)</h3>
+            <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>Flujo de Efectivo</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <div className="flex items-center gap-1 text-emerald-500 mb-1">
                         <ArrowUpRight size={16} /> <span className="text-xs font-bold">Ingresos</span>
                     </div>
-                    <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(currentStats.ingresosMes)}</p>
+                    <p className={`text-xl md:text-2xl font-mono font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.ingresosMes)}</p>
                 </div>
                 <div>
                     <div className="flex items-center gap-1 text-rose-500 mb-1">
                         <ArrowDownRight size={16} /> <span className="text-xs font-bold">Gastos</span>
                     </div>
-                    <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(currentStats.gastosMes)}</p>
+                    <p className={`text-xl md:text-2xl font-mono font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.gastosMes)}</p>
                 </div>
             </div>
 
@@ -430,7 +574,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
             <div className="mb-4">
                 <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Deuda Total Tarjetas</p>
-                <p className={`text-3xl font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(currentStats.deudaTotal)}</p>
+                <p className={`text-xl md:text-2xl font-mono font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.deudaTotal)}</p>
             </div>
 
             <div className="space-y-3">
@@ -555,7 +699,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         {/* Weekly Comparison Card */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
           <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
-            Comparación Semanal
+            Gastos Semanales
           </h3>
 
           <div className="space-y-4">
@@ -844,64 +988,122 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </p>
           </div>
         </div>
-      </div>
 
-      {/* Savings Goal Card */}
-      {savingsGoal && (
-        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
-          <div className="flex items-center justify-between mb-4">
+        {/* Per-account breakdown */}
+        <div className={`mt-4 pt-4 border-t ${theme.colors.border} space-y-3`}>
+          {/* Efectivo y Débito */}
+          <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wider`}>Efectivo y Débito</p>
+          {/* Billetera */}
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Target className={textColors.primary} size={20} />
-              <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider`}>
-                Meta de Ahorro {savingsGoal.anio}
-              </h3>
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-500/10`}>
+                <FontAwesomeIcon icon={faWallet} className="text-emerald-500" style={{ fontSize: '13px' }} />
+              </div>
+              <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>Billetera Física</span>
             </div>
-            <span className={`text-xs ${theme.colors.textMuted}`}>{savingsGoal.proposito}</span>
+            <span className={`text-sm font-mono font-bold ${accountBreakdown.billeteraBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {formatCurrency(accountBreakdown.billeteraBalance)}
+            </span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
-            {/* Total Ahorrado */}
-            <div>
-              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total ahorrado hasta ahora</p>
-              <p className={`text-2xl font-mono font-bold ${textColors.primary}`}>
-                {formatCurrency(currentStats.ingresosMes - currentStats.gastosMes)}
-              </p>
-            </div>
-
-            {/* Meta Anual */}
-            <div>
-              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Meta anual</p>
-              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                {formatCurrency(savingsGoal.meta_anual)}
-              </p>
-            </div>
-
-            {/* Te falta */}
-            <div>
-              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Te falta</p>
-              <p className={`text-2xl font-mono font-bold text-rose-500`}>
-                {formatCurrency(Math.max(0, savingsGoal.meta_anual - (currentStats.ingresosMes - currentStats.gastosMes)))}
-              </p>
-            </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div>
-            <div className="flex justify-between text-xs mb-2">
-              <span className={theme.colors.textMuted}>Progreso</span>
-              <span className={`${textColors.primary} font-bold`}>
-                {((((currentStats.ingresosMes - currentStats.gastosMes) / savingsGoal.meta_anual) * 100) || 0).toFixed(1)}%
+          {/* Debit cards */}
+          {accountBreakdown.debitAccounts.map(acc => (
+            <div key={acc.alias} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-blue-500/10`}>
+                  <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-400" style={{ fontSize: '12px' }} />
+                </div>
+                <div>
+                  <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>{acc.alias}</span>
+                  <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco}</span>
+                </div>
+              </div>
+              <span className={`text-sm font-mono font-bold ${acc.balance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {formatCurrency(acc.balance)}
               </span>
             </div>
-            <div className={`w-full h-3 ${theme.colors.bgSecondary} rounded-full overflow-hidden`}>
-              <div
-                className={`h-full rounded-full transition-all duration-1000 ${textColors.primary === 'text-emerald-600' ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                style={{width: `${Math.min(100, ((currentStats.ingresosMes - currentStats.gastosMes) / savingsGoal.meta_anual) * 100)}%`}}
-              />
+          ))}
+          {/* Credit cards — only if any */}
+          {accountBreakdown.creditAccounts.length > 0 && (
+            <>
+              <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wider pt-2 border-t ${theme.colors.border}`}>Crédito disponible</p>
+              {accountBreakdown.creditAccounts.map(acc => (
+                <div key={acc.alias} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-purple-500/10`}>
+                      <FontAwesomeIcon icon={faCreditCard} className="text-purple-400" style={{ fontSize: '12px' }} />
+                    </div>
+                    <div>
+                      <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>{acc.alias}</span>
+                      <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco}</span>
+                      {acc.deuda > 0 && (
+                        <span className="text-[10px] text-rose-400 ml-1">· deuda {formatCurrency(acc.deuda)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-sm font-mono font-bold text-purple-400">
+                    {formatCurrency(acc.disponible)}
+                  </span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Goals Summary - Savings Goals (Sobres Virtuales) */}
+      {goals.length > 0 && (() => {
+        const activeGoals = goals.filter(g => g.estado === 'activa');
+        const totalApartado = goals.reduce((s, g) => s + g.monto_ahorrado, 0);
+        // balanceTotal ya descuenta Aporte_Meta — no restar totalApartado de nuevo
+        const saldoDisponible = currentStats.balanceTotal;
+
+        return (
+          <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Target className={textColors.primary} size={20} />
+                <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider`}>
+                  Metas de Ahorro
+                </h3>
+              </div>
+              <div className="text-right">
+                <p className={`text-[10px] ${theme.colors.textMuted}`}>Saldo Disponible</p>
+                <p className={`text-sm font-mono font-bold ${saldoDisponible >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                  {formatCurrency(saldoDisponible)}
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {activeGoals.slice(0, 4).map(goal => {
+                const pct = goal.monto_objetivo > 0 ? (goal.monto_ahorrado / goal.monto_objetivo) * 100 : 0;
+                const barColor = pct >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-blue-500 to-emerald-500';
+                const pctColor = pct >= 100 ? 'text-emerald-600' : textColors.primary;
+
+                return (
+                  <div key={goal.id}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className={`text-xs font-medium ${theme.colors.textPrimary}`}>{goal.nombre}</span>
+                      <span className={`text-xs font-bold ${pctColor}`}>{pct.toFixed(0)}%</span>
+                    </div>
+                    <div className={`w-full h-2 ${theme.colors.bgSecondary} rounded-full overflow-hidden`}>
+                      <div className={`h-full rounded-full transition-all duration-700 ${barColor}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                    </div>
+                    <div className="flex justify-between mt-0.5">
+                      <span className={`text-[10px] ${theme.colors.textMuted}`}>{formatCurrency(goal.monto_ahorrado)}</span>
+                      <span className={`text-[10px] ${theme.colors.textMuted}`}>{formatCurrency(goal.monto_objetivo)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {activeGoals.length > 4 && (
+                <p className={`text-[10px] ${theme.colors.textMuted} text-center`}>
+                  +{activeGoals.length - 4} meta{activeGoals.length - 4 > 1 ? 's' : ''} más
+                </p>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Recent Activity */}
       <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
@@ -933,7 +1135,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                             {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
                                         </div>
                                         <div>
-                                            <p className={`font-medium ${theme.colors.textPrimary} text-sm`}>{t.descripcion}</p>
+                                            <div className="flex items-center gap-2">
+                                              <p className={`font-medium ${theme.colors.textPrimary} text-sm`}>{t.descripcion}</p>
+                                              {t.isSuscripcion && (
+                                                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-600">
+                                                  Suscripción
+                                                </span>
+                                              )}
+                                            </div>
                                             <p className={`text-xs ${theme.colors.textMuted}`}>{formatTimeLabel(t.timestamp || t.fecha)} • {t.categoria}</p>
                                         </div>
                                     </div>
@@ -956,7 +1165,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                                 </button>
                                             </div>
                                         )}
-                                        <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : theme.colors.textPrimary}`}>
+                                        <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : 'text-rose-600'}`}>
                                             {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
                                         </span>
                                     </div>
@@ -968,6 +1177,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                 ))
             )}
          </div>
+         {hasMoreTransactions && (
+           <button
+             onClick={() => setVisibleTransactions(prev => prev + 10)}
+             className={`w-full py-3 text-sm font-medium ${textColors.primary} hover:${theme.colors.bgSecondary} transition-colors border-t ${theme.colors.border}`}
+           >
+             Ver más ({recentTransactions.length - visibleTransactions} restantes)
+           </button>
+         )}
       </div>
 
       {/* Category Analysis - Bar Chart with Period Filter */}

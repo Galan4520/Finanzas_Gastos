@@ -1,8 +1,8 @@
 // ═══════════════════════════════════════════════════════════════
-// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v5.0
+// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v5.1
 // Sistema de Pagos con Tracking de MONTO PAGADO TOTAL
-// Incluye: PIN Security, SUSCRIPCIONES, CRUD y PERFIL
-// 🆕 NUEVA COLUMNA: monto_pagado_total (L) - Soluciona bug de pagos parciales
+// Incluye: PIN Security, SUSCRIPCIONES, CRUD, PERFIL y METAS DE AHORRO
+// 🆕 v5.1: Nueva hoja "Metas" para sistema de sobres virtuales
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════
@@ -83,6 +83,70 @@ function saveProfile(sheet, params) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// 🆕 FUNCIONES DE METAS DE AHORRO (Sobres Virtuales)
+// ═══════════════════════════════════════════════════════════════
+function getGoals(sheet) {
+  let metasSheet = sheet.getSheetByName('Metas');
+
+  if (!metasSheet) {
+    metasSheet = sheet.insertSheet('Metas');
+    metasSheet.getRange('A1').setValue('id');
+    metasSheet.getRange('B1').setValue('nombre');
+    metasSheet.getRange('C1').setValue('monto_objetivo');
+    metasSheet.getRange('D1').setValue('monto_ahorrado');
+    metasSheet.getRange('E1').setValue('notas');
+    metasSheet.getRange('F1').setValue('estado');
+    metasSheet.getRange('G1').setValue('timestamp');
+    metasSheet.getRange('H1').setValue('icono');
+    return [];
+  }
+
+  // Asegurar que el header H1 exista (para hojas creadas antes de agregar icono)
+  if (!metasSheet.getRange('H1').getValue()) {
+    metasSheet.getRange('H1').setValue('icono');
+  }
+
+  var data = metasSheet.getDataRange().getValues();
+  var goals = [];
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0]) {
+      goals.push({
+        id: data[i][0],
+        nombre: data[i][1],
+        monto_objetivo: data[i][2],
+        monto_ahorrado: data[i][3],
+        notas: data[i][4] || '',
+        estado: data[i][5] || 'activa',
+        timestamp: data[i][6],
+        icono: data[i][7] || ''
+      });
+    }
+  }
+  return goals;
+}
+
+function actualizarMontoMeta(sheet, metaId, montoAporte) {
+  var metasSheet = sheet.getSheetByName('Metas');
+  if (!metasSheet) return;
+
+  var data = metasSheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === metaId) {
+      var ahorradoActual = parseFloat(data[i][3]) || 0;
+      var nuevoAhorrado = ahorradoActual + parseFloat(montoAporte);
+      metasSheet.getRange(i + 1, 4).setValue(nuevoAhorrado);
+
+      // Si alcanzó o superó el objetivo, marcar como completada
+      var objetivo = parseFloat(data[i][2]) || 0;
+      if (objetivo > 0 && nuevoAhorrado >= objetivo) {
+        metasSheet.getRange(i + 1, 6).setValue('completada');
+      }
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // POST - REGISTRO DE DATOS CON VALIDACIÓN DE PIN
 // ═══════════════════════════════════════════════════════════════
 function doPost(e) {
@@ -155,6 +219,84 @@ function doPost(e) {
     return handleDelete(sheet, params);
   }
 
+  // 🆕 Aporte directo a meta (sobre digital: descuenta saldo disponible)
+  if (params.tipo === 'Aporte_Meta') {
+    // 1. Actualizar monto_ahorrado en Metas
+    actualizarMontoMeta(sheet, params.meta_id, parseFloat(params.monto));
+
+    // 2. Registrar en Gastos sheet para que afecte saldo disponible de la cuenta
+    // Columnas: A:fecha, B:categoria, C:descripcion, D:monto, E:notas, F:timestamp, G:meta_id, H:cuenta, I:tipo
+    if (params.cuenta) {
+      const gastosSheet = sheet.getSheetByName('Gastos');
+      if (gastosSheet) {
+        const fecha = params.timestamp ? params.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        const ts = params.timestamp || new Date().toISOString();
+        gastosSheet.appendRow([
+          fecha,                                               // A: Fecha
+          'Meta',                                             // B: Categoría
+          'Aporte a: ' + (params.nombre_meta || params.meta_id), // C: Descripción
+          parseFloat(params.monto),                          // D: Monto
+          '',                                                 // E: Notas (vacío)
+          ts,                                                 // F: Timestamp
+          params.meta_id || '',                              // G: Meta ID
+          params.cuenta,                                     // H: Cuenta
+          'Aporte_Meta'                                      // I: Tipo (nuevo)
+        ]);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Aporte a meta registrado'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 🆕 Ruptura de meta (sobre digital: devuelve saldo comprometido a la cuenta)
+  if (params.tipo === 'Ruptura_Meta') {
+    // 1. Restar de monto_ahorrado en Metas
+    const metasSheet = sheet.getSheetByName('Metas');
+    if (metasSheet) {
+      const metaData = metasSheet.getDataRange().getValues();
+      for (let i = 1; i < metaData.length; i++) {
+        if (metaData[i][0] === params.meta_id) {
+          const nuevoAhorrado = Math.max(0, (parseFloat(metaData[i][3]) || 0) - parseFloat(params.monto));
+          metasSheet.getRange(i + 1, 4).setValue(nuevoAhorrado);
+          // Si se redujo y estaba completada, reactivar
+          if (nuevoAhorrado < (parseFloat(metaData[i][2]) || 0)) {
+            metasSheet.getRange(i + 1, 6).setValue('activa');
+          }
+          break;
+        }
+      }
+    }
+
+    // 2. Registrar en Ingresos sheet para devolver saldo a la cuenta
+    // Columnas: A:fecha, B:categoria, C:descripcion, D:monto, E:notas, F:timestamp, G:meta_id, H:cuenta, I:tipo
+    if (params.cuenta) {
+      const ingresosSheet = sheet.getSheetByName('Ingresos');
+      if (ingresosSheet) {
+        const fecha = params.timestamp ? params.timestamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
+        const ts = params.timestamp || new Date().toISOString();
+        ingresosSheet.appendRow([
+          fecha,                                               // A: Fecha
+          'Meta',                                             // B: Categoría
+          'Ruptura de: ' + (params.nombre_meta || params.meta_id), // C: Descripción
+          parseFloat(params.monto),                          // D: Monto
+          '',                                                 // E: Notas (vacío)
+          ts,                                                 // F: Timestamp
+          params.meta_id || '',                              // G: Meta ID
+          params.cuenta,                                     // H: Cuenta
+          'Ruptura_Meta'                                     // I: Tipo (nuevo)
+        ]);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Ruptura de meta registrada'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   // Si no hay acción especial, es un INSERT normal
   const targetSheet = sheet.getSheetByName(params.tipo);
 
@@ -166,27 +308,56 @@ function doPost(e) {
 
   let row = [];
 
-  if (params.tipo === 'Gastos' || params.tipo === 'Ingresos') {
-    // ===== HOJAS SIMPLES: Gastos e Ingresos =====
+  if (params.tipo === 'Metas') {
+    // ===== HOJA: Metas (Sobres Virtuales) =====
     row = [
-      params.fecha,
-      params.categoria,
-      params.descripcion,
-      parseFloat(params.monto),
+      params.id || ('META' + Date.now()),
+      params.nombre,
+      parseFloat(params.monto_objetivo) || 0,
+      parseFloat(params.monto_ahorrado) || 0,
       params.notas || '',
-      params.timestamp
+      params.estado || 'activa',
+      params.timestamp,
+      params.icono || ''
     ];
+
+  } else if (params.tipo === 'Gastos' || params.tipo === 'Ingresos') {
+    // ===== HOJAS SIMPLES: Gastos e Ingresos =====
+    // G = meta_id (opcional), H = cuenta (cuenta/tarjeta asociada)
+    var metaId = params.meta_id || '';
+    var cuentaAsociada = params.cuenta || '';
+    row = [
+      params.fecha,         // A: Fecha
+      params.categoria,     // B: Categoría
+      params.descripcion,   // C: Descripción
+      parseFloat(params.monto), // D: Monto
+      params.notas || '',   // E: Notas
+      params.timestamp,     // F: Timestamp
+      metaId,               // G: Meta ID (opcional)
+      cuentaAsociada        // H: Cuenta/tarjeta asociada
+    ];
+
+    // Si es un ingreso asignado a una meta, actualizar monto_ahorrado
+    if (params.tipo === 'Ingresos' && metaId) {
+      actualizarMontoMeta(sheet, metaId, parseFloat(params.monto));
+    }
 
   } else if (params.tipo === 'Tarjetas') {
     // ===== HOJA: Tarjetas =====
+    // Columnas: A:Banco, B:Tipo_Tarjeta, C:Alias, D:URL_Imagen, E:Dia_Cierre,
+    //           F:Dia_Pago, G:Limite, H:Credito_Disponible (fórmula, se deja vacío),
+    //           I:Tea, J:Tipo_Cuenta, K:Timestamp
     row = [
       params.banco,
       params.tipo_tarjeta,
       params.alias,
       params.url_imagen || '',
-      parseInt(params.dia_cierre),
-      parseInt(params.dia_pago),
+      parseInt(params.dia_cierre) || 0,
+      parseInt(params.dia_pago) || 0,
       parseFloat(params.limite),
+      '',  // H: Credito_Disponible — fórmula del sheet, no se sobreescribe
+      params.tea ? parseFloat(params.tea) : '',
+      params.tipo_cuenta || 'credito',
       params.timestamp
     ];
 
@@ -223,17 +394,43 @@ function doPost(e) {
     row = [
       params.fecha_pago,            // A: Fecha del pago
       params.id_gasto,              // B: ID del gasto relacionado
-      params.tarjeta,               // C: Tarjeta
+      params.tarjeta,               // C: Tarjeta pagada
       params.descripcion_gasto,     // D: Descripción del gasto
       parseFloat(params.monto_pagado), // E: Monto pagado
       params.tipo_pago,             // F: Tipo (Cuota/Total/Parcial)
       numCuota,                     // G: Número de cuota (si aplica)
       params.notas || '',           // H: Notas
-      params.timestamp              // I: Timestamp
+      params.timestamp,             // I: Timestamp
+      params.cuenta_pago || ''      // J: Cuenta desde la que se paga
     ];
 
     // ACTUALIZAR el gasto en Gastos_Pendientes
     actualizarGastoPendiente(sheet, params);
+
+    // 🆕 Registrar también en Gastos para descontar del saldo de la cuenta pagadora
+    // Esto garantiza que el saldo disponible se actualice correctamente tras el pago
+    if (params.cuenta_pago) {
+      const gastosSheet = sheet.getSheetByName('Gastos');
+      if (gastosSheet) {
+        const tipoPagoDesc = params.tipo_pago === 'Suscripcion' ? 'Pago suscripción'
+          : params.tipo_pago === 'Total' ? 'Liquidación total'
+          : params.tipo_pago === 'Cuota' ? 'Pago cuota'
+          : 'Pago parcial';
+        const fecha = params.fecha_pago || new Date().toISOString().slice(0, 10);
+        const ts = params.timestamp || new Date().toISOString();
+        gastosSheet.appendRow([
+          fecha,                                                             // A: Fecha
+          'Pagos',                                                           // B: Categoría
+          tipoPagoDesc + ' - ' + (params.descripcion_gasto || ''),          // C: Descripción
+          parseFloat(params.monto_pagado),                                   // D: Monto
+          params.tarjeta ? 'Tarjeta: ' + params.tarjeta : '',               // E: Notas
+          ts,                                                                // F: Timestamp
+          '',                                                                // G: Meta ID (vacío)
+          params.cuenta_pago                                                 // H: Cuenta pagadora
+          // Col I (tipo) omitida → doGet la lee como 'Gastos' por defecto
+        ]);
+      }
+    }
   }
 
   targetSheet.appendRow(row);
@@ -292,13 +489,37 @@ function handleUpdate(sheet, params) {
         targetSheet.getRange(i + 1, 2).setValue(params.tipo_tarjeta);
         targetSheet.getRange(i + 1, 3).setValue(params.alias);
         targetSheet.getRange(i + 1, 4).setValue(params.url_imagen || '');
-        targetSheet.getRange(i + 1, 5).setValue(parseInt(params.dia_cierre));
-        targetSheet.getRange(i + 1, 6).setValue(parseInt(params.dia_pago));
+        targetSheet.getRange(i + 1, 5).setValue(parseInt(params.dia_cierre) || 0);
+        targetSheet.getRange(i + 1, 6).setValue(parseInt(params.dia_pago) || 0);
         targetSheet.getRange(i + 1, 7).setValue(parseFloat(params.limite));
+        // Col 8 (H) = Credito_Disponible fórmula — NO tocar
+        targetSheet.getRange(i + 1, 9).setValue(params.tea ? parseFloat(params.tea) : '');  // I: TEA
+        targetSheet.getRange(i + 1, 10).setValue(params.tipo_cuenta || 'credito');           // J: Tipo_Cuenta
 
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
           message: 'Tarjeta actualizada'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  } else if (tipo === 'Metas') {
+    // Buscar meta por ID (columna A)
+    const metaId = params.id;
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === metaId) {
+        targetSheet.getRange(i + 1, 2).setValue(params.nombre);
+        targetSheet.getRange(i + 1, 3).setValue(parseFloat(params.monto_objetivo) || 0);
+        targetSheet.getRange(i + 1, 4).setValue(parseFloat(params.monto_ahorrado) || 0);
+        targetSheet.getRange(i + 1, 5).setValue(params.notas || '');
+        targetSheet.getRange(i + 1, 6).setValue(params.estado || 'activa');
+        if (params.icono !== undefined) {
+          targetSheet.getRange(i + 1, 8).setValue(params.icono || '');
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Meta actualizada'
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -315,6 +536,10 @@ function handleUpdate(sheet, params) {
         targetSheet.getRange(i + 1, 4).setValue(parseFloat(params.monto));
         targetSheet.getRange(i + 1, 5).setValue(params.notas || '');
         // Mantener el timestamp original (columna F) para no perder la referencia
+        // Columna G (meta_id) se mantiene sin cambios
+        if (params.cuenta !== undefined) {
+          targetSheet.getRange(i + 1, 8).setValue(params.cuenta || ''); // H: cuenta
+        }
 
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
@@ -362,6 +587,16 @@ function handleDelete(sheet, params) {
         return ContentService.createTextOutput(JSON.stringify({
           success: true,
           message: 'Tarjeta eliminada'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+  } else if (tipo === 'Metas') {
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === idToDelete) {
+        targetSheet.deleteRow(i + 1);
+        return ContentService.createTextOutput(JSON.stringify({
+          success: true,
+          message: 'Meta eliminada'
         })).setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -480,6 +715,12 @@ function doGet(e) {
     const data = tarjetasSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) {
+        // Columnas: A:Banco(0), B:Tipo_Tarjeta(1), C:Alias(2), D:URL_Imagen(3),
+        //           E:Dia_Cierre(4), F:Dia_Pago(5), G:Limite(6),
+        //           H:Credito_Disponible(7, fórmula — ignorar),
+        //           I:Tea(8), J:Tipo_Cuenta(9), K:Timestamp(10)
+        const teaVal = data[i][8];
+        const tipoCuentaVal = data[i][9];
         cards.push({
           banco: data[i][0],
           tipo_tarjeta: data[i][1],
@@ -488,7 +729,9 @@ function doGet(e) {
           dia_cierre: data[i][4],
           dia_pago: data[i][5],
           limite: data[i][6],
-          timestamp: data[i][7]
+          tea: teaVal && !isNaN(parseFloat(teaVal)) ? parseFloat(teaVal) : null,
+          tipo_cuenta: (tipoCuentaVal === 'debito' || tipoCuentaVal === 'credito') ? tipoCuentaVal : null,
+          timestamp: data[i][10] || data[i][7] // fallback para filas antiguas sin col K
         });
       }
     }
@@ -536,7 +779,9 @@ function doGet(e) {
           monto: data[i][3],
           notas: data[i][4],
           timestamp: data[i][5],
-          tipo: 'Gastos'
+          tipo: data[i][8] || 'Gastos',
+          meta_id: data[i][6] || '',
+          cuenta: data[i][7] || ''
         });
       }
     }
@@ -554,7 +799,9 @@ function doGet(e) {
           monto: data[i][3],
           notas: data[i][4],
           timestamp: data[i][5],
-          tipo: 'Ingresos'
+          tipo: data[i][8] || 'Ingresos',
+          meta_id: data[i][6] || '',
+          cuenta: data[i][7] || ''
         });
       }
     }
@@ -584,6 +831,9 @@ function doGet(e) {
     }
   }
 
+  // 5. Obtener Metas de Ahorro
+  const goals = getGoals(sheet);
+
   // 📧 Obtener configuración de notificaciones
   var notificationConfig = getNotificationConfig();
 
@@ -593,7 +843,8 @@ function doGet(e) {
     cards: cards,
     pending: pending,
     history: history,
-    availableProperties: availableProperties, // 🆕 Catálogo de propiedades
+    goals: goals,                              // 🆕 Metas de ahorro
+    availableProperties: availableProperties, // Catálogo de propiedades
     notificationConfig: notificationConfig    // 📧 Config de notificaciones
   })).setMimeType(ContentService.MimeType.JSON);
 }

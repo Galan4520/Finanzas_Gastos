@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3, User } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3, User, RefreshCw } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { UserProfile } from '../types';
@@ -129,7 +129,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
               disabled={isSyncing}
               className={`w-full py-2.5 rounded-lg font-medium text-xs uppercase tracking-wider transition-all ${isSyncing
                 ? `${theme.colors.bgSecondary} ${theme.colors.textMuted}`
-                : `${theme.colors.bgSecondary} ${theme.colors.primary} hover:text-white ${theme.colors.textSecondary}`
+                : `${theme.colors.bgSecondary} ${theme.colors.textSecondary} ${theme.colors.primaryHover} hover:text-white`
                 }`}
             >
               {isSyncing ? 'Sincronizando...' : '↻ Sincronizar'}
@@ -160,8 +160,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           <span className="font-bold text-lg">{profile ? `Hola, ${profile.nombre}` : 'MoneyCrock'}</span>
         </div>
         {connected && (
-          <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `animate-spin ${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
-            <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full" />
+          <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
+            <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
           </button>
         )}
       </div>

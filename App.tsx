@@ -15,7 +15,7 @@ import { EditTransactionModal } from './components/ui/EditTransactionModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Toast } from './components/ui/Toast';
 import { useTheme } from './contexts/ThemeContext';
-import { UserProfile, CreditCard, PendingExpense, SavingsGoalConfig, Transaction, RealEstateInvestment, RealEstateProperty, NotificationConfig } from './types';
+import { UserProfile, CreditCard, PendingExpense, Goal, Transaction, RealEstateInvestment, RealEstateProperty, NotificationConfig } from './types';
 import * as googleSheetService from './services/googleSheetService';
 import { normalizarDeuda, isDeudaVencida } from './utils/debtUtils';
 
@@ -74,7 +74,7 @@ function App() {
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>([]);
   const [history, setHistory] = useState<Transaction[]>([]);
-  const [savingsGoal, setSavingsGoal] = useState<SavingsGoalConfig | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [realEstateInvestments, setRealEstateInvestments] = useState<RealEstateInvestment[]>([]);
   const [availableProperties] = useState<RealEstateProperty[]>(MOCK_PROPERTIES);
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfig | null>(null);
@@ -132,8 +132,18 @@ function App() {
 
         setHistory(data.history || []);
 
-        if (data.savingsGoal) {
-          setSavingsGoal(data.savingsGoal);
+        // Load goals from sync
+        if (data.goals) {
+          setGoals(data.goals.map((g: any) => ({
+            id: g.id,
+            nombre: g.nombre,
+            monto_objetivo: Number(g.monto_objetivo) || 0,
+            monto_ahorrado: Number(g.monto_ahorrado) || 0,
+            notas: g.notas || '',
+            estado: g.estado || 'activa',
+            icono: g.icono || '',
+            timestamp: g.timestamp
+          })));
         }
 
         if (data.profile) {
@@ -302,9 +312,94 @@ function App() {
     setCards(prev => prev.map(c => c.alias === card.alias ? card : c));
   };
 
-  const saveSavingsGoal = (goal: SavingsGoalConfig) => {
-    setSavingsGoal(goal);
-    showToast('Meta guardada', 'success');
+  const addGoal = (goal: Goal) => {
+    setGoals(prev => [...prev, goal]);
+    showToast('Meta creada', 'success');
+    // Persist to Google Sheets
+    googleSheetService.createGoal(scriptUrl, pin, goal)
+      .then(() => setTimeout(() => handleSync(), 1500))
+      .catch(() => showToast('Error al guardar meta en la nube', 'error'));
+  };
+
+  const updateGoal = (goal: Goal) => {
+    setGoals(prev => prev.map(g => g.id === goal.id ? goal : g));
+    showToast('Meta actualizada', 'success');
+    googleSheetService.updateGoal(scriptUrl, pin, goal)
+      .then(() => setTimeout(() => handleSync(), 1500))
+      .catch(() => showToast('Error al actualizar meta en la nube', 'error'));
+  };
+
+  const deleteGoal = (goalId: string) => {
+    setGoals(prev => prev.filter(g => g.id !== goalId));
+    showToast('Meta eliminada', 'success');
+    googleSheetService.deleteGoal(scriptUrl, pin, goalId)
+      .then(() => setTimeout(() => handleSync(), 1500))
+      .catch(() => showToast('Error al eliminar meta en la nube', 'error'));
+  };
+
+  const contributeToGoal = (metaId: string, monto: number, cuenta?: string) => {
+    const goal = goals.find(g => g.id === metaId);
+
+    // Optimistic update goal
+    setGoals(prev => prev.map(g => {
+      if (g.id !== metaId) return g;
+      const nuevoAhorrado = g.monto_ahorrado + monto;
+      return {
+        ...g,
+        monto_ahorrado: nuevoAhorrado,
+        estado: (g.monto_objetivo > 0 && nuevoAhorrado >= g.monto_objetivo) ? 'completada' as const : g.estado
+      };
+    }));
+
+    // Optimistic update history — afecta accountBalances inmediatamente
+    const ts = new Date().toISOString();
+    setHistory(prev => [{
+      fecha: ts.slice(0, 10),
+      categoria: 'Aporte Meta',
+      descripcion: `Aporte a: ${goal?.nombre || metaId}`,
+      monto,
+      tipo: 'Aporte_Meta' as const,
+      cuenta: cuenta || 'Billetera',
+      meta_id: metaId,
+      timestamp: ts
+    }, ...prev]);
+
+    showToast('Aporte registrado', 'success');
+    googleSheetService.contributeToGoal(scriptUrl, pin, metaId, monto, cuenta, goal?.nombre)
+      .then(() => setTimeout(() => handleSync(), 1500))
+      .catch(() => showToast('Error al registrar aporte en la nube', 'error'));
+  };
+
+  const romperMeta = (metaId: string, monto: number, cuenta?: string) => {
+    const goal = goals.find(g => g.id === metaId);
+
+    // Optimistic update goal
+    setGoals(prev => prev.map(g => {
+      if (g.id !== metaId) return g;
+      return {
+        ...g,
+        monto_ahorrado: Math.max(0, g.monto_ahorrado - monto),
+        estado: 'activa' as const
+      };
+    }));
+
+    // Optimistic update history — devuelve saldo a la cuenta inmediatamente
+    const ts = new Date().toISOString();
+    setHistory(prev => [{
+      fecha: ts.slice(0, 10),
+      categoria: 'Ruptura Meta',
+      descripcion: `Ruptura de: ${goal?.nombre || metaId}`,
+      monto,
+      tipo: 'Ruptura_Meta' as const,
+      cuenta: cuenta || 'Billetera',
+      meta_id: metaId,
+      timestamp: ts
+    }, ...prev]);
+
+    showToast('Fondos liberados de la meta', 'success');
+    googleSheetService.romperMeta(scriptUrl, pin, metaId, monto, cuenta, goal?.nombre)
+      .then(() => setTimeout(() => handleSync(), 1500))
+      .catch(() => showToast('Error al liberar fondos de la meta', 'error'));
   };
 
   const handleConfirmDelete = () => {
@@ -338,14 +433,14 @@ function App() {
             pendingExpenses={pendingExpenses}
             cards={cards}
             history={history}
-            savingsGoal={savingsGoal}
+            goals={goals}
             onEditTransaction={(t) => setEditingTransaction(t)}
             onDeleteTransaction={(t) => setDeleteTarget({ type: 'transaction', item: t })}
           />
         );
 
       case 'metas':
-        return <GoalsView history={history} savingsGoal={savingsGoal} onSaveGoal={saveSavingsGoal} />;
+        return <GoalsView history={history} goals={goals} cards={cards} onAddGoal={addGoal} onUpdateGoal={updateGoal} onDeleteGoal={deleteGoal} onContributeToGoal={contributeToGoal} onRomperMeta={romperMeta} />;
 
       case 'registrar':
         return (
@@ -353,13 +448,16 @@ function App() {
             scriptUrl={scriptUrl}
             pin={pin}
             cards={cards}
+            goals={goals}
+            history={history}
+            pendingExpenses={pendingExpenses}
             onAddPending={(newExpense) => setPendingExpenses(prev => [...prev, newExpense])}
             onSuccess={() => {
               showToast('Movimiento registrado correctamente', 'success');
-              // Opcional: Redirigir a dashboard o quedarse para registrar otro
-              // setActiveTab('dashboard');
+              setTimeout(() => handleSync(), 1500);
             }}
             notify={showToast}
+            onRomperMeta={romperMeta}
           />
         );
 
@@ -377,7 +475,7 @@ function App() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Left Column (3/5): Payment Form - IS the debt list + payment controls */}
             <div className="lg:col-span-3">
-              <PaymentForm scriptUrl={scriptUrl} pin={pin} pendingExpenses={pendingExpenses} onUpdateExpense={handleUpdateExpense} onAddToHistory={handleAddToHistory} {...commonProps} />
+              <PaymentForm scriptUrl={scriptUrl} pin={pin} cards={cards} pendingExpenses={pendingExpenses} history={history} goals={goals} onUpdateExpense={handleUpdateExpense} onAddToHistory={handleAddToHistory} onRomperMeta={romperMeta} {...commonProps} />
             </div>
 
             {/* Right Column (2/5): Summary + Subscriptions */}
@@ -450,12 +548,10 @@ function App() {
             profile={profile}
             currentTheme={currentTheme}
             cards={cards}
-            savingsGoal={savingsGoal}
             notificationConfig={notificationConfig}
             onAddCard={handleAddCard}
             onEditCard={handleEditCard}
             onDeleteCard={(card) => setDeleteTarget({ type: 'card', item: card })}
-            onSaveGoal={saveSavingsGoal}
             onSetTheme={setTheme}
             onSync={handleSync}
             onSaveNotificationConfig={handleSaveNotificationConfig}
@@ -543,15 +639,15 @@ function App() {
         isOpen={!!deleteTarget}
         title={
           deleteTarget?.type === 'transaction' ? 'Eliminar Movimiento'
-          : deleteTarget?.type === 'subscription' ? 'Eliminar Suscripción'
-          : 'Eliminar Tarjeta'
+            : deleteTarget?.type === 'subscription' ? 'Eliminar Suscripción'
+              : 'Eliminar Tarjeta'
         }
         message={
           deleteTarget?.type === 'transaction'
             ? `¿Estás seguro que deseas eliminar "${(deleteTarget.item as Transaction).descripcion}" por ${(deleteTarget.item as Transaction).monto}?`
-          : deleteTarget?.type === 'subscription'
-            ? `¿Estás seguro que deseas eliminar la suscripción "${(deleteTarget.item as PendingExpense).descripcion}"?`
-            : `¿Estás seguro que deseas eliminar la tarjeta "${(deleteTarget?.item as CreditCard)?.alias}"?`
+            : deleteTarget?.type === 'subscription'
+              ? `¿Estás seguro que deseas eliminar la suscripción "${(deleteTarget.item as PendingExpense).descripcion}"?`
+              : `¿Estás seguro que deseas eliminar la tarjeta "${(deleteTarget?.item as CreditCard)?.alias}"?`
         }
         confirmText="Eliminar"
         onConfirm={handleConfirmDelete}

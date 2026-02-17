@@ -1,25 +1,23 @@
 import React, { useState } from 'react';
-import { CreditCard as CreditCardType, SavingsGoalConfig, UserProfile, NotificationConfig } from '../types';
+import { CreditCard as CreditCardType, UserProfile, NotificationConfig } from '../types';
 import { CardForm } from './forms/CardForm';
 import { NotificationSettings } from './NotificationSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../themes';
-import { CreditCard, Target, Settings as SettingsIcon, Save, X, Pencil, Trash2, AlertTriangle, PiggyBank, Bell } from 'lucide-react';
-import { formatCurrency, getLocalISOString } from '../utils/format';
+import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell } from 'lucide-react';
+import { formatCurrency } from '../utils/format';
 import { getAvatarById } from '../avatars';
 
 interface SettingsViewProps {
   scriptUrl: string;
   pin: string;
   cards: CreditCardType[];
-  savingsGoal: SavingsGoalConfig | null;
   currentTheme: string;
   profile?: UserProfile | null;
   notificationConfig?: NotificationConfig | null;
   onAddCard: (card: CreditCardType) => void;
   onEditCard: (card: CreditCardType) => void;
   onDeleteCard: (card: CreditCardType) => void;
-  onSaveGoal: (goal: SavingsGoalConfig) => void;
   onSetTheme: (theme: string) => void;
   onSync: () => void;
   onSaveNotificationConfig: (config: NotificationConfig) => Promise<{ success: boolean; verified: boolean }>;
@@ -33,13 +31,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   scriptUrl,
   pin,
   cards,
-  savingsGoal,
   currentTheme,
   profile,
   onAddCard,
   onEditCard,
   onDeleteCard,
-  onSaveGoal,
   onSetTheme,
   onSync,
   notificationConfig,
@@ -51,31 +47,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const { theme } = useTheme();
   const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
-  const [isEditingGoal, setIsEditingGoal] = useState(false);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
-
-  const [goalFormData, setGoalFormData] = useState({
-    meta_anual: savingsGoal?.meta_anual || 40000,
-    proposito: savingsGoal?.proposito || 'Fondo de emergencia / Viaje / Auto',
-    anio: savingsGoal?.anio || new Date().getFullYear()
-  });
-
-  const handleSaveGoal = () => {
-    const goal: SavingsGoalConfig = {
-      meta_anual: goalFormData.meta_anual,
-      ahorro_mensual_necesario: goalFormData.meta_anual / 12,
-      proposito: goalFormData.proposito,
-      anio: goalFormData.anio,
-      timestamp: getLocalISOString()
-    };
-    onSaveGoal(goal);
-    setIsEditingGoal(false);
-  };
 
   const sections = [
     { id: 'general' as const, label: 'General', icon: <SettingsIcon size={18} /> },
     { id: 'tarjetas' as const, label: 'Tarjetas', icon: <CreditCard size={18} /> },
-    { id: 'meta' as const, label: 'Meta de Ahorro', icon: <Target size={18} /> },
     { id: 'notificaciones' as const, label: 'Notificaciones', icon: <Bell size={18} /> },
   ];
 
@@ -326,110 +302,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           )}
 
-          {/* META DE AHORRO SECTION */}
-          {activeSection === 'meta' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className={`text-lg font-bold ${theme.colors.textPrimary} mb-2`}>
-                  Configuración de Meta Anual
-                </h3>
-                <p className={`text-sm ${theme.colors.textMuted}`}>
-                  Define tu objetivo de ahorro para el año {new Date().getFullYear()}
-                </p>
-              </div>
-
-              {savingsGoal && !isEditingGoal ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className={`${theme.colors.bgSecondary} p-4 rounded-lg`}>
-                      <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Meta Anual</p>
-                      <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                        {formatCurrency(savingsGoal.meta_anual)}
-                      </p>
-                    </div>
-                    <div className={`${theme.colors.bgSecondary} p-4 rounded-lg`}>
-                      <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Ahorro Mensual</p>
-                      <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                        {formatCurrency(savingsGoal.ahorro_mensual_necesario)}
-                      </p>
-                    </div>
-                    <div className={`${theme.colors.bgSecondary} p-4 rounded-lg`}>
-                      <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Propósito</p>
-                      <p className={`text-lg font-bold ${theme.colors.textPrimary}`}>
-                        {savingsGoal.proposito}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setGoalFormData({
-                        meta_anual: savingsGoal.meta_anual,
-                        proposito: savingsGoal.proposito,
-                        anio: savingsGoal.anio
-                      });
-                      setIsEditingGoal(true);
-                    }}
-                    className={`${theme.colors.primary} hover:${theme.colors.primaryHover} text-white px-4 py-2 rounded-lg transition-all`}
-                  >
-                    Editar Meta
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
-                        <PiggyBank size={18} />
-                        Meta de ahorro anual
-                      </label>
-                      <input
-                        type="number"
-                        value={goalFormData.meta_anual}
-                        onChange={(e) => setGoalFormData({ ...goalFormData, meta_anual: parseFloat(e.target.value) || 0 })}
-                        className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-2 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current outline-none`}
-                      />
-                      <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
-                        Ahorro mensual necesario: {formatCurrency(goalFormData.meta_anual / 12)}
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
-                        <Target size={18} />
-                        ¿Para qué estás ahorrando?
-                      </label>
-                      <input
-                        type="text"
-                        value={goalFormData.proposito}
-                        onChange={(e) => setGoalFormData({ ...goalFormData, proposito: e.target.value })}
-                        placeholder="Fondo de emergencia / Viaje / Auto"
-                        className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-2 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current outline-none`}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    {savingsGoal && (
-                      <button
-                        onClick={() => setIsEditingGoal(false)}
-                        className={`flex items-center gap-2 ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary} px-4 py-2 rounded-lg transition-colors`}
-                      >
-                        <X size={16} />
-                        Cancelar
-                      </button>
-                    )}
-                    <button
-                      onClick={handleSaveGoal}
-                      className={`flex items-center gap-2 ${theme.colors.primary} hover:${theme.colors.primaryHover} text-white px-4 py-2 rounded-lg transition-all shadow-lg`}
-                    >
-                      <Save size={16} />
-                      Guardar Meta
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
     </div>

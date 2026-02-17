@@ -6,9 +6,21 @@ export interface CreditCard {
   dia_cierre: number;
   dia_pago: number;
   limite: number;
-  tea?: number | null; // TEA: Tasa Efectiva Anual (porcentaje, ej: 60 = 60%). Ingresada por el usuario.
+  tea?: number | null; // TEA: Tasa Efectiva Anual (porcentaje, ej: 60 = 60%). Solo para tarjetas de crédito.
+  tipo_cuenta?: 'credito' | 'debito'; // 'credito' = solo en tab Tarjeta; 'debito' = en Gasto/Ingreso
   timestamp: string;
 }
+
+/**
+ * Determina si una tarjeta es de débito o crédito.
+ * Usa tipo_cuenta si está disponible, de lo contrario infiere del nombre de tipo_tarjeta.
+ */
+export const getCardType = (card: CreditCard): 'credito' | 'debito' => {
+  if (card.tipo_cuenta === 'credito' || card.tipo_cuenta === 'debito') return card.tipo_cuenta;
+  const t = (card.tipo_tarjeta || '').toLowerCase();
+  if (t.includes('déb') || t.includes('deb') || t === 'débito') return 'debito';
+  return 'credito';
+};
 
 // ═══════════════════════════════════════════════════════════════
 // SIMULACIÓN DE CUOTAS CON INTERÉS (TEA)
@@ -63,7 +75,9 @@ export interface Transaction {
   monto: number;
   notas?: string;
   timestamp: string;
-  tipo: 'Gastos' | 'Ingresos';
+  tipo: 'Gastos' | 'Ingresos' | 'Aporte_Meta' | 'Ruptura_Meta';
+  meta_id?: string;
+  cuenta?: string; // Cuenta/tarjeta asociada al movimiento
 }
 
 export interface PendingExpense {
@@ -84,6 +98,7 @@ export interface PendingExpense {
   timestamp: string;
 }
 
+// Legacy - kept for API sync compatibility
 export interface SavingsGoalConfig {
   meta_anual: number;
   ahorro_mensual_necesario: number;
@@ -92,13 +107,15 @@ export interface SavingsGoalConfig {
   timestamp: string;
 }
 
-export interface MonthlyGoalProgress {
-  mes: string;
-  ingresos: number;
-  gastos: number;
-  ahorro_real: number;
-  acumulado: number;
-  porcentaje_meta: number;
+export interface Goal {
+  id: string;
+  nombre: string;
+  monto_objetivo: number;
+  monto_ahorrado: number;
+  notas?: string;
+  estado: 'activa' | 'completada';
+  icono?: string; // Key from ICON_OPTIONS (e.g. 'car', 'plane', 'house')
+  timestamp: string;
 }
 
 export const CATEGORIAS_GASTOS = [

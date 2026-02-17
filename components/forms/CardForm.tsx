@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BANCOS, CreditCard } from '../../types';
+import { BANCOS, CreditCard, getCardType } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { formatCurrency, getLocalISOString } from '../../utils/format';
 import { Plus, X, CreditCard as CardIcon, Calendar, Wallet, Layers, Percent } from 'lucide-react';
@@ -28,8 +28,12 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
     dia_pago: undefined,
     limite: undefined,
     tea: undefined,
+    tipo_cuenta: undefined,
     selectedCardId: ''
   });
+
+  // Debit card: tipo_tarjeta selector = 'Débito'
+  const isDebitForm = formData.tipo_tarjeta === 'Débito';
 
   // Get available cards based on bank and type selection
   const availableCards = useMemo(() => {
@@ -59,15 +63,18 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
     setLoading(true);
 
     try {
+      const tipoCuenta: 'credito' | 'debito' = formData.tipo_tarjeta === 'Débito' ? 'debito' : 'credito';
       const newCard: CreditCard = {
         banco: formData.banco!,
         tipo_tarjeta: selectedCard?.nombre || formData.tipo_tarjeta!,
         alias: formData.alias!,
         url_imagen: selectedCard?.imagen || formData.url_imagen || '',
-        dia_cierre: Number(formData.dia_cierre),
-        dia_pago: Number(formData.dia_pago),
+        // Débito: no tiene ciclo de facturación, se guarda 0
+        dia_cierre: tipoCuenta === 'debito' ? 0 : Number(formData.dia_cierre),
+        dia_pago: tipoCuenta === 'debito' ? 0 : Number(formData.dia_pago),
         limite: Number(formData.limite),
-        tea: formData.tea ? Number(formData.tea) : null,
+        tea: tipoCuenta === 'debito' ? null : (formData.tea ? Number(formData.tea) : null),
+        tipo_cuenta: tipoCuenta,
         timestamp: getLocalISOString()
       };
 
@@ -77,7 +84,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       setFormData({
         banco: '', tipo_tarjeta: '', alias: '', url_imagen: '',
         dia_cierre: undefined, dia_pago: undefined, limite: undefined,
-        tea: undefined, selectedCardId: ''
+        tea: undefined, tipo_cuenta: undefined, selectedCardId: ''
       });
       notify?.('Tarjeta agregada correctamente', 'success');
       setShowForm(false);
@@ -95,6 +102,12 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       // Reset selected card if bank or type changes
       if (name === 'banco' || name === 'tipo_tarjeta') {
         newData.selectedCardId = '';
+      }
+      // Derive tipo_cuenta from tipo_tarjeta selection
+      if (name === 'tipo_tarjeta') {
+        newData.tipo_cuenta = value === 'Débito' ? 'debito' : value === 'Crédito' ? 'credito' : undefined;
+        // Clear TEA for debit cards
+        if (value === 'Débito') newData.tea = undefined;
       }
       return newData;
     });
@@ -176,29 +189,52 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                     </div>
 
                     <div>
-                      <p className={`text-xs opacity-70 uppercase mb-1 ${textColor}`}>Línea de Crédito</p>
+                      <p className={`text-xs opacity-70 uppercase mb-1 ${textColor}`}>
+                        {getCardType(card) === 'debito' ? 'Cuenta Débito' : 'Línea de Crédito'}
+                      </p>
                       <p className={`text-2xl font-mono font-bold ${textColor}`}>{formatCurrency(card.limite)}</p>
                     </div>
 
                     <div className={`pt-3 mt-1 border-t border-white/10 flex justify-between text-xs ${textColor}`}>
-                      <div className="flex flex-col">
-                        <span className="opacity-70 uppercase text-[10px]">Cierre</span>
-                        <span className="font-bold flex items-center gap-1">
-                          <Calendar size={10} /> Día {card.dia_cierre}
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-center">
-                        <span className="opacity-70 uppercase text-[10px]">TEA</span>
-                        <span className="font-bold">
-                          {card.tea ? `${card.tea}%` : '—'}
-                        </span>
-                      </div>
-                      <div className="flex flex-col text-right">
-                        <span className="opacity-70 uppercase text-[10px]">Pago Aprox.</span>
-                        <span className="font-bold flex items-center justify-end gap-1">
-                          Día {card.dia_pago}
-                        </span>
-                      </div>
+                      {getCardType(card) === 'debito' ? (
+                        /* Débito: sin ciclo de facturación */
+                        <>
+                          <div className="flex flex-col">
+                            <span className="opacity-70 uppercase text-[10px]">Tipo</span>
+                            <span className="font-bold">Débito</span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="opacity-70 uppercase text-[10px]">Banco</span>
+                            <span className="font-bold truncate max-w-[80px]">{card.banco}</span>
+                          </div>
+                          <div className="flex flex-col text-right">
+                            <span className="opacity-70 uppercase text-[10px]">TEA</span>
+                            <span className="font-bold">—</span>
+                          </div>
+                        </>
+                      ) : (
+                        /* Crédito: ciclo de facturación completo */
+                        <>
+                          <div className="flex flex-col">
+                            <span className="opacity-70 uppercase text-[10px]">Cierre</span>
+                            <span className="font-bold flex items-center gap-1">
+                              <Calendar size={10} /> Día {card.dia_cierre}
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className="opacity-70 uppercase text-[10px]">TEA</span>
+                            <span className="font-bold">
+                              {card.tea ? `${card.tea}%` : '—'}
+                            </span>
+                          </div>
+                          <div className="flex flex-col text-right">
+                            <span className="opacity-70 uppercase text-[10px]">Pago Aprox.</span>
+                            <span className="font-bold flex items-center justify-end gap-1">
+                              Día {card.dia_pago}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -284,65 +320,69 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
             />
           </div>
 
-          {/* Días, Límite y TEA */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className={labelClass}>Día Cierre</label>
-              <input
-                type="number"
-                name="dia_cierre"
-                min="1"
-                max="31"
-                value={formData.dia_cierre || ''}
-                onChange={handleChange}
-                required
-                className={`${inputClass} text-center`}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Día Pago</label>
-              <input
-                type="number"
-                name="dia_pago"
-                min="1"
-                max="31"
-                value={formData.dia_pago || ''}
-                onChange={handleChange}
-                required
-                className={`${inputClass} text-center`}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Límite</label>
-              <input
-                type="number"
-                name="limite"
-                step="0.01"
-                value={formData.limite || ''}
-                onChange={handleChange}
-                required
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>
-                <Percent size={10} className="inline mr-1" />
-                TEA (%)
-              </label>
-              <input
-                type="number"
-                name="tea"
-                step="0.01"
-                min="0"
-                max="999"
-                placeholder="Ej: 60"
-                value={formData.tea || ''}
-                onChange={handleChange}
-                className={inputClass}
-              />
-              <p className={`text-[10px] ${theme.colors.textMuted} mt-1`}>Tasa Efectiva Anual</p>
-            </div>
+          {/* Límite / Saldo inicial — siempre visible */}
+          <div>
+            <label className={labelClass}>{isDebitForm ? 'Saldo inicial' : 'Límite de crédito'}</label>
+            <input
+              type="number"
+              name="limite"
+              step="0.01"
+              value={formData.limite || ''}
+              onChange={handleChange}
+              required
+              className={inputClass}
+            />
           </div>
+
+          {/* Día Cierre, Día Pago y TEA — solo tarjetas de crédito */}
+          {!isDebitForm && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <label className={labelClass}>Día Cierre</label>
+                <input
+                  type="number"
+                  name="dia_cierre"
+                  min="1"
+                  max="31"
+                  value={formData.dia_cierre || ''}
+                  onChange={handleChange}
+                  required
+                  className={`${inputClass} text-center`}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Día Pago</label>
+                <input
+                  type="number"
+                  name="dia_pago"
+                  min="1"
+                  max="31"
+                  value={formData.dia_pago || ''}
+                  onChange={handleChange}
+                  required
+                  className={`${inputClass} text-center`}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>
+                  <Percent size={10} className="inline mr-1" />
+                  TEA (%)
+                </label>
+                <input
+                  type="number"
+                  name="tea"
+                  step="0.01"
+                  min="0"
+                  max="999"
+                  placeholder="Ej: 60"
+                  value={formData.tea || ''}
+                  onChange={handleChange}
+                  className={inputClass}
+                />
+                <p className={`text-[10px] ${theme.colors.textMuted} mt-1`}>Tasa Efectiva Anual</p>
+              </div>
+            </div>
+          )}
 
           {/* Card Preview */}
           {selectedCard && (

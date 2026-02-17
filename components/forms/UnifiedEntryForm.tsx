@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, simularCompraEnCuotas } from '../../types';
+import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType } from '../../types';
 import { sendToSheet } from '../../services/googleSheetService';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
 import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info } from 'lucide-react';
@@ -13,18 +13,24 @@ interface UnifiedEntryFormProps {
   scriptUrl: string;
   pin: string;
   cards: CreditCard[];
+  goals?: Goal[];
+  history?: Transaction[];
+  pendingExpenses?: PendingExpense[];
   onAddPending: (expense: PendingExpense) => void;
   onSuccess: () => void;
   notify?: (msg: string, type: 'success' | 'error') => void;
+  onRomperMeta?: (metaId: string, monto: number, cuenta?: string) => void;
 }
 
 type EntryType = 'gasto' | 'ingreso' | 'tarjeta';
 
-export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, pin, cards, onAddPending, onSuccess, notify }) => {
+export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, pin, cards, goals = [], history = [], pendingExpenses = [], onAddPending, onSuccess, notify, onRomperMeta }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
   const [entryType, setEntryType] = useState<EntryType>('gasto');
   const [loading, setLoading] = useState(false);
+  const [selectedMetaId, setSelectedMetaId] = useState('');
+  const [selectedCuenta, setSelectedCuenta] = useState('Billetera');
 
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
@@ -36,7 +42,52 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
   type TipoCuotas = 'SIN_INTERES' | 'CON_INTERES';
   const [tipoCuotas, setTipoCuotas] = useState<TipoCuotas>('SIN_INTERES');
 
+  // Romper chanchito inline
+  const [breakMetaId, setBreakMetaId] = useState('');
+  const [breakAmount, setBreakAmount] = useState('');
+
   const today = new Date().toISOString().split('T')[0];
+
+  // Separar tarjetas por tipo
+  const creditCards = useMemo(() => cards.filter(c => getCardType(c) === 'credito'), [cards]);
+  const debitCards = useMemo(() => cards.filter(c => getCardType(c) === 'debito'), [cards]);
+
+  // Calcular saldo disponible por cuenta (incluye fondos comprometidos en metas)
+  const accountBalances = useMemo(() => {
+    const balances: Record<string, number> = {};
+    // Tipos que suman al saldo (ingresos reales + ruptura de metas)
+    const INGRESO_TYPES: string[] = ['Ingresos', 'Ruptura_Meta'];
+    // Tipos que restan del saldo (gastos reales + aportes a metas)
+    const GASTO_TYPES: string[] = ['Gastos', 'Aporte_Meta'];
+
+    // Billetera: ingresos - gastos taggeados como "Billetera"
+    const billeteraIngresos = history
+      .filter(t => INGRESO_TYPES.includes(t.tipo) && t.cuenta === 'Billetera')
+      .reduce((sum, t) => sum + Number(t.monto), 0);
+    const billeteraGastos = history
+      .filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === 'Billetera')
+      .reduce((sum, t) => sum + Number(t.monto), 0);
+    balances['Billetera'] = billeteraIngresos - billeteraGastos;
+
+    // Tarjetas débito: saldo inicial (card.limite) + ingresos - gastos del historial
+    debitCards.forEach(card => {
+      const ingresos = history
+        .filter(t => INGRESO_TYPES.includes(t.tipo) && t.cuenta === card.alias)
+        .reduce((sum, t) => sum + Number(t.monto), 0);
+      const gastos = history
+        .filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === card.alias)
+        .reduce((sum, t) => sum + Number(t.monto), 0);
+      // card.limite actúa como "saldo inicial" para débito — punto de partida
+      balances[card.alias] = Number(card.limite || 0) + ingresos - gastos;
+    });
+
+    return balances;
+  }, [history, debitCards]);
+
+  const goalsWithFunds = useMemo(() =>
+    goals.filter(g => g.estado === 'activa' && g.monto_ahorrado > 0),
+    [goals]
+  );
 
   const [formData, setFormData] = useState({
     fecha: today,
@@ -53,8 +104,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
 
   // Effect for Credit Card Dates calculation
   useEffect(() => {
-    if (entryType === 'tarjeta' && formData.tarjetaId && cards.length > 0) {
-      const card = cards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
+    if (entryType === 'tarjeta' && formData.tarjetaId && creditCards.length > 0) {
+      const card = creditCards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
       if (card) {
         const hoy = new Date(formData.fecha);
         const anio = hoy.getFullYear();
@@ -78,7 +129,43 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
         }));
       }
     }
-  }, [entryType, formData.tarjetaId, cards, formData.fecha]);
+  }, [entryType, formData.tarjetaId, creditCards, formData.fecha]);
+
+  // Derived: romper chanchito inline
+  const montoTyped = parseFloat(formData.monto || '0');
+  const saldoActual = accountBalances[selectedCuenta] ?? 0;
+  const deficit = Math.max(0, montoTyped - saldoActual);
+  const showBreakOption = entryType === 'gasto' && montoTyped > 0 && montoTyped > saldoActual && goalsWithFunds.length > 0;
+
+  // Auto-select first goal when panel opens
+  useEffect(() => {
+    if (showBreakOption && goalsWithFunds.length > 0) {
+      if (!breakMetaId || !goalsWithFunds.find(g => g.id === breakMetaId)) {
+        setBreakMetaId(goalsWithFunds[0].id);
+      }
+    }
+  }, [showBreakOption, goalsWithFunds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-compute suggested amount (deficit capped at goal's available funds)
+  useEffect(() => {
+    if (!showBreakOption || !breakMetaId) return;
+    const goal = goalsWithFunds.find(g => g.id === breakMetaId);
+    if (!goal) return;
+    const suggested = Math.min(deficit, goal.monto_ahorrado);
+    setBreakAmount(suggested > 0 ? String(Math.round(suggested * 100) / 100) : '');
+  }, [showBreakOption, deficit, breakMetaId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleBreakFromForm = () => {
+    const amount = parseFloat(breakAmount);
+    if (!amount || amount <= 0) return;
+    const targetGoal = goalsWithFunds.find(g => g.id === breakMetaId) || goalsWithFunds[0];
+    if (!targetGoal) return;
+    if (amount > targetGoal.monto_ahorrado) {
+      notify?.(`Máximo disponible en "${targetGoal.nombre}": ${formatCurrency(targetGoal.monto_ahorrado)}`, 'error');
+      return;
+    }
+    onRomperMeta?.(targetGoal.id, amount, selectedCuenta);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,12 +178,31 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
       return;
     }
 
+    // Validar saldo disponible para gastos en efectivo
+    if (entryType === 'gasto') {
+      const saldoDisponible = accountBalances[selectedCuenta] ?? 0;
+      if (montoValue > saldoDisponible) {
+        const comprometido = history
+          .filter(t => t.tipo === 'Aporte_Meta' && t.cuenta === selectedCuenta)
+          .reduce((s, t) => s + Number(t.monto), 0)
+          - history
+          .filter(t => t.tipo === 'Ruptura_Meta' && t.cuenta === selectedCuenta)
+          .reduce((s, t) => s + Number(t.monto), 0);
+        const hint = comprometido > 0
+          ? ` · ${formatCurrency(comprometido)} en metas`
+          : '';
+        const nombre = selectedCuenta === 'Billetera' ? 'Billetera Física' : selectedCuenta;
+        notify?.(`Saldo insuficiente en ${nombre}. Disponible: ${formatCurrency(saldoDisponible)}${hint}`, 'error');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
       if (entryType === 'tarjeta') {
         // Extract alias from tarjetaId (format: "alias-banco")
-        const selectedCard = cards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
+        const selectedCard = creditCards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
         const tarjetaAlias = selectedCard?.alias || '';
 
         const newExpense: PendingExpense = {
@@ -122,7 +228,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
         await sendToSheet(scriptUrl, pin, sheetData, 'Gastos_Pendientes');
       } else {
         // Gasto (Cash) or Ingreso
-        const payload = {
+        const payload: Record<string, any> = {
           fecha: formData.fecha,
           categoria: formData.categoria,
           descripcion: formData.descripcion,
@@ -130,12 +236,22 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
           notas: formData.notas,
           timestamp: getLocalISOString()
         };
+        // Include cuenta (account/card) if selected
+        if (selectedCuenta) {
+          payload.cuenta = selectedCuenta;
+        }
+        // If it's an income assigned to a goal, include meta_id
+        if (entryType === 'ingreso' && selectedMetaId) {
+          payload.meta_id = selectedMetaId;
+        }
         await sendToSheet(scriptUrl, pin, payload, entryType === 'gasto' ? 'Gastos' : 'Ingresos');
       }
 
       notify?.('Registrado exitosamente', 'success');
       // Reset critical fields
       setFormData(prev => ({ ...prev, monto: '', descripcion: '', notas: '' }));
+      setSelectedMetaId('');
+      setSelectedCuenta('Billetera');
       onSuccess();
 
     } catch (error) {
@@ -280,7 +396,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
                 <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-1 block">Seleccionar Tarjeta</label>
                 <select name="tarjetaId" value={formData.tarjetaId} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary}">
                   <option value="">-- Elige tarjeta --</option>
-                  {cards.map(c => <option key={`${c.alias}-${c.banco}`} value={`${c.alias}-${c.banco}`}>{c.alias} ({c.banco})</option>)}
+                  {creditCards.map(c => <option key={`${c.alias}-${c.banco}`} value={`${c.alias}-${c.banco}`}>{c.alias} ({c.banco})</option>)}
+                  {creditCards.length === 0 && <option disabled value="">Sin tarjetas de crédito registradas</option>}
                 </select>
               </div>
 
@@ -338,7 +455,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
 
                   {/* Simulación con interés (solo si tipoCuotas='CON_INTERES') */}
                   {tipoCuotas === 'CON_INTERES' && (() => {
-                    const selectedCard = cards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
+                    const selectedCard = creditCards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
                     const cardTea = selectedCard?.tea ?? null;
                     const monto = parseFloat(formData.monto) || 0;
                     const cuotas = parseInt(formData.num_cuotas) || 1;
@@ -402,6 +519,115 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
             </div>
           )}
 
+          {/* Account/Card selector for Gasto and Ingreso — OBLIGATORIO */}
+          {(entryType === 'gasto' || entryType === 'ingreso') && (
+            <div className="space-y-1">
+              <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>
+                {entryType === 'ingreso' ? 'Cuenta que recibe *' : 'Cuenta de origen *'}
+              </label>
+              <select
+                value={selectedCuenta}
+                onChange={e => setSelectedCuenta(e.target.value)}
+                required
+                className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500`}
+              >
+                <option value="Billetera">
+                  💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)} disponible
+                </option>
+                {debitCards.map(c => (
+                  <option key={`${c.alias}-${c.banco}`} value={c.alias}>
+                    💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)} disponible
+                  </option>
+                ))}
+              </select>
+              {selectedCuenta && (
+                <p className={`text-xs ${theme.colors.textMuted} ml-1 mt-1 flex items-center gap-2`}>
+                  <span>
+                    Disponible: <strong>{formatCurrency(accountBalances[selectedCuenta] ?? 0)}</strong>
+                  </span>
+                  {entryType === 'gasto' && (accountBalances[selectedCuenta] ?? 0) < parseFloat(formData.monto || '0') && parseFloat(formData.monto || '0') > 0 && (
+                    <span className="text-red-400">⚠ Saldo insuficiente</span>
+                  )}
+                </p>
+              )}
+              {debitCards.length === 0 && (
+                <p className={`text-xs text-amber-400 ml-1 mt-1`}>
+                  💡 Solo tienes Billetera disponible. Agrega tarjetas de débito en Configuración para más opciones.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Romper Chanchito — panel inline cuando saldo es insuficiente */}
+          {showBreakOption && (
+            <div className={`p-4 rounded-xl border border-amber-400/40 bg-amber-500/5 space-y-3`}>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🐷</span>
+                <div>
+                  <p className="text-sm font-bold text-amber-400">¿Romper chanchito?</p>
+                  <p className={`text-xs ${theme.colors.textMuted}`}>
+                    Te faltan <strong className="text-amber-400">{formatCurrency(deficit)}</strong> · Libera fondos de una meta
+                  </p>
+                </div>
+              </div>
+
+              {/* Selector de meta */}
+              <div className="space-y-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>¿De qué meta?</label>
+                <select
+                  value={breakMetaId}
+                  onChange={e => setBreakMetaId(e.target.value)}
+                  className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl px-4 py-2.5 ${theme.colors.textPrimary} text-sm`}
+                >
+                  {goalsWithFunds.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.nombre} — {formatCurrency(g.monto_ahorrado)} disponibles
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Monto + botón */}
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className={`absolute left-3 top-2.5 text-sm ${theme.colors.textMuted}`}>S/</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={goalsWithFunds.find(g => g.id === breakMetaId)?.monto_ahorrado}
+                    value={breakAmount}
+                    onChange={e => setBreakAmount(e.target.value)}
+                    className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-amber-400`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleBreakFromForm}
+                  className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  🐷 Liberar fondos
+                </button>
+              </div>
+
+              {/* Preview de resultado */}
+              {breakMetaId && (() => {
+                const selectedGoal = goalsWithFunds.find(g => g.id === breakMetaId);
+                if (!selectedGoal) return null;
+                const liberando = Math.min(parseFloat(breakAmount || '0'), selectedGoal.monto_ahorrado);
+                const nuevoSaldo = saldoActual + liberando;
+                const puedeGastar = nuevoSaldo >= montoTyped;
+                return (
+                  <p className={`text-xs ${puedeGastar ? 'text-emerald-400' : 'text-amber-300/70'}`}>
+                    {puedeGastar
+                      ? `✓ Al liberar quedarás con ${formatCurrency(nuevoSaldo - montoTyped)} de saldo`
+                      : `Aún te faltarán ${formatCurrency(montoTyped - nuevoSaldo)} después de liberar`}
+                  </p>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Category & Desc */}
           <div className="space-y-4">
             {/* Subscription Selector (only for subscription type) */}
@@ -437,6 +663,28 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
+
+            {/* Goal selector for income */}
+            {entryType === 'ingreso' && goals.length > 0 && (
+              <div className="space-y-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Asignar a meta (opcional)</label>
+                <select
+                  value={selectedMetaId}
+                  onChange={e => setSelectedMetaId(e.target.value)}
+                  className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500`}
+                >
+                  <option value="">Ninguna - saldo libre</option>
+                  {goals.filter(g => g.estado === 'activa').map(g => (
+                    <option key={g.id} value={g.id}>{g.nombre} ({formatCurrency(g.monto_ahorrado)} / {formatCurrency(g.monto_objetivo)})</option>
+                  ))}
+                </select>
+                {selectedMetaId && (
+                  <p className={`text-xs ${theme.colors.textMuted} ml-1 mt-1`}>
+                    Este ingreso se apartará para la meta seleccionada
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Description - hide for subscriptions with selected app */}
             {!(entryType === 'tarjeta' && expenseType === 'suscripcion' && selectedSubscriptionApp && selectedSubscriptionApp !== 'other') && (

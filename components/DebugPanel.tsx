@@ -46,7 +46,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ pendingExpenses, onForce
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-4 right-4 ${hasIssues ? 'bg-red-500 hover:bg-red-600' : theme.colors.primary} text-white p-3 rounded-full shadow-lg z-50 transition-all hover:scale-110`}
+        className={`fixed bottom-24 md:bottom-4 right-4 ${hasIssues ? 'bg-red-500 hover:bg-red-600' : theme.colors.primary} text-white p-3 rounded-full shadow-lg z-50 transition-all hover:scale-110`}
         title="Herramientas de Depuración"
       >
         {hasIssues ? <AlertCircle size={24} /> : <Database size={24} />}
@@ -55,7 +55,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ pendingExpenses, onForce
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 ${theme.colors.bgCard} border ${theme.colors.border} rounded-2xl shadow-2xl p-6 w-96 z-50`}>
+    <div className={`fixed bottom-24 md:bottom-4 right-4 ${theme.colors.bgCard} border ${theme.colors.border} rounded-2xl shadow-2xl p-6 w-96 max-w-[calc(100vw-2rem)] z-50`}>
       <div className="flex justify-between items-center mb-4">
         <h3 className={`text-lg font-bold ${theme.colors.textPrimary} flex items-center gap-2`}>
           <Database size={20} />

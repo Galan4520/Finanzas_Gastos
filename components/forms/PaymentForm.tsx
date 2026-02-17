@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { PendingExpense, Transaction } from '../../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { PendingExpense, Transaction, CreditCard as CreditCardAccount, Goal, getCardType } from '../../types';
 import { sendToSheet, fetchData } from '../../services/googleSheetService';
 import { formatCurrency, formatDate, getLocalISOString } from '../../utils/format';
 import { calcularSaldoPendiente } from '../../utils/debtUtils';
@@ -9,19 +9,92 @@ import { useTheme } from '../../contexts/ThemeContext';
 interface PaymentFormProps {
   scriptUrl: string;
   pin: string;
+  cards?: CreditCardAccount[];
   pendingExpenses: PendingExpense[];
+  history?: Transaction[];
+  goals?: Goal[];
   onUpdateExpense: (expense: PendingExpense) => void;
   onAddToHistory?: (transaction: Transaction) => void;
   notify?: (msg: string, type: 'success' | 'error') => void;
+  onRomperMeta?: (metaId: string, monto: number, cuenta?: string) => void;
 }
 
-export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendingExpenses, onUpdateExpense, onAddToHistory, notify }) => {
+export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards = [], pendingExpenses, history = [], goals = [], onUpdateExpense, onAddToHistory, notify, onRomperMeta }) => {
   const { theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [selectedExpenseId, setSelectedExpenseId] = useState('');
   const [paymentType, setPaymentType] = useState('Cuota');
   const [customAmount, setCustomAmount] = useState('');
   const [payMode, setPayMode] = useState<'deudas' | 'suscripciones'>('deudas');
+  const [selectedCuentaPago, setSelectedCuentaPago] = useState('Billetera');
+
+  // Romper chanchito inline
+  const [breakMetaId, setBreakMetaId] = useState('');
+  const [breakAmount, setBreakAmount] = useState('');
+
+  // Tarjetas débito (para validación de saldo)
+  const debitCards = useMemo(() => cards.filter(c => getCardType(c) === 'debito'), [cards]);
+
+  // Saldo disponible por cuenta (Billetera + débito, incluye aportes/rupturas de metas)
+  const accountBalances = useMemo(() => {
+    const balances: Record<string, number> = {};
+    const INGRESO_TYPES = ['Ingresos', 'Ruptura_Meta'];
+    const GASTO_TYPES = ['Gastos', 'Aporte_Meta'];
+
+    const billeteraIngresos = history.filter(t => INGRESO_TYPES.includes(t.tipo) && t.cuenta === 'Billetera').reduce((s, t) => s + Number(t.monto), 0);
+    const billeteraGastos = history.filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === 'Billetera').reduce((s, t) => s + Number(t.monto), 0);
+    balances['Billetera'] = billeteraIngresos - billeteraGastos;
+
+    debitCards.forEach(card => {
+      const ing = history.filter(t => INGRESO_TYPES.includes(t.tipo) && t.cuenta === card.alias).reduce((s, t) => s + Number(t.monto), 0);
+      const gas = history.filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === card.alias).reduce((s, t) => s + Number(t.monto), 0);
+      balances[card.alias] = Number(card.limite || 0) + ing - gas;
+    });
+
+    return balances;
+  }, [history, debitCards]);
+
+  const goalsWithFunds = useMemo(() =>
+    goals.filter(g => g.estado === 'activa' && g.monto_ahorrado > 0),
+    [goals]
+  );
+
+  // Derived: romper chanchito
+  const montoAPagar = parseFloat(customAmount || '0');
+  const isTrackedAccount = selectedCuentaPago === 'Billetera' || debitCards.some(c => c.alias === selectedCuentaPago);
+  const saldoActualCuenta = isTrackedAccount ? (accountBalances[selectedCuentaPago] ?? 0) : Infinity;
+  const deficit = Math.max(0, montoAPagar - saldoActualCuenta);
+  const showBreakOption = isTrackedAccount && montoAPagar > 0 && deficit > 0 && goalsWithFunds.length > 0;
+
+  // Auto-select first goal when panel opens
+  useEffect(() => {
+    if (showBreakOption && goalsWithFunds.length > 0) {
+      if (!breakMetaId || !goalsWithFunds.find(g => g.id === breakMetaId)) {
+        setBreakMetaId(goalsWithFunds[0].id);
+      }
+    }
+  }, [showBreakOption, goalsWithFunds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-compute suggested amount
+  useEffect(() => {
+    if (!showBreakOption || !breakMetaId) return;
+    const goal = goalsWithFunds.find(g => g.id === breakMetaId);
+    if (!goal) return;
+    const suggested = Math.min(deficit, goal.monto_ahorrado);
+    setBreakAmount(suggested > 0 ? String(Math.round(suggested * 100) / 100) : '');
+  }, [showBreakOption, deficit, breakMetaId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleBreakFromForm = () => {
+    const amount = parseFloat(breakAmount);
+    if (!amount || amount <= 0) return;
+    const targetGoal = goalsWithFunds.find(g => g.id === breakMetaId) || goalsWithFunds[0];
+    if (!targetGoal) return;
+    if (amount > targetGoal.monto_ahorrado) {
+      notify?.(`Máximo disponible en "${targetGoal.nombre}": ${formatCurrency(targetGoal.monto_ahorrado)}`, 'error');
+      return;
+    }
+    onRomperMeta?.(targetGoal.id, amount, selectedCuentaPago || 'Billetera');
+  };
 
   const selectedExpense = pendingExpenses.find(e => e.id === selectedExpenseId);
 
@@ -66,6 +139,20 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
     try {
       const montoPagado = parseFloat(customAmount);
       const esSuscripcion = selectedExpense.tipo === 'suscripcion';
+
+      // VALIDACIÓN: Saldo insuficiente en cuenta rastreada
+      if (isTrackedAccount && montoPagado > (accountBalances[selectedCuentaPago] ?? 0)) {
+        const saldo = accountBalances[selectedCuentaPago] ?? 0;
+        const comprometido = history
+          .filter(t => t.tipo === 'Aporte_Meta' && t.cuenta === selectedCuentaPago)
+          .reduce((s, t) => s + Number(t.monto), 0)
+          - history.filter(t => t.tipo === 'Ruptura_Meta' && t.cuenta === selectedCuentaPago)
+            .reduce((s, t) => s + Number(t.monto), 0);
+        const hint = comprometido > 0 ? ` · ${formatCurrency(comprometido)} en metas` : '';
+        notify?.(`Saldo insuficiente en ${selectedCuentaPago}. Disponible: ${formatCurrency(saldo)}${hint}`, 'error');
+        setLoading(false);
+        return;
+      }
 
       // VALIDACIÓN QA: No permitir pagar más de la deuda
       if (!esSuscripcion) {
@@ -138,6 +225,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
         monto_pagado: montoPagado,
         tipo_pago: tipoPagoFinal,
         num_cuota: paymentType === 'Cuota' && !esSuscripcion ? (Math.floor(cuotasPagadasActual) + 1) : 0,
+        cuenta_pago: selectedCuentaPago,
         timestamp: getLocalISOString()
       };
 
@@ -149,6 +237,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
           : `Pago ${paymentType} - ${selectedExpense.descripcion}`,
         monto: montoPagado,
         notas: `Pago de ${esSuscripcion ? 'suscripción' : 'deuda'} - ${selectedExpense.tarjeta}`,
+        cuenta: selectedCuentaPago,
         timestamp: getLocalISOString()
       };
 
@@ -163,11 +252,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
       console.log('💾 [PaymentForm] Registrando pago en base de datos...');
 
       // Registrar el pago en la hoja de Pagos
-      // (GAS automáticamente actualiza monto_pagado_total en Gastos_Pendientes)
+      // GAS automáticamente: actualiza Gastos_Pendientes + escribe en Gastos para descontar el saldo
       await sendToSheet(scriptUrl, pin, paymentPayload, 'Pagos');
-
-      // Registrar el gasto en el historial
-      await sendToSheet(scriptUrl, pin, gastoEntry, 'Gastos');
 
       // PASO 2: Esperar y verificar que el pago se guardó
       console.log('🔍 [PaymentForm] Verificando persistencia del pago...');
@@ -221,6 +307,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
       // Limpiar formulario
       setSelectedExpenseId('');
       setCustomAmount('');
+      setSelectedCuentaPago('Billetera');
 
       // Notificar éxito
       if (esSuscripcion) {
@@ -457,6 +544,108 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, pendin
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Cuenta de origen del pago */}
+        <div>
+          <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase tracking-wide ml-1 mb-1 block`}>
+            Cuenta desde la que pagas
+          </label>
+          <select
+            value={selectedCuentaPago}
+            onChange={e => setSelectedCuentaPago(e.target.value)}
+            className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-current transition-all`}
+          >
+            <option value="">Efectivo / Sin especificar</option>
+            <option value="Billetera">
+              💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)} disponible
+            </option>
+            {debitCards.map(c => (
+              <option key={`${c.alias}-${c.banco}`} value={c.alias}>
+                💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)} disponible
+              </option>
+            ))}
+            {cards.filter(c => getCardType(c) === 'credito').map(c => (
+              <option key={`${c.alias}-${c.banco}`} value={c.alias}>
+                🔵 {c.alias} — {c.banco} (crédito)
+              </option>
+            ))}
+          </select>
+          {isTrackedAccount && (
+            <p className={`text-xs ml-1 mt-1 flex items-center gap-2 ${theme.colors.textMuted}`}>
+              <span>Disponible: <strong>{formatCurrency(saldoActualCuenta)}</strong></span>
+              {montoAPagar > 0 && montoAPagar > saldoActualCuenta && (
+                <span className="text-red-400">⚠ Saldo insuficiente</span>
+              )}
+            </p>
+          )}
+        </div>
+
+        {/* Romper Chanchito — panel inline cuando saldo es insuficiente */}
+        {showBreakOption && (
+          <div className={`p-4 rounded-xl border border-amber-400/40 bg-amber-500/5 space-y-3`}>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🐷</span>
+              <div>
+                <p className="text-sm font-bold text-amber-400">¿Romper chanchito?</p>
+                <p className={`text-xs ${theme.colors.textMuted}`}>
+                  Te faltan <strong className="text-amber-400">{formatCurrency(deficit)}</strong> · Libera fondos de una meta
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>¿De qué meta?</label>
+              <select
+                value={breakMetaId}
+                onChange={e => setBreakMetaId(e.target.value)}
+                className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl px-4 py-2.5 ${theme.colors.textPrimary} text-sm`}
+              >
+                {goalsWithFunds.map(g => (
+                  <option key={g.id} value={g.id}>
+                    {g.nombre} — {formatCurrency(g.monto_ahorrado)} disponibles
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className={`absolute left-3 top-2.5 text-sm ${theme.colors.textMuted}`}>S/</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  max={goalsWithFunds.find(g => g.id === breakMetaId)?.monto_ahorrado}
+                  value={breakAmount}
+                  onChange={e => setBreakAmount(e.target.value)}
+                  className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-amber-400`}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleBreakFromForm}
+                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5 whitespace-nowrap"
+              >
+                🐷 Liberar fondos
+              </button>
+            </div>
+
+            {breakMetaId && (() => {
+              const selectedGoal = goalsWithFunds.find(g => g.id === breakMetaId);
+              if (!selectedGoal) return null;
+              const liberando = Math.min(parseFloat(breakAmount || '0'), selectedGoal.monto_ahorrado);
+              const nuevoSaldo = saldoActualCuenta + liberando;
+              const puedeGastar = nuevoSaldo >= montoAPagar;
+              return (
+                <p className={`text-xs ${puedeGastar ? 'text-emerald-400' : 'text-amber-300/70'}`}>
+                  {puedeGastar
+                    ? `✓ Al liberar quedarás con ${formatCurrency(nuevoSaldo - montoAPagar)} de saldo`
+                    : `Aún te faltarán ${formatCurrency(montoAPagar - nuevoSaldo)} después de liberar`}
+                </p>
+              );
+            })()}
           </div>
         )}
 
