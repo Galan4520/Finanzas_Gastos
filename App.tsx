@@ -144,6 +144,20 @@ function App() {
       const data = await googleSheetService.fetchData(scriptUrl, pin);
 
       if (data) {
+        // DEBUG: Ver respuesta completa del GAS
+        console.log('🔍 [DEBUG] Respuesta completa del GAS:', JSON.stringify({
+          gasVersion: data.gasVersion,
+          schemaVersion: data.schemaVersion,
+          cardsCount: (data.cards || []).length,
+          pendingCount: (data.pending || []).length,
+          historyCount: (data.history || []).length,
+          goalsCount: (data.goals || []).length,
+          hasProfile: !!data.profile,
+          hasNotificationConfig: !!data.notificationConfig,
+          hasCustomCategories: !!data.customCategories,
+          hasFamilyConfig: !!data.familyConfig
+        }));
+
         // Track GAS & schema versions
         if (data.gasVersion !== undefined) setGasVersion(data.gasVersion);
         if (data.schemaVersion !== undefined) setSchemaVersion(data.schemaVersion);
