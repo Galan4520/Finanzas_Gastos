@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3, User, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Clock, Settings, PlusCircle, Target, BarChart3, User, RefreshCw, Users } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { UserProfile } from '../types';
@@ -55,9 +55,10 @@ interface LayoutProps {
   isSyncing: boolean;
   profile?: UserProfile | null;
   lastSyncTime?: Date | null;
+  hasFamilyPlan?: boolean;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, connected, onSync, isSyncing, profile, lastSyncTime }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, connected, onSync, isSyncing, profile, lastSyncTime, hasFamilyPlan }) => {
   const { theme, currentTheme } = useTheme();
 
   // Helper to format time relative
@@ -73,14 +74,33 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   const textColors = getTextColor(currentTheme);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
-  // Simplified Navigation Logic
+  // Desktop sidebar: always all items
   const navItems = [
     { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard /> },
     { id: 'metas', label: 'Metas', icon: <Target /> },
-    { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true }, // Unified Action - Centered
+    { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true },
     { id: 'deudas', label: 'Deudas', icon: <Clock /> },
     { id: 'config', label: 'Ajustes', icon: <Settings /> },
+    ...(hasFamilyPlan ? [{ id: 'familia', label: 'Familia', icon: <Users /> }] : []),
   ];
+
+  // Mobile bottom nav: always exactly 5 slots
+  // When family plan active, Familia replaces Ajustes (settings accessible via header icon)
+  const mobileNavItems = hasFamilyPlan
+    ? [
+        { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard /> },
+        { id: 'metas', label: 'Metas', icon: <Target /> },
+        { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true },
+        { id: 'deudas', label: 'Deudas', icon: <Clock /> },
+        { id: 'familia', label: 'Familia', icon: <Users /> },
+      ]
+    : [
+        { id: 'dashboard', label: 'Inicio', icon: <LayoutDashboard /> },
+        { id: 'metas', label: 'Metas', icon: <Target /> },
+        { id: 'registrar', label: 'Nuevo', icon: <PlusCircle />, isMain: true },
+        { id: 'deudas', label: 'Deudas', icon: <Clock /> },
+        { id: 'config', label: 'Ajustes', icon: <Settings /> },
+      ];
 
   return (
     <div className={`min-h-screen ${theme.colors.bgSecondary} ${theme.colors.textPrimary}`}>
@@ -159,11 +179,22 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           )}
           <span className="font-bold text-lg">{profile ? `Hola, ${profile.nombre}` : 'MoneyCrock'}</span>
         </div>
-        {connected && (
-          <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
-            <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
-          </button>
-        )}
+        <div className="flex items-center gap-1">
+          {hasFamilyPlan && (
+            <button
+              onClick={() => onTabChange('config')}
+              className={`p-2 rounded-full ${activeTab === 'config' ? `${textColors.primary} ${theme.colors.primaryLight}` : theme.colors.textMuted}`}
+              title="Ajustes"
+            >
+              <Settings size={18} />
+            </button>
+          )}
+          {connected && (
+            <button onClick={onSync} disabled={isSyncing} className={`p-2 rounded-full ${isSyncing ? `${theme.colors.textMuted}` : `${textColors.primary} ${theme.colors.primaryLight}`}`}>
+              <RefreshCw size={18} className={isSyncing ? 'animate-spin' : ''} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content Area */}
@@ -174,7 +205,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       {/* Mobile Bottom Navigation */}
       <div className={`md:hidden fixed bottom-0 left-0 right-0 ${theme.colors.bgCard} backdrop-blur-xl border-t ${theme.colors.border} pb-safe pt-2 px-4 z-40`}>
         <div className="flex justify-between items-end pb-3">
-          {navItems.map(item => (
+          {mobileNavItems.map(item => (
             <NavItem key={item.id} {...item} active={activeTab === item.id} onClick={onTabChange} mobile isMain={item.isMain} theme={theme} textColors={textColors} />
           ))}
         </div>

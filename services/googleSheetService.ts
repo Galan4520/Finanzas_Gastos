@@ -1,4 +1,4 @@
-import { Transaction, CreditCard, PendingExpense, NotificationConfig, Goal } from "../types";
+import { Transaction, CreditCard, PendingExpense, NotificationConfig, Goal, FamilyConfig } from "../types";
 
 // ═══════════════════════════════════════════════════════════════
 // ARQUITECTURA: Backend como única fuente de verdad
@@ -580,6 +580,69 @@ export const romperMeta = async (
     return { success: true };
   } catch (error) {
     console.error('❌ [romperMeta] Error:', error);
+    throw error;
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// CUSTOM CATEGORIES - Guardar categorías personalizadas (Config E2/E3)
+// ═══════════════════════════════════════════════════════════════
+export const saveCustomCategories = async (
+  scriptUrl: string,
+  pin: string,
+  gastosCustom: string[],
+  ingresosCustom: string[]
+): Promise<void> => {
+  if (!scriptUrl) return;
+  const formData = objectToFormData({
+    action: 'saveCustomCategories',
+    pin,
+    gastos_custom: JSON.stringify(gastosCustom),
+    ingresos_custom: JSON.stringify(ingresosCustom),
+  });
+  await fetch(scriptUrl, { method: 'POST', mode: 'no-cors', body: formData });
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FAMILY CONFIG - Guardar configuración del plan familiar
+// ═══════════════════════════════════════════════════════════════
+export const saveFamilyConfig = async (
+  scriptUrl: string,
+  pin: string,
+  config: FamilyConfig
+): Promise<{ success: boolean; verified: boolean }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const members = config.members || [];
+  const payload = {
+    action: 'saveFamilyConfig',
+    pin,
+    members_json: JSON.stringify(members)
+  };
+
+  const formData = objectToFormData(payload);
+
+  console.log('👨‍👩‍👧 [saveFamilyConfig] Guardando', members.length, 'miembros...');
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    await delay(1500);
+    const freshData = await fetchData(scriptUrl, pin);
+    const savedConfig = freshData.familyConfig;
+
+    if (savedConfig && savedConfig.members && savedConfig.members.length === members.length) {
+      console.log('✅ [saveFamilyConfig] Configuración familiar verificada');
+      return { success: true, verified: true };
+    }
+
+    return { success: true, verified: false };
+  } catch (error) {
+    console.error('❌ [saveFamilyConfig] Error:', error);
     throw error;
   }
 };

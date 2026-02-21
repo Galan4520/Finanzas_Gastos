@@ -1,9 +1,313 @@
 // ═══════════════════════════════════════════════════════════════
-// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v5.1
+// CÓDIGO COMPLETO PARA GOOGLE APPS SCRIPT v5.2
 // Sistema de Pagos con Tracking de MONTO PAGADO TOTAL
-// Incluye: PIN Security, SUSCRIPCIONES, CRUD, PERFIL y METAS DE AHORRO
-// 🆕 v5.1: Nueva hoja "Metas" para sistema de sobres virtuales
+// Incluye: PIN Security, SUSCRIPCIONES, CRUD, PERFIL, METAS DE AHORRO
+// 🆕 v5.2: Auto-migración de Schema + Self-Update vía Apps Script API
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// VERSIONAMIENTO Y AUTO-UPDATE
+// ═══════════════════════════════════════════════════════════════
+var GAS_VERSION = 1;
+var SCHEMA_VERSION = 1;
+var VERSION_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/gas-version.json';
+var CODE_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js';
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS DE MIGRACIÓN
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Asegura que una hoja exista. La crea si falta.
+ */
+function ensureSheet(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) {
+    sheet = ss.insertSheet(name);
+    Logger.log('Hoja creada: ' + name);
+  }
+  return sheet;
+}
+
+/**
+ * Escribe en una celda SOLO si está vacía (no sobreescribe datos del usuario).
+ */
+function ensureCell(sheet, cell, value) {
+  var current = sheet.getRange(cell).getValue();
+  if (!current && current !== 0 && current !== false) {
+    sheet.getRange(cell).setValue(value);
+  }
+}
+
+/**
+ * Asegura que la fila 1 tenga todos los headers esperados.
+ * Agrega headers faltantes al final, sin reordenar columnas existentes.
+ */
+function ensureHeaders(sheet, expectedHeaders) {
+  var lastCol = sheet.getLastColumn();
+  var existingHeaders = [];
+  if (lastCol > 0) {
+    existingHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
+      .map(function(h) { return h.toString().trim(); });
+  }
+
+  for (var i = 0; i < expectedHeaders.length; i++) {
+    var found = false;
+    for (var j = 0; j < existingHeaders.length; j++) {
+      if (existingHeaders[j] === expectedHeaders[i]) { found = true; break; }
+    }
+    if (!found) {
+      // Hoja vacía: escribir en posición correcta; hoja con datos: agregar al final
+      var col = (existingHeaders.length === 0) ? (i + 1) : (sheet.getLastColumn() + 1);
+      sheet.getRange(1, col).setValue(expectedHeaders[i]);
+      existingHeaders.push(expectedHeaders[i]);
+      Logger.log('Header agregado: "' + expectedHeaders[i] + '" en hoja "' + sheet.getName() + '"');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REGISTRO DE MIGRACIONES DE SCHEMA
+// ═══════════════════════════════════════════════════════════════
+var MIGRATIONS = [
+  {
+    version: 1,
+    description: 'Baseline v5.2 — todas las hojas, headers y Config cells',
+    migrate: function(ss) {
+      // --- Config ---
+      var config = ensureSheet(ss, 'Config');
+      ensureCell(config, 'A1', 'PIN');
+      ensureCell(config, 'B1', 'email_notificacion');
+      ensureCell(config, 'C1', 'dias_anticipacion');
+      ensureCell(config, 'D1', 'notificaciones_activas');
+      ensureCell(config, 'E1', 'last_email_sent');
+      ensureCell(config, 'F1', 'custom_cats_gastos');
+      ensureCell(config, 'G1', 'custom_cats_ingresos');
+      ensureCell(config, 'H1', 'schema_version');
+
+      // --- Tarjetas ---
+      var tarjetas = ensureSheet(ss, 'Tarjetas');
+      ensureHeaders(tarjetas, [
+        'Banco', 'Tipo_Tarjeta', 'Alias', 'URL_Imagen',
+        'Dia_Cierre', 'Dia_Pago', 'Limite', 'Credito_Disponible',
+        'Tea', 'Tipo_Cuenta', 'Timestamp'
+      ]);
+
+      // --- Gastos ---
+      var gastos = ensureSheet(ss, 'Gastos');
+      ensureHeaders(gastos, [
+        'Fecha', 'Categoria', 'Descripcion', 'Monto',
+        'Notas', 'Timestamp', 'Meta_ID', 'Cuenta', 'Tipo'
+      ]);
+
+      // --- Ingresos ---
+      var ingresos = ensureSheet(ss, 'Ingresos');
+      ensureHeaders(ingresos, [
+        'Fecha', 'Categoria', 'Descripcion', 'Monto',
+        'Notas', 'Timestamp', 'Meta_ID', 'Cuenta', 'Tipo'
+      ]);
+
+      // --- Gastos_Pendientes ---
+      var pendientes = ensureSheet(ss, 'Gastos_Pendientes');
+      ensureHeaders(pendientes, [
+        'ID', 'Fecha_Gasto', 'Tarjeta', 'Categoria', 'Descripcion',
+        'Monto', 'Fecha_Cierre', 'Fecha_Pago', 'Estado',
+        'Num_Cuotas', 'Cuotas_Pagadas', 'Monto_Pagado_Total',
+        'Tipo', 'Notas', 'Timestamp'
+      ]);
+
+      // --- Pagos ---
+      var pagos = ensureSheet(ss, 'Pagos');
+      ensureHeaders(pagos, [
+        'Fecha_Pago', 'ID_Gasto', 'Tarjeta', 'Descripcion_Gasto',
+        'Monto_Pagado', 'Tipo_Pago', 'Num_Cuota', 'Notas',
+        'Timestamp', 'Cuenta_Pago'
+      ]);
+
+      // --- Metas ---
+      var metas = ensureSheet(ss, 'Metas');
+      ensureHeaders(metas, [
+        'ID', 'Nombre', 'Monto_Objetivo', 'Monto_Ahorrado',
+        'Notas', 'Estado', 'Timestamp', 'Icono'
+      ]);
+
+      // --- Perfil ---
+      var perfil = ensureSheet(ss, 'Perfil');
+      ensureHeaders(perfil, ['avatar_id', 'nombre']);
+
+      // --- Propiedades_Disponibles (opcional) ---
+      ensureSheet(ss, 'Propiedades_Disponibles');
+    }
+  }
+  // Futuras migraciones:
+  // { version: 2, description: '...', migrate: function(ss) { ... } }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// FUNCIÓN DE MIGRACIÓN DE SCHEMA
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Ejecuta migraciones de schema pendientes.
+ * Se llama al inicio de doGet(). Idempotente y segura.
+ * Retorna la versión actual del schema después de migrar.
+ */
+function migrateSchema() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var config = ss.getSheetByName('Config');
+
+  // Si Config no existe, crearla con PIN por defecto
+  if (!config) {
+    config = ss.insertSheet('Config');
+    config.getRange('A1').setValue('PIN');
+    config.getRange('A2').setValue('1234');
+  }
+
+  // Leer versión actual del schema
+  var currentVersion = 0;
+  if (config.getRange('H1').getValue() === 'schema_version') {
+    currentVersion = parseInt(config.getRange('H2').getValue()) || 0;
+  }
+
+  // Ejecutar migraciones pendientes en orden
+  var lastSuccessful = currentVersion;
+  for (var i = 0; i < MIGRATIONS.length; i++) {
+    if (MIGRATIONS[i].version > currentVersion) {
+      try {
+        Logger.log('Ejecutando migración v' + MIGRATIONS[i].version + ': ' + MIGRATIONS[i].description);
+        MIGRATIONS[i].migrate(ss);
+        lastSuccessful = MIGRATIONS[i].version;
+      } catch (error) {
+        Logger.log('ERROR en migración v' + MIGRATIONS[i].version + ': ' + error.toString());
+        break; // Detener si una migración falla
+      }
+    }
+  }
+
+  // Actualizar versión almacenada
+  if (lastSuccessful > currentVersion) {
+    config.getRange('H1').setValue('schema_version');
+    config.getRange('H2').setValue(lastSuccessful);
+    Logger.log('Schema migrado de v' + currentVersion + ' a v' + lastSuccessful);
+  }
+
+  return lastSuccessful;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SELF-UPDATE — Auto-actualización del código GAS vía Apps Script API
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Verifica si hay una versión más nueva del código en GitHub.
+ * Si la hay, actualiza el proyecto GAS automáticamente.
+ * Throttle: solo checa 1 vez cada 24 horas.
+ * Falla silenciosamente — nunca bloquea el doGet.
+ */
+function checkForUpdate() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var config = ss.getSheetByName('Config');
+    if (!config) return;
+
+    // --- Throttle: solo checar cada 24h ---
+    var lastCheck = config.getRange('H3').getValue();
+    if (lastCheck) {
+      var lastCheckDate = new Date(lastCheck);
+      var now = new Date();
+      var hoursElapsed = (now - lastCheckDate) / (1000 * 60 * 60);
+      if (hoursElapsed < 24) return; // Ya chequeamos recientemente
+    }
+
+    // Registrar timestamp del check actual
+    config.getRange('H3').setValue(new Date().toISOString());
+
+    // --- 1. Fetch versión remota desde GitHub ---
+    var response = UrlFetchApp.fetch(VERSION_URL, { muteHttpExceptions: true });
+    if (response.getResponseCode() !== 200) return;
+
+    var remote = JSON.parse(response.getContentText());
+
+    // --- 2. Comparar con versión local ---
+    if (!remote.gas_version || remote.gas_version <= GAS_VERSION) return;
+
+    // --- 3. Fetch nuevo código ---
+    var codeUrl = remote.code_url || CODE_URL;
+    var codeResponse = UrlFetchApp.fetch(codeUrl, { muteHttpExceptions: true });
+    if (codeResponse.getResponseCode() !== 200) return;
+
+    var newCode = codeResponse.getContentText();
+
+    // --- 4. Actualizar propio proyecto vía Apps Script API ---
+    var scriptId = ScriptApp.getScriptId();
+    var apiUrl = 'https://script.googleapis.com/v1/projects/' + scriptId + '/content';
+
+    var manifestJson = JSON.stringify({
+      timeZone: 'America/Lima',
+      dependencies: {},
+      exceptionLogging: 'STACKDRIVER',
+      runtimeVersion: 'V8',
+      webapp: {
+        executeAs: 'USER_DEPLOYING',
+        access: 'ANYONE'
+      },
+      oauthScopes: [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/script.projects',
+        'https://www.googleapis.com/auth/script.external_request',
+        'https://www.googleapis.com/auth/gmail.send'
+      ]
+    });
+
+    var updateResponse = UrlFetchApp.fetch(apiUrl, {
+      method: 'put',
+      contentType: 'application/json',
+      headers: {
+        Authorization: 'Bearer ' + ScriptApp.getOAuthToken()
+      },
+      payload: JSON.stringify({
+        files: [
+          { name: 'Code', type: 'SERVER_JS', source: newCode },
+          { name: 'appsscript', type: 'JSON', source: manifestJson }
+        ]
+      }),
+      muteHttpExceptions: true
+    });
+
+    if (updateResponse.getResponseCode() === 200) {
+      Logger.log('Auto-update exitoso: v' + GAS_VERSION + ' → v' + remote.gas_version);
+
+      // Notificar al usuario por email (si tiene email configurado)
+      try {
+        var email = config.getRange('B2').getValue().toString().trim();
+        if (email) {
+          MailApp.sendEmail({
+            to: email,
+            subject: '✅ MoneyCrock actualizado a v' + remote.gas_version,
+            htmlBody: '<div style="font-family:Arial;max-width:500px;margin:0 auto;padding:20px;">' +
+              '<div style="background:linear-gradient(135deg,#10b981,#059669);padding:24px;border-radius:16px;text-align:center;">' +
+              '<h1 style="color:white;margin:0;">💳 MoneyCrock</h1>' +
+              '<p style="color:#d1fae5;margin:8px 0 0 0;">Tu aplicación fue actualizada automáticamente</p>' +
+              '</div>' +
+              '<div style="background:white;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 16px 16px;">' +
+              '<p style="color:#10b981;font-size:48px;margin:0;text-align:center;">✓</p>' +
+              '<h2 style="color:#1e293b;text-align:center;">Versión ' + remote.gas_version + '</h2>' +
+              '<p style="color:#64748b;text-align:center;">' + (remote.changelog || 'Mejoras y correcciones') + '</p>' +
+              '</div></div>'
+          });
+        }
+      } catch (mailErr) {
+        Logger.log('No se pudo enviar email de actualización: ' + mailErr.toString());
+      }
+    } else {
+      Logger.log('Auto-update falló (código ' + updateResponse.getResponseCode() + '): ' + updateResponse.getContentText());
+    }
+
+  } catch (e) {
+    Logger.log('checkForUpdate falló (no-blocking): ' + e.toString());
+    // Nunca bloquea — el doGet sigue funcionando normalmente
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // VALIDACIÓN DE PIN - SISTEMA DE SEGURIDAD
@@ -179,6 +483,41 @@ function doPost(e) {
       success: true,
       message: 'Configuración de notificaciones guardada'
     })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 👨‍👩‍👧 Guardar configuración del Plan Familiar — almacena members como JSON en B5
+  if (action === 'saveFamilyConfig') {
+    var ss2 = SpreadsheetApp.getActiveSpreadsheet();
+    var cfgSheet = ss2.getSheetByName('Config');
+    if (cfgSheet) {
+      var membersJson = params.members_json || '[]';
+      // Store members JSON in B5 (empty string if no members, to clear the cell)
+      var parsedMembers = JSON.parse(membersJson);
+      cfgSheet.getRange('B5').setValue(parsedMembers.length > 0 ? membersJson : '');
+      // Always clear legacy individual cells B6:B8
+      cfgSheet.getRange('B6').setValue('');
+      cfgSheet.getRange('B7').setValue('');
+      cfgSheet.getRange('B8').setValue('');
+    }
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      message: 'Configuración familiar guardada'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 🏷️ Guardar categorías personalizadas en Config F2 (gastos) y F3 (ingresos)
+  // NOTA: E1/E2 están reservadas para last_email_sent del sistema de notificaciones
+  if (action === 'saveCustomCategories') {
+    var ss3 = SpreadsheetApp.getActiveSpreadsheet();
+    var cfgSheet3 = ss3.getSheetByName('Config');
+    if (cfgSheet3) {
+      cfgSheet3.getRange('F1').setValue('custom_cats_gastos');
+      cfgSheet3.getRange('F2').setValue(params.gastos_custom || '[]');
+      cfgSheet3.getRange('G1').setValue('custom_cats_ingresos');
+      cfgSheet3.getRange('G2').setValue(params.ingresos_custom || '[]');
+    }
+    return ContentService.createTextOutput(JSON.stringify({ success: true }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
   // 📧 Enviar notificaciones manualmente
@@ -703,6 +1042,12 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
+  // 🔄 Auto-migrar schema (crea hojas/columnas faltantes)
+  var schemaVer = migrateSchema();
+
+  // 🔄 Auto-update del código GAS (checa GitHub cada 24h)
+  checkForUpdate();
+
   const sheet = SpreadsheetApp.getActiveSpreadsheet();
 
   // 🆕 Obtener Perfil
@@ -839,13 +1184,17 @@ function doGet(e) {
 
   // 🆕 Retornar JSON con perfil incluido
   return ContentService.createTextOutput(JSON.stringify({
+    gasVersion: GAS_VERSION,                   // 🔄 Versión del código GAS
+    schemaVersion: schemaVer,                  // 🔄 Versión del schema del Sheet
     profile: profile,  // null si no existe, o { avatar_id, nombre }
     cards: cards,
     pending: pending,
     history: history,
     goals: goals,                              // 🆕 Metas de ahorro
     availableProperties: availableProperties, // Catálogo de propiedades
-    notificationConfig: notificationConfig    // 📧 Config de notificaciones
+    notificationConfig: notificationConfig,   // 📧 Config de notificaciones
+    familyConfig: getFamilyConfig(),          // 👨‍👩‍👧 Plan Familiar
+    customCategories: getCustomCategories()   // 🏷️ Categorías personalizadas
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -985,6 +1334,44 @@ function getNotificationConfig() {
     notificacionesActivas: notificacionesActivas,
     lastEmailSent: lastEmailSent
   };
+}
+
+/**
+ * Lee la configuración del Plan Familiar desde la hoja Config.
+ * Nuevo formato: B5 contiene un JSON array de members.
+ * Backward compat: si B5 no es JSON, intenta leer el formato legacy (B5:B8 individuales).
+ */
+function getFamilyConfig() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var configSheet = ss.getSheetByName('Config');
+    if (!configSheet) return { members: [] };
+
+    var b5 = configSheet.getRange('B5').getValue().toString().trim();
+    if (!b5) return { members: [] };
+
+    // Try new JSON array format first
+    if (b5.startsWith('[')) {
+      try {
+        var members = JSON.parse(b5);
+        return { members: members };
+      } catch(parseErr) {
+        return { members: [] };
+      }
+    }
+
+    // Legacy format: B5=partnerUrl, B6=partnerPin, B7=partnerName, B8=partnerAvatarId
+    var partnerUrl = b5;
+    var partnerPin = configSheet.getRange('B6').getValue().toString().trim();
+    var partnerName = configSheet.getRange('B7').getValue().toString().trim();
+    var partnerAvatarId = configSheet.getRange('B8').getValue().toString().trim();
+    if (!partnerUrl) return { members: [] };
+    return {
+      members: [{ url: partnerUrl, pin: partnerPin, name: partnerName || 'Pareja', avatarId: partnerAvatarId || 'avatar_1' }]
+    };
+  } catch(e) {
+    return { members: [] };
+  }
 }
 
 /**
@@ -1303,4 +1690,25 @@ function generarReporteMensual(mes, anio) {
   }
 
   return reporte;
+}
+
+/**
+ * 🏷️ Lee categorías personalizadas desde Config F2 (gastos) y G2 (ingresos)
+ * NOTA: E1/E2 están reservadas para last_email_sent (sistema de notificaciones)
+ */
+function getCustomCategories() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var configSheet = ss.getSheetByName('Config');
+    if (!configSheet) return { gastos: [], ingresos: [] };
+    var gastosRaw = configSheet.getRange('F2').getValue().toString().trim();
+    var ingresosRaw = configSheet.getRange('G2').getValue().toString().trim();
+    var gastos = [];
+    var ingresos = [];
+    try { if (gastosRaw) gastos = JSON.parse(gastosRaw); } catch(e) {}
+    try { if (ingresosRaw) ingresos = JSON.parse(ingresosRaw); } catch(e) {}
+    return { gastos: gastos, ingresos: ingresos };
+  } catch(e) {
+    return { gastos: [], ingresos: [] };
+  }
 }

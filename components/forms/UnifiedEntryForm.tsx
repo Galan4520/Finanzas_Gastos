@@ -3,6 +3,7 @@ import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goa
 import { sendToSheet } from '../../services/googleSheetService';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
 import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info } from 'lucide-react';
+import { CategoryPicker } from '../ui/CategoryPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
 import { SubscriptionSelector } from './SubscriptionSelector';
@@ -20,11 +21,20 @@ interface UnifiedEntryFormProps {
   onSuccess: () => void;
   notify?: (msg: string, type: 'success' | 'error') => void;
   onRomperMeta?: (metaId: string, monto: number, cuenta?: string) => void;
+  customGastosCategories?: string[];
+  customIngresosCategories?: string[];
+  onAddCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
+  onRemoveCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
 }
 
 type EntryType = 'gasto' | 'ingreso' | 'tarjeta';
 
-export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, pin, cards, goals = [], history = [], pendingExpenses = [], onAddPending, onSuccess, notify, onRomperMeta }) => {
+export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
+  scriptUrl, pin, cards, goals = [], history = [], pendingExpenses = [],
+  onAddPending, onSuccess, notify, onRomperMeta,
+  customGastosCategories = [], customIngresosCategories = [],
+  onAddCustomCategory, onRemoveCustomCategory,
+}) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
   const [entryType, setEntryType] = useState<EntryType>('gasto');
@@ -658,10 +668,16 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({ scriptUrl, p
             {/* Category - always visible */}
             <div className="space-y-1">
               <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Categoría</label>
-              <select name="categoria" value={formData.categoria} onChange={handleChange} required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500`}>
-                <option value="">Selecciona...</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <CategoryPicker
+                value={formData.categoria}
+                onChange={cat => setFormData(prev => ({ ...prev, categoria: cat }))}
+                categories={categories}
+                customCategories={entryType === 'ingreso' ? customIngresosCategories : customGastosCategories}
+                tipo={entryType === 'ingreso' ? 'ingreso' : 'gasto'}
+                required
+                onAddCustomCategory={cat => onAddCustomCategory?.(cat, entryType === 'ingreso' ? 'ingreso' : 'gasto')}
+                onRemoveCustomCategory={cat => onRemoveCustomCategory?.(cat, entryType === 'ingreso' ? 'ingreso' : 'gasto')}
+              />
             </div>
 
             {/* Goal selector for income */}

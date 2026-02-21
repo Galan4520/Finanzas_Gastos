@@ -165,6 +165,24 @@ export interface RealEstateProperty {
   timestamp: string;
 }
 
+// Family Plan - single member
+export interface FamilyMember {
+  url: string;
+  pin: string;
+  name: string;
+  avatarId: string;
+}
+
+// Family Plan Config - supports multiple members
+export interface FamilyConfig {
+  members: FamilyMember[];
+  // Legacy fields (backward compat - auto-migrated on load)
+  partnerUrl?: string;
+  partnerPin?: string;
+  partnerName?: string;
+  partnerAvatarId?: string;
+}
+
 // User Profile
 export interface UserProfile {
   id: string;
@@ -175,6 +193,7 @@ export interface UserProfile {
     theme: 'light' | 'dark' | 'system';
     notifications: boolean;
   };
+  familyConfig?: FamilyConfig;
 }
 
 // Notification Config (from Google Sheet Config tab)

@@ -8,6 +8,7 @@ import { AssetsView } from './components/AssetsView';
 import { SettingsView } from './components/SettingsView';
 import { GoalsView } from './components/GoalsView';
 import { ReportsView } from './components/ReportsView';
+import { FamiliaView } from './components/FamiliaView';
 import { DebugPanel } from './components/DebugPanel';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
 import { EditSubscriptionModal } from './components/ui/EditSubscriptionModal';
@@ -15,7 +16,7 @@ import { EditTransactionModal } from './components/ui/EditTransactionModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Toast } from './components/ui/Toast';
 import { useTheme } from './contexts/ThemeContext';
-import { UserProfile, CreditCard, PendingExpense, Goal, Transaction, RealEstateInvestment, RealEstateProperty, NotificationConfig } from './types';
+import { UserProfile, CreditCard, PendingExpense, Goal, Transaction, RealEstateInvestment, RealEstateProperty, NotificationConfig, FamilyConfig, FamilyMember } from './types';
 import * as googleSheetService from './services/googleSheetService';
 import { normalizarDeuda, isDeudaVencida } from './utils/debtUtils';
 
@@ -79,6 +80,33 @@ function App() {
   const [availableProperties] = useState<RealEstateProperty[]>(MOCK_PROPERTIES);
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfig | null>(null);
 
+  // GAS version info (from doGet response)
+  const [gasVersion, setGasVersion] = useState<number | null>(null);
+  const [schemaVersion, setSchemaVersion] = useState<number | null>(null);
+
+  // Custom categories (user-created)
+  const [customGastosCategories, setCustomGastosCategories] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('customGastosCats') || '[]'); } catch { return []; }
+  });
+  const [customIngresosCategories, setCustomIngresosCategories] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('customIngresosCats') || '[]'); } catch { return []; }
+  });
+
+  // Family Plan State
+  const [familyConfig, setFamilyConfig] = useState<FamilyConfig | null>(() => {
+    const saved = localStorage.getItem('familyConfig');
+    if (!saved) return null;
+    const cfg = JSON.parse(saved) as FamilyConfig;
+    // Migrate legacy format (single partner) to new members array
+    if (!cfg.members && cfg.partnerUrl) {
+      return { members: [{ url: cfg.partnerUrl, pin: cfg.partnerPin || '', name: cfg.partnerName || 'Pareja', avatarId: cfg.partnerAvatarId || 'avatar_1' }] };
+    }
+    return cfg;
+  });
+  type MemberData = { history: Transaction[]; goals: Goal[]; cards: CreditCard[]; profile: UserProfile | null };
+  const [membersData, setMembersData] = useState<Record<string, MemberData>>({});
+  const [isSyncingPartner, setIsSyncingPartner] = useState(false);
+
   // UI State
   const [toast, setToast] = useState({ msg: '', type: 'success' as 'success' | 'error', visible: false });
   const [showProfileSetup, setShowProfileSetup] = useState(false);
@@ -116,6 +144,10 @@ function App() {
       const data = await googleSheetService.fetchData(scriptUrl, pin);
 
       if (data) {
+        // Track GAS & schema versions
+        if (data.gasVersion !== undefined) setGasVersion(data.gasVersion);
+        if (data.schemaVersion !== undefined) setSchemaVersion(data.schemaVersion);
+
         // Update state
         setCards(data.cards || []);
 
@@ -161,6 +193,32 @@ function App() {
         // Load notification config
         if (data.notificationConfig) {
           setNotificationConfig(data.notificationConfig);
+        }
+
+        // Load custom categories from sheet
+        if (data.customCategories) {
+          const gc: string[] = data.customCategories.gastos || [];
+          const ic: string[] = data.customCategories.ingresos || [];
+          if (gc.length > 0) { setCustomGastosCategories(gc); localStorage.setItem('customGastosCats', JSON.stringify(gc)); }
+          if (ic.length > 0) { setCustomIngresosCategories(ic); localStorage.setItem('customIngresosCats', JSON.stringify(ic)); }
+        }
+
+        // Load family config from sheet (persists across devices)
+        if (data.familyConfig) {
+          const fc: FamilyConfig = data.familyConfig;
+          const hasMembers = (fc.members && fc.members.length > 0) || fc.partnerUrl;
+          if (hasMembers) {
+            // Migrate legacy single-partner format
+            const normalized: FamilyConfig = fc.members
+              ? fc
+              : { members: [{ url: fc.partnerUrl!, pin: fc.partnerPin || '', name: fc.partnerName || 'Pareja', avatarId: fc.partnerAvatarId || 'avatar_1' }] };
+            setFamilyConfig(normalized);
+            localStorage.setItem('familyConfig', JSON.stringify(normalized));
+            // Auto-fetch members data if not loaded yet
+            if (Object.keys(membersData).length === 0) {
+              handleFetchPartnerData(normalized);
+            }
+          }
         }
 
         // Check for version migration or missing profile
@@ -422,6 +480,99 @@ function App() {
     setDeleteTarget(null);
   };
 
+  // Family Plan handlers
+  const normalizeMember = (data: any) => ({
+    history: data.history || [],
+    goals: (data.goals || []).map((g: any) => ({
+      id: g.id, nombre: g.nombre,
+      monto_objetivo: Number(g.monto_objetivo) || 0,
+      monto_ahorrado: Number(g.monto_ahorrado) || 0,
+      notas: g.notas || '', estado: g.estado || 'activa',
+      icono: g.icono || '', timestamp: g.timestamp
+    })),
+    cards: data.cards || [],
+    profile: data.profile ? { ...data.profile, id: data.profile.id || '' } : null
+  });
+
+  const handleFetchPartnerData = async (config: FamilyConfig) => {
+    const members = config.members || [];
+    if (members.length === 0) return;
+    setIsSyncingPartner(true);
+    try {
+      const results: Record<string, MemberData> = {};
+      await Promise.all(members.map(async (m: FamilyMember) => {
+        if (!m.url || !m.pin) return;
+        try {
+          const data = await googleSheetService.fetchData(m.url, m.pin);
+          results[m.name] = normalizeMember(data);
+        } catch {
+          // ignore individual member errors
+        }
+      }));
+      setMembersData(results);
+    } catch {
+      showToast('No se pudo conectar con uno o más miembros. Verifica URL y PIN.', 'error');
+    } finally {
+      setIsSyncingPartner(false);
+    }
+  };
+
+  const handleSaveFamilyConfig = async (config: FamilyConfig) => {
+    localStorage.setItem('familyConfig', JSON.stringify(config));
+    setFamilyConfig(config);
+    await handleFetchPartnerData(config);
+    if (scriptUrl && pin) {
+      googleSheetService.saveFamilyConfig(scriptUrl, pin, config).catch(() => {});
+    }
+  };
+
+  const handleDisconnectPartner = () => {
+    localStorage.removeItem('familyConfig');
+    setFamilyConfig(null);
+    setMembersData({});
+    // Clear family config from GAS sheet (B5:B8) so it doesn't re-load on other devices
+    if (scriptUrl && pin) {
+      googleSheetService.saveFamilyConfig(scriptUrl, pin, { members: [] }).catch(() => {});
+    }
+  };
+
+  // Custom category handlers
+  const handleAddCustomCategory = (cat: string, tipo: 'gasto' | 'ingreso') => {
+    if (tipo === 'gasto') {
+      const updated = [...customGastosCategories, cat];
+      setCustomGastosCategories(updated);
+      localStorage.setItem('customGastosCats', JSON.stringify(updated));
+      if (scriptUrl && pin) googleSheetService.saveCustomCategories(scriptUrl, pin, updated, customIngresosCategories).catch(() => {});
+    } else {
+      const updated = [...customIngresosCategories, cat];
+      setCustomIngresosCategories(updated);
+      localStorage.setItem('customIngresosCats', JSON.stringify(updated));
+      if (scriptUrl && pin) googleSheetService.saveCustomCategories(scriptUrl, pin, customGastosCategories, updated).catch(() => {});
+    }
+  };
+
+  const handleRemoveCustomCategory = (cat: string, tipo: 'gasto' | 'ingreso') => {
+    if (tipo === 'gasto') {
+      const updated = customGastosCategories.filter(c => c !== cat);
+      setCustomGastosCategories(updated);
+      localStorage.setItem('customGastosCats', JSON.stringify(updated));
+      if (scriptUrl && pin) googleSheetService.saveCustomCategories(scriptUrl, pin, updated, customIngresosCategories).catch(() => {});
+    } else {
+      const updated = customIngresosCategories.filter(c => c !== cat);
+      setCustomIngresosCategories(updated);
+      localStorage.setItem('customIngresosCats', JSON.stringify(updated));
+      if (scriptUrl && pin) googleSheetService.saveCustomCategories(scriptUrl, pin, customGastosCategories, updated).catch(() => {});
+    }
+  };
+
+  // Auto-load members data on start if family config exists
+  React.useEffect(() => {
+    if (familyConfig && Object.keys(membersData).length === 0) {
+      handleFetchPartnerData(familyConfig);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Render logic
   const renderContent = () => {
     const commonProps = { notify: showToast };
@@ -458,6 +609,10 @@ function App() {
             }}
             notify={showToast}
             onRomperMeta={romperMeta}
+            customGastosCategories={customGastosCategories}
+            customIngresosCategories={customIngresosCategories}
+            onAddCustomCategory={handleAddCustomCategory}
+            onRemoveCustomCategory={handleRemoveCustomCategory}
           />
         );
 
@@ -536,6 +691,23 @@ function App() {
         );
       }
 
+      case 'familia':
+        return (
+          <FamiliaView
+            myProfile={profile}
+            myHistory={history}
+            myGoals={goals}
+            myCards={cards}
+            familyConfig={familyConfig}
+            membersData={membersData}
+            isSyncingPartner={isSyncingPartner}
+            onSaveFamilyConfig={handleSaveFamilyConfig}
+            onDisconnectPartner={handleDisconnectPartner}
+            onRefreshPartner={() => familyConfig ? handleFetchPartnerData(familyConfig) : Promise.resolve()}
+            notify={showToast}
+          />
+        );
+
       case 'activos': // Assets Management
         return <AssetsView realEstateInvestments={realEstateInvestments} availableProperties={availableProperties} onAddProperty={handleAddRealEstateInvestment} notify={showToast} />;
 
@@ -559,6 +731,11 @@ function App() {
             onSendNotifications={handleSendNotifications}
             onSetupDailyTrigger={handleSetupDailyTrigger}
             notify={showToast}
+            familyConfig={familyConfig}
+            onDisconnectPartner={handleDisconnectPartner}
+            onNavigateToFamilia={() => setActiveTab('familia')}
+            gasVersion={gasVersion}
+            schemaVersion={schemaVersion}
           />
         );
 
@@ -600,6 +777,7 @@ function App() {
         isSyncing={isSyncing}
         lastSyncTime={lastSyncTime}
         profile={profile}
+        hasFamilyPlan={!!familyConfig}
       >
         {renderContent()}
       </Layout>

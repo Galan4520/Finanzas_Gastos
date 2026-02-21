@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { CreditCard as CreditCardType, UserProfile, NotificationConfig } from '../types';
+import { CreditCard as CreditCardType, UserProfile, NotificationConfig, FamilyConfig } from '../types';
 import { CardForm } from './forms/CardForm';
 import { NotificationSettings } from './NotificationSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { themes } from '../themes';
-import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell } from 'lucide-react';
+import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell, Users, Link2, Link2Off } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 import { getAvatarById } from '../avatars';
 
@@ -25,6 +25,11 @@ interface SettingsViewProps {
   onSendNotifications: () => Promise<{ enviado: boolean; verified: boolean; razon?: string }>;
   onSetupDailyTrigger: () => Promise<void>;
   notify: (msg: string, type: 'success' | 'error') => void;
+  familyConfig?: FamilyConfig | null;
+  onDisconnectPartner?: () => void;
+  onNavigateToFamilia?: () => void;
+  gasVersion?: number | null;
+  schemaVersion?: number | null;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -43,7 +48,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSendTestEmail,
   onSendNotifications,
   onSetupDailyTrigger,
-  notify
+  notify,
+  familyConfig,
+  onDisconnectPartner,
+  onNavigateToFamilia,
+  gasVersion,
+  schemaVersion
 }) => {
   const { theme } = useTheme();
   const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
@@ -185,6 +195,82 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   Para cambiar el PIN, actualiza la celda A2 en la hoja "Config" de tu Google Sheet
                 </p>
               </div>
+
+              {/* Plan Familiar */}
+              <div className={`pt-6 border-t ${theme.colors.border}`}>
+                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3 flex items-center gap-2`}>
+                  <Users size={16} /> Plan Familiar
+                </label>
+                {familyConfig ? (
+                  <div className={`${theme.colors.bgSecondary} rounded-xl border ${theme.colors.border} p-4 flex items-center justify-between`}>
+                    <div className="flex items-center gap-2">
+                      <Link2 size={16} className="text-green-400" />
+                      <div>
+                        <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{familyConfig.partnerName}</p>
+                        <p className={`text-xs ${theme.colors.textMuted}`}>Pareja conectada</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {onNavigateToFamilia && (
+                        <button onClick={onNavigateToFamilia} className="text-xs px-3 py-1.5 rounded-lg bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-all">
+                          Ver
+                        </button>
+                      )}
+                      {onDisconnectPartner && (
+                        <button onClick={onDisconnectPartner} className="p-1.5 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-all">
+                          <Link2Off size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className={`${theme.colors.bgSecondary} rounded-xl border ${theme.colors.border} p-4`}>
+                    <p className={`text-sm ${theme.colors.textMuted} mb-3`}>
+                      Conecta la cuenta de tu pareja para ver un resumen combinado de finanzas familiares.
+                    </p>
+                    {onNavigateToFamilia && (
+                      <button
+                        onClick={onNavigateToFamilia}
+                        className={`w-full py-2.5 rounded-xl font-bold text-white text-sm ${theme.colors.gradientPrimary} transition-all`}
+                      >
+                        Configurar Plan Familiar
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Version Info */}
+              {(gasVersion !== null || schemaVersion !== null) && (
+                <div className={`pt-6 border-t ${theme.colors.border}`}>
+                  <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3`}>
+                    Información del Sistema
+                  </label>
+                  <div className={`${theme.colors.bgSecondary} rounded-xl p-4 border ${theme.colors.border}`}>
+                    <div className="flex flex-wrap gap-4 text-xs font-mono">
+                      {gasVersion !== null && (
+                        <div>
+                          <span className={theme.colors.textMuted}>GAS</span>{' '}
+                          <span className={`${theme.colors.textPrimary} font-bold`}>v{gasVersion}</span>
+                        </div>
+                      )}
+                      {schemaVersion !== null && (
+                        <div>
+                          <span className={theme.colors.textMuted}>Schema</span>{' '}
+                          <span className={`${theme.colors.textPrimary} font-bold`}>v{schemaVersion}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className={theme.colors.textMuted}>App</span>{' '}
+                        <span className={`${theme.colors.textPrimary} font-bold`}>5.2</span>
+                      </div>
+                    </div>
+                    <p className={`text-xs ${theme.colors.textMuted} mt-2`}>
+                      El schema y código se actualizan automáticamente
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className={`pt-6 border-t ${theme.colors.border}`}>
                 <button
