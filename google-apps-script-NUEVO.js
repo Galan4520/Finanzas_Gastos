@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════════
 // VERSIONAMIENTO Y AUTO-UPDATE
 // ═══════════════════════════════════════════════════════════════
-var GAS_VERSION = 2;
+var GAS_VERSION = 3;
 var SCHEMA_VERSION = 1;
 var VERSION_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/gas-version.json';
 var CODE_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js';
@@ -275,7 +275,78 @@ function checkForUpdate() {
     });
 
     if (updateResponse.getResponseCode() === 200) {
-      Logger.log('Auto-update exitoso: v' + GAS_VERSION + ' → v' + remote.gas_version);
+      Logger.log('Código actualizado exitosamente: v' + GAS_VERSION + ' → v' + remote.gas_version);
+
+      // --- 5. Crear nueva versión del proyecto ---
+      var versionUrl = 'https://script.googleapis.com/v1/projects/' + scriptId + '/versions';
+      var versionResponse = UrlFetchApp.fetch(versionUrl, {
+        method: 'post',
+        contentType: 'application/json',
+        headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        payload: JSON.stringify({
+          description: 'Auto-update v' + remote.gas_version + ': ' + (remote.changelog || 'Mejoras')
+        }),
+        muteHttpExceptions: true
+      });
+
+      if (versionResponse.getResponseCode() === 200) {
+        var versionData = JSON.parse(versionResponse.getContentText());
+        var newVersionNumber = versionData.versionNumber;
+        Logger.log('Nueva versión creada: ' + newVersionNumber);
+
+        // --- 6. Actualizar el deployment web existente para que use la nueva versión ---
+        var deploymentsUrl = 'https://script.googleapis.com/v1/projects/' + scriptId + '/deployments';
+        var deploymentsResponse = UrlFetchApp.fetch(deploymentsUrl, {
+          method: 'get',
+          headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+          muteHttpExceptions: true
+        });
+
+        if (deploymentsResponse.getResponseCode() === 200) {
+          var deployments = JSON.parse(deploymentsResponse.getContentText()).deployments || [];
+          // Buscar el deployment web (no el HEAD deployment)
+          for (var d = 0; d < deployments.length; d++) {
+            var dep = deployments[d];
+            // El deployment web tiene entryPoints con type WEBAPP y NO es el HEAD deployment
+            if (dep.entryPoints) {
+              var isWebApp = false;
+              for (var ep = 0; ep < dep.entryPoints.length; ep++) {
+                if (dep.entryPoints[ep].entryPointType === 'WEB_APP') {
+                  isWebApp = true;
+                  break;
+                }
+              }
+              // Solo actualizar deployments web que no sean HEAD (tienen versionNumber en deploymentConfig)
+              if (isWebApp && dep.deploymentConfig && dep.deploymentConfig.versionNumber) {
+                var updateDepUrl = deploymentsUrl + '/' + dep.deploymentId;
+                var updateDepResponse = UrlFetchApp.fetch(updateDepUrl, {
+                  method: 'put',
+                  contentType: 'application/json',
+                  headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+                  payload: JSON.stringify({
+                    deploymentConfig: {
+                      scriptId: scriptId,
+                      versionNumber: newVersionNumber,
+                      description: 'Auto-update v' + remote.gas_version
+                    }
+                  }),
+                  muteHttpExceptions: true
+                });
+
+                if (updateDepResponse.getResponseCode() === 200) {
+                  Logger.log('Deployment ' + dep.deploymentId + ' actualizado a versión ' + newVersionNumber);
+                } else {
+                  Logger.log('Error actualizando deployment: ' + updateDepResponse.getContentText());
+                }
+              }
+            }
+          }
+        }
+      } else {
+        Logger.log('Error creando versión: ' + versionResponse.getContentText());
+      }
+
+      Logger.log('Auto-update completo: v' + GAS_VERSION + ' → v' + remote.gas_version);
 
       // Notificar al usuario por email (si tiene email configurado)
       try {
@@ -283,14 +354,14 @@ function checkForUpdate() {
         if (email) {
           MailApp.sendEmail({
             to: email,
-            subject: '✅ MoneyCrock actualizado a v' + remote.gas_version,
+            subject: 'MoneyCrock actualizado a v' + remote.gas_version,
             htmlBody: '<div style="font-family:Arial;max-width:500px;margin:0 auto;padding:20px;">' +
               '<div style="background:linear-gradient(135deg,#10b981,#059669);padding:24px;border-radius:16px;text-align:center;">' +
-              '<h1 style="color:white;margin:0;">💳 MoneyCrock</h1>' +
+              '<h1 style="color:white;margin:0;">MoneyCrock</h1>' +
               '<p style="color:#d1fae5;margin:8px 0 0 0;">Tu aplicación fue actualizada automáticamente</p>' +
               '</div>' +
               '<div style="background:white;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 16px 16px;">' +
-              '<p style="color:#10b981;font-size:48px;margin:0;text-align:center;">✓</p>' +
+              '<p style="color:#10b981;font-size:48px;margin:0;text-align:center;">OK</p>' +
               '<h2 style="color:#1e293b;text-align:center;">Versión ' + remote.gas_version + '</h2>' +
               '<p style="color:#64748b;text-align:center;">' + (remote.changelog || 'Mejoras y correcciones') + '</p>' +
               '</div></div>'
