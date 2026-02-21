@@ -1,5 +1,5 @@
 {
-  "gas_version": 1,
+  "gas_version": 2,
   "code_url": "https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js",
-  "changelog": "v5.2 — Auto-migración de Schema + Self-Update vía Apps Script API"
+  "changelog": "v5.2.1 — Test de auto-update exitoso"
 }

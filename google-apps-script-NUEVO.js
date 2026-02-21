@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════════
 // VERSIONAMIENTO Y AUTO-UPDATE
 // ═══════════════════════════════════════════════════════════════
-var GAS_VERSION = 1;
+var GAS_VERSION = 2;
 var SCHEMA_VERSION = 1;
 var VERSION_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/gas-version.json';
 var CODE_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js';
