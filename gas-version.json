@@ -1,5 +1,5 @@
 {
-  "gas_version": 3,
+  "gas_version": 4,
   "code_url": "https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js",
-  "changelog": "v5.2.2 — Fix: auto-update ahora actualiza el deployment web (no solo el código)"
+  "changelog": "v5.3 — Prueba de auto-update: verificar que el GAS se actualiza solo"
 }

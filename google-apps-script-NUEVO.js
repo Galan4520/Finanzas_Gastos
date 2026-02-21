@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════════
 // VERSIONAMIENTO Y AUTO-UPDATE
 // ═══════════════════════════════════════════════════════════════
-var GAS_VERSION = 3;
+var GAS_VERSION = 4;
 var SCHEMA_VERSION = 1;
 var VERSION_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/gas-version.json';
 var CODE_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js';
@@ -48,7 +48,7 @@ function ensureHeaders(sheet, expectedHeaders) {
   var existingHeaders = [];
   if (lastCol > 0) {
     existingHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0]
-      .map(function(h) { return h.toString().trim(); });
+      .map(function (h) { return h.toString().trim(); });
   }
 
   for (var i = 0; i < expectedHeaders.length; i++) {
@@ -73,7 +73,7 @@ var MIGRATIONS = [
   {
     version: 1,
     description: 'Baseline v5.2 — todas las hojas, headers y Config cells',
-    migrate: function(ss) {
+    migrate: function (ss) {
       // --- Config ---
       var config = ensureSheet(ss, 'Config');
       ensureCell(config, 'A1', 'PIN');
@@ -824,8 +824,8 @@ function doPost(e) {
       if (gastosSheet) {
         const tipoPagoDesc = params.tipo_pago === 'Suscripcion' ? 'Pago suscripción'
           : params.tipo_pago === 'Total' ? 'Liquidación total'
-          : params.tipo_pago === 'Cuota' ? 'Pago cuota'
-          : 'Pago parcial';
+            : params.tipo_pago === 'Cuota' ? 'Pago cuota'
+              : 'Pago parcial';
         const fecha = params.fecha_pago || new Date().toISOString().slice(0, 10);
         const ts = params.timestamp || new Date().toISOString();
         gastosSheet.appendRow([
@@ -1381,23 +1381,23 @@ function getNotificationConfig() {
   var notificacionesActivas = true;
 
   // Leer email (B2)
-  try { email = configSheet.getRange('B2').getValue().toString().trim(); } catch(e) {}
+  try { email = configSheet.getRange('B2').getValue().toString().trim(); } catch (e) { }
   // Leer días de anticipación (C2)
   try {
     var dias = parseInt(configSheet.getRange('C2').getValue());
     if (!isNaN(dias) && dias > 0) diasAnticipacion = dias;
-  } catch(e) {}
+  } catch (e) { }
   // Leer si notificaciones están activas (D2)
   try {
     var activas = configSheet.getRange('D2').getValue();
     if (activas === false || activas === 'false' || activas === 'no' || activas === 0) {
       notificacionesActivas = false;
     }
-  } catch(e) {}
+  } catch (e) { }
 
   // Leer último email enviado (E2)
   var lastEmailSent = '';
-  try { lastEmailSent = configSheet.getRange('E2').getValue().toString().trim(); } catch(e) {}
+  try { lastEmailSent = configSheet.getRange('E2').getValue().toString().trim(); } catch (e) { }
 
   return {
     email: email,
@@ -1426,7 +1426,7 @@ function getFamilyConfig() {
       try {
         var members = JSON.parse(b5);
         return { members: members };
-      } catch(parseErr) {
+      } catch (parseErr) {
         return { members: [] };
       }
     }
@@ -1440,7 +1440,7 @@ function getFamilyConfig() {
     return {
       members: [{ url: partnerUrl, pin: partnerPin, name: partnerName || 'Pareja', avatarId: partnerAvatarId || 'avatar_1' }]
     };
-  } catch(e) {
+  } catch (e) {
     return { members: [] };
   }
 }
@@ -1776,10 +1776,10 @@ function getCustomCategories() {
     var ingresosRaw = configSheet.getRange('G2').getValue().toString().trim();
     var gastos = [];
     var ingresos = [];
-    try { if (gastosRaw) gastos = JSON.parse(gastosRaw); } catch(e) {}
-    try { if (ingresosRaw) ingresos = JSON.parse(ingresosRaw); } catch(e) {}
+    try { if (gastosRaw) gastos = JSON.parse(gastosRaw); } catch (e) { }
+    try { if (ingresosRaw) ingresos = JSON.parse(ingresosRaw); } catch (e) { }
     return { gastos: gastos, ingresos: ingresos };
-  } catch(e) {
+  } catch (e) {
     return { gastos: [], ingresos: [] };
   }
 }
