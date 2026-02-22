@@ -11,6 +11,7 @@ import { ReportsView } from './components/ReportsView';
 import { FamiliaView } from './components/FamiliaView';
 import { DebugPanel } from './components/DebugPanel';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
+import { OnboardingWizard } from './components/OnboardingWizard';
 import { EditSubscriptionModal } from './components/ui/EditSubscriptionModal';
 import { EditTransactionModal } from './components/ui/EditTransactionModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
@@ -110,6 +111,7 @@ function App() {
   // UI State
   const [toast, setToast] = useState({ msg: '', type: 'success' as 'success' | 'error', visible: false });
   const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<PendingExpense | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'subscription' | 'card' | 'transaction', item: PendingExpense | CreditCard | Transaction } | null>(null);
@@ -243,6 +245,14 @@ function App() {
           }
         }
 
+        // Detect first-time user: no cards AND no history → show onboarding
+        const isFirstTime = (data.cards || []).length === 0
+          && (data.history || []).length === 0
+          && !localStorage.getItem('onboarding_completed');
+        if (isFirstTime && !showProfileSetup) {
+          setShowOnboarding(true);
+        }
+
         setLastSyncTime(new Date());
 
         // Cache data (optional but good for offline)
@@ -340,6 +350,13 @@ function App() {
   const handleAddRealEstateInvestment = (investment: RealEstateInvestment) => {
     setRealEstateInvestments(prev => [...prev, investment]);
     showToast('Propiedad agregada correctamente', 'success');
+  };
+
+  // Onboarding Complete
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('onboarding_completed', 'true');
+    setShowOnboarding(false);
+    handleSync();
   };
 
   // Profile Save
@@ -802,6 +819,15 @@ function App() {
         <ProfileSetupModal
           isOpen={showProfileSetup}
           onSave={handleProfileSave}
+        />
+      )}
+
+      {/* Onboarding Wizard */}
+      {showOnboarding && !showProfileSetup && (
+        <OnboardingWizard
+          scriptUrl={scriptUrl}
+          pin={pin}
+          onComplete={handleOnboardingComplete}
         />
       )}
 

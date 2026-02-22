@@ -8,6 +8,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { FamilyConfig, FamilyMember, Transaction, Goal, CreditCard as CreditCardType, UserProfile } from '../types';
 import { getAvatarById } from '../avatars';
+import { AvatarSvg } from './ui/AvatarSvg';
 import { formatCurrency } from '../utils/format';
 import {
   faCar, faPlane, faHouse, faGraduationCap, faShield, faBriefcase,
@@ -244,7 +245,7 @@ const PersonView: React.FC<{
       {/* Person header */}
       <div className="flex items-center gap-3">
         {avatar ? (
-          <img src={avatar.imagePath} alt={avatar.label} className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm" />
+          <AvatarSvg avatarId={avatar.id} size={40} className="border-2 border-white shadow-sm" />
         ) : (
           <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: `${ownerColor}30` }}>
             <User size={20} style={{ color: ownerColor }} />

@@ -7,6 +7,7 @@ import { themes } from '../themes';
 import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell, Users, Link2, Link2Off } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 import { getAvatarById } from '../avatars';
+import { AvatarSvg } from './ui/AvatarSvg';
 
 interface SettingsViewProps {
   scriptUrl: string;
@@ -105,11 +106,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               {profile && avatar && (
                 <div className={`${theme.colors.bgSecondary} p-4 rounded-xl border ${theme.colors.border} flex items-center gap-4`}>
                   <div className="relative">
-                    <img
-                      src={avatar.imagePath}
-                      alt={avatar.label}
-                      className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md"
-                    />
+                    <AvatarSvg avatarId={avatar.id} size={64} className="border-4 border-white shadow-md" />
                     <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
                   </div>
                   <div>

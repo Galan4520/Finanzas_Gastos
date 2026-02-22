@@ -4,6 +4,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { UserProfile } from '../types';
 import { getAvatarById } from '../avatars';
+import { AvatarSvg } from './ui/AvatarSvg';
 
 interface NavItemProps {
   id: string;
@@ -121,11 +122,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           {profile && avatar && (
             <div className={`flex items-center gap-3 p-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary}`}>
               <div className="relative">
-                <img
-                  src={avatar.imagePath}
-                  alt={avatar.label}
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
-                />
+                <AvatarSvg avatarId={avatar.id} size={40} className="border-2 border-white shadow-sm" />
                 <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
               </div>
               <div className="overflow-hidden">
@@ -167,11 +164,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       <div className={`md:hidden p-4 flex justify-between items-center ${theme.colors.bgCard} backdrop-blur-lg sticky top-0 z-30 border-b ${theme.colors.border}`}>
         <div className="flex items-center gap-3">
           {profile && avatar ? (
-            <img
-              src={avatar.imagePath}
-              alt={avatar.label}
-              className="w-8 h-8 rounded-full object-cover border border-gray-200"
-            />
+            <AvatarSvg avatarId={avatar.id} size={32} className="border border-gray-200" />
           ) : (
             <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
               <span className="font-bold text-white">MC</span>

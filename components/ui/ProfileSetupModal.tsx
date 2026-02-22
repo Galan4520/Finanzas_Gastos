@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { avatars, Avatar } from '../../avatars';
+import { AvatarSvg } from './AvatarSvg';
 
 interface ProfileSetupModalProps {
     isOpen: boolean;
@@ -64,31 +65,22 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ isOpen, on
                                 <button
                                     key={avatar.id}
                                     onClick={() => setSelectedAvatar(avatar.id)}
-                                    className={`relative group aspect-square rounded-xl overflow-hidden border-3 transition-all duration-300 transform hover:scale-105 ${selectedAvatar === avatar.id
-                                            ? 'border-teal-500 ring-4 ring-teal-500/30 scale-105'
-                                            : `${theme.colors.border} hover:border-teal-400`
+                                    className={`relative group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all duration-300 transform hover:scale-105 border-2 ${selectedAvatar === avatar.id
+                                            ? 'border-teal-500 ring-4 ring-teal-500/30 scale-105 bg-teal-500/10'
+                                            : `border-transparent hover:border-teal-400/50 ${theme.colors.bgSecondary}`
                                         }`}
                                 >
-                                    <img
-                                        src={avatar.imagePath}
-                                        alt={avatar.label}
-                                        className="w-full h-full object-cover"
-                                    />
-                                    {/* Selected check mark */}
+                                    <AvatarSvg avatarId={avatar.id} size={56} className="shadow-lg" />
+                                    <span className={`text-[10px] font-semibold ${selectedAvatar === avatar.id ? 'text-teal-400' : theme.colors.textMuted}`}>
+                                        {avatar.label}
+                                    </span>
                                     {selectedAvatar === avatar.id && (
-                                        <div className="absolute inset-0 bg-teal-500/30 flex items-center justify-center">
-                                            <div className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center shadow-lg">
-                                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                            </div>
+                                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center shadow-lg">
+                                            <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                            </svg>
                                         </div>
                                     )}
-                                    {/* Hover label */}
-                                    <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2 transform transition-transform ${selectedAvatar === avatar.id ? 'translate-y-0' : 'translate-y-full group-hover:translate-y-0'
-                                        }`}>
-                                        <span className="text-white text-[10px] font-semibold">{avatar.label}</span>
-                                    </div>
                                 </button>
                             ))}
                         </div>
