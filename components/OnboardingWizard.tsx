@@ -398,6 +398,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                   <>
                     <input
                       type="number"
+                      max="99999999"
                       value={cardForm.limite}
                       onChange={e => setCardForm({ ...cardForm, limite: e.target.value })}
                       placeholder="Limite de credito (S/.)"
@@ -480,6 +481,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400/60 text-sm font-medium">S/.</span>
                 <input
                   type="number"
+                  max="99999999"
                   value={billetera}
                   onChange={e => setBilletera(e.target.value)}
                   placeholder="0.00"
@@ -504,6 +506,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sky-400/60 text-sm font-medium">S/.</span>
                         <input
                           type="number"
+                          max="99999999"
                           value={balances[card.alias] || ''}
                           onChange={e => setBalances({ ...balances, [card.alias]: e.target.value })}
                           placeholder="0.00"
@@ -568,6 +571,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-violet-400/60 text-sm font-medium">S/.</span>
                             <input
                               type="number"
+                              max="99999999"
                               value={debts[card.alias] || ''}
                               onChange={e => setDebts({ ...debts, [card.alias]: e.target.value })}
                               placeholder="0.00"
@@ -578,7 +582,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
 
                         {/* Timing radio — only show if debt > 0 */}
                         {Number(debts[card.alias]) > 0 && (
-                          <div className="px-4 pb-4">
+                          <div className="px-4 pb-3">
                             <div className="flex items-center gap-1.5 mb-2">
                               <Calendar size={12} className="text-violet-400/60" />
                               <span className="text-violet-300/60 text-xs">Cuando lo tienes que pagar?</span>
@@ -627,6 +631,15 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                                 </div>
                               </label>
                             </div>
+                          </div>
+                        )}
+
+                        {/* Tip: cuotas se detallan después */}
+                        {Number(debts[card.alias]) > 0 && (
+                          <div className="px-4 pb-4">
+                            <p className="text-violet-300/40 text-[10px] text-center">
+                              Si tienes compras en cuotas, podras detallarlas despues en la seccion Deudas
+                            </p>
                           </div>
                         )}
                       </div>

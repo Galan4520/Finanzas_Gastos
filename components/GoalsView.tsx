@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Transaction, Goal, CreditCard, getCardType } from '../types';
-import { formatCurrency, getLocalISOString } from '../utils/format';
+import { formatCurrency, formatCompact, getLocalISOString } from '../utils/format';
 import { Target, Plus, Trash2, Edit2, Save, X, PiggyBank, ArrowUpRight, CheckCircle, TrendingUp, Zap } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -336,7 +336,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                   </div>
                   <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wide`}>Apartado</p>
                 </div>
-                <p className={`text-lg font-mono font-bold ${textColors.primary}`}>{formatCurrency(totalApartado)}</p>
+                <p className={`text-base sm:text-lg font-mono font-bold truncate ${textColors.primary}`}>{formatCompact(totalApartado)}</p>
                 <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>en {activeGoals.length} meta{activeGoals.length !== 1 ? 's' : ''}</p>
               </div>
 
@@ -348,8 +348,8 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                   </div>
                   <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wide`}>Saldo libre</p>
                 </div>
-                <p className={`text-lg font-mono font-bold ${totalSaldoLibre >= 0 ? theme.colors.textPrimary : 'text-rose-400'}`}>
-                  {formatCurrency(Math.max(0, totalSaldoLibre))}
+                <p className={`text-base sm:text-lg font-mono font-bold truncate ${totalSaldoLibre >= 0 ? theme.colors.textPrimary : 'text-rose-400'}`}>
+                  {formatCompact(Math.max(0, totalSaldoLibre))}
                 </p>
                 <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>disponible</p>
               </div>
@@ -362,7 +362,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                   </div>
                   <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wide`}>Objetivo</p>
                 </div>
-                <p className={`text-lg font-mono font-bold ${theme.colors.textPrimary}`}>{formatCurrency(totalObjetivo)}</p>
+                <p className={`text-base sm:text-lg font-mono font-bold truncate ${theme.colors.textPrimary}`}>{formatCompact(totalObjetivo)}</p>
                 <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>falta {formatCurrency(Math.max(0, totalObjetivo - totalApartado))}</p>
               </div>
 
@@ -473,7 +473,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>Monto objetivo (S/)</label>
-                <input type="number" value={formData.monto_objetivo || ''} onChange={e => setFormData(prev => ({ ...prev, monto_objetivo: parseFloat(e.target.value) || 0 }))} placeholder="20000" className={`${inputClass} font-mono`} />
+                <input type="number" max="99999999" value={formData.monto_objetivo || ''} onChange={e => setFormData(prev => ({ ...prev, monto_objetivo: parseFloat(e.target.value) || 0 }))} placeholder="20000" className={`${inputClass} font-mono`} />
               </div>
               <div>
                 <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>Notas (opcional)</label>
@@ -541,11 +541,11 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                         <div className="flex justify-between items-end mb-3">
                           <div>
                             <p className={`text-[10px] ${theme.colors.textMuted} uppercase tracking-wide`}>Ahorrado</p>
-                            <p className={`text-2xl font-mono font-bold`} style={{ color: goalMeta.accent }}>{formatCurrency(goal.monto_ahorrado)}</p>
+                            <p className={`text-lg sm:text-2xl font-mono font-bold truncate`} style={{ color: goalMeta.accent }}>{formatCompact(goal.monto_ahorrado)}</p>
                           </div>
                           <div className="text-right">
                             <p className={`text-[10px] ${theme.colors.textMuted} uppercase tracking-wide`}>Objetivo</p>
-                            <p className={`text-sm font-mono ${theme.colors.textMuted}`}>{formatCurrency(goal.monto_objetivo)}</p>
+                            <p className={`text-sm font-mono truncate ${theme.colors.textMuted}`}>{formatCompact(goal.monto_objetivo)}</p>
                           </div>
                         </div>
 
@@ -585,7 +585,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                               <div className="relative flex-1">
                                 <span className={`absolute left-3 top-2.5 text-sm ${theme.colors.textMuted}`}>S/</span>
                                 <input
-                                  type="number" value={contributeAmount}
+                                  type="number" max="99999999" value={contributeAmount}
                                   onChange={e => { setContributeAmount(e.target.value); setContributeError(''); }}
                                   placeholder="0.00" autoFocus
                                   className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg pl-8 pr-3 py-2 text-sm ${theme.colors.textPrimary} font-mono outline-none focus:ring-2 focus:ring-current`}

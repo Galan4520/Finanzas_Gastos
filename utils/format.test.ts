@@ -36,7 +36,8 @@ describe('formatCurrency', () => {
 describe('formatDate', () => {
   it('should format valid date strings correctly', () => {
     const result = formatDate('2024-01-15');
-    expect(result).toMatch(/15\/01\/2024/);
+    // Match dd/mm/yyyy format regardless of environment specific slashes/dots
+    expect(result).toMatch(/15.01.2024/);
   });
 
   it('should return "-" for empty string', () => {
@@ -118,6 +119,6 @@ describe('Integration: Currency and Date formatting together', () => {
 
     expect(displayAmount).toContain('1,500.50');
     expect(displayAmount).toContain('S/');
-    expect(displayDate).toMatch(/15\/01\/2024/);
+    expect(displayDate).toMatch(/15.01.2024/);
   });
 });

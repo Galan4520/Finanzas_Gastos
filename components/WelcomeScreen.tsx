@@ -169,7 +169,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
                 </a>
               </SubStep>
               <SubStep label="A2." color="text-blue-400">
-                <p>Ponle nombre: <em className="text-emerald-400">"MoneyCrock"</em> y clic en <strong className="text-white">Crear</strong></p>
+                <p>Ponle nombre: <em className="text-emerald-400">"Yunai"</em> y clic en <strong className="text-white">Crear</strong></p>
               </SubStep>
               <SubStep label="A3." color="text-blue-400">
                 <p>Ve a <strong className="text-white">Configuracion del proyecto</strong> y copia el <strong className="text-emerald-400">"Numero de proyecto"</strong> (es un numero largo)</p>
@@ -186,7 +186,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             </h4>
             <div className="space-y-2">
               <SubStep label="B1." color="text-purple-400">
-                <p>Abre este link directo (asegurate de tener seleccionado tu proyecto "MoneyCrock"):</p>
+                <p>Abre este link directo (asegurate de tener seleccionado tu proyecto "Yunai"):</p>
                 <a href="https://console.cloud.google.com/apis/library/script.googleapis.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 underline text-xs mt-1">
                   <ExternalLink size={10} /> Habilitar Apps Script API
                 </a>
@@ -535,11 +535,11 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
           <div className="relative z-10">
             {/* Logo */}
             <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <Wallet className="w-12 h-12 text-white" strokeWidth={2.5} />
+              <span className="text-5xl">🦗</span>
             </div>
 
             {/* Title */}
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">MoneyCrock</h1>
+            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Yunai</h1>
             <p className="text-emerald-50 text-sm font-medium">Tu gestor de finanzas personales</p>
           </div>
         </div>

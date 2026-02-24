@@ -327,6 +327,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
               type="number"
               name="limite"
               step="0.01"
+              max="99999999"
               value={formData.limite || ''}
               onChange={handleChange}
               required

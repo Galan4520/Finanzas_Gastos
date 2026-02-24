@@ -111,10 +111,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <div className="mb-8 px-2">
           <div className="flex items-center gap-2 mb-6">
             <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center shadow-lg`}>
-              <span className="font-bold text-white text-lg">MC</span>
+              <span className="text-lg">🦗</span>
             </div>
             <h1 className={`text-xl font-bold ${theme.colors.textPrimary}`}>
-              MoneyCrock
+              Yunai
             </h1>
           </div>
 
@@ -167,10 +167,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
             <AvatarSvg avatarId={avatar.id} size={32} className="border border-gray-200" />
           ) : (
             <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
-              <span className="font-bold text-white">MC</span>
+              <span className="text-lg">🦗</span>
             </div>
           )}
-          <span className="font-bold text-lg">{profile ? `Hola, ${profile.nombre}` : 'MoneyCrock'}</span>
+          <span className="font-bold text-lg">{profile ? `Hola, ${profile.nombre}` : 'Yunai'}</span>
         </div>
         <div className="flex items-center gap-1">
           {hasFamilyPlan && (

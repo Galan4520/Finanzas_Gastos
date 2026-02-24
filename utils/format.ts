@@ -7,6 +7,29 @@ export const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
+/**
+ * Formato compacto para displays con espacio limitado.
+ * < 10K: "S/ 9,999.99" (completo)
+ * 10K–999K: "S/ 25.3K"
+ * 1M+: "S/ 1.2M"
+ */
+export const formatCompact = (amount: number): string => {
+  const abs = Math.abs(amount);
+  const sign = amount < 0 ? '-' : '';
+
+  if (abs < 10_000) {
+    return formatCurrency(amount);
+  }
+  if (abs < 1_000_000) {
+    const k = abs / 1_000;
+    const formatted = k % 1 === 0 ? k.toFixed(0) : k.toFixed(1);
+    return `${sign}S/ ${formatted}K`;
+  }
+  const m = abs / 1_000_000;
+  const formatted = m % 1 === 0 ? m.toFixed(0) : m.toFixed(1);
+  return `${sign}S/ ${formatted}M`;
+};
+
 export const formatDate = (dateString: string) => {
   if (!dateString) return '-';
   const date = new Date(dateString);

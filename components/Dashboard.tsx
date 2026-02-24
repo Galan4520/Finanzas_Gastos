@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { CreditCard, PendingExpense, Transaction, Goal, RealEstateInvestment, getCardType } from '../types';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatCompact } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home, Pencil, Trash2, Calendar } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -621,16 +621,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             {/* Inversión Total */}
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Inversión Total</p>
-              <p className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                {formatCurrency(assetsMetrics.totalInversion)}
+              <p className={`text-base sm:text-xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+                {formatCompact(assetsMetrics.totalInversion)}
               </p>
             </div>
 
             {/* Valor Actual */}
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Valor Actual</p>
-              <p className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                {formatCurrency(assetsMetrics.totalValorActual)}
+              <p className={`text-base sm:text-xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+                {formatCompact(assetsMetrics.totalValorActual)}
               </p>
             </div>
 
@@ -638,8 +638,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Plusvalía</p>
               <div className="flex items-center gap-2">
-                <p className={`text-xl font-mono font-bold ${assetsMetrics.plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {assetsMetrics.plusvalia >= 0 ? '+' : ''}{formatCurrency(assetsMetrics.plusvalia)}
+                <p className={`text-base sm:text-xl font-mono font-bold truncate ${assetsMetrics.plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  {assetsMetrics.plusvalia >= 0 ? '+' : ''}{formatCompact(assetsMetrics.plusvalia)}
                 </p>
                 {assetsMetrics.plusvalia !== 0 && (
                   <span className={`text-xs font-bold ${assetsMetrics.plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -652,8 +652,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             {/* Ingresos por Renta */}
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Renta Mensual</p>
-              <p className={`text-xl font-mono font-bold ${assetsMetrics.totalRentaMensual > 0 ? 'text-emerald-500' : theme.colors.textPrimary}`}>
-                {formatCurrency(assetsMetrics.totalRentaMensual)}
+              <p className={`text-base sm:text-xl font-mono font-bold truncate ${assetsMetrics.totalRentaMensual > 0 ? 'text-emerald-500' : theme.colors.textPrimary}`}>
+                {formatCompact(assetsMetrics.totalRentaMensual)}
               </p>
             </div>
           </div>
@@ -705,15 +705,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           <div className="space-y-4">
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Esta semana</p>
-              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                {formatCurrency(weeklyComparison.thisWeek)}
+              <p className={`text-xl sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+                {formatCompact(weeklyComparison.thisWeek)}
               </p>
             </div>
 
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Semana pasada</p>
-              <p className={`text-lg font-mono font-bold ${theme.colors.textSecondary}`}>
-                {formatCurrency(weeklyComparison.lastWeek)}
+              <p className={`text-lg font-mono font-bold truncate ${theme.colors.textSecondary}`}>
+                {formatCompact(weeklyComparison.lastWeek)}
               </p>
             </div>
 
@@ -757,8 +757,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           <div className="space-y-4">
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total a pagar</p>
-              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                {formatCurrency(cardPayments.thisMonth.total)}
+              <p className={`text-xl sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+                {formatCompact(cardPayments.thisMonth.total)}
               </p>
             </div>
 
@@ -815,8 +815,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           <div className="space-y-4">
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total estimado</p>
-              <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-                {formatCurrency(cardPayments.nextMonth.total)}
+              <p className={`text-xl sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+                {formatCompact(cardPayments.nextMonth.total)}
               </p>
             </div>
 
@@ -923,7 +923,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                             <p className={`text-xs ${theme.colors.textMuted}`}>{percentage.toFixed(1)}% del total</p>
                           </div>
                         </div>
-                        <p className={`font-bold font-mono text-lg ${theme.colors.textPrimary}`}>{formatCurrency(card.value)}</p>
+                        <p className={`font-bold font-mono text-base sm:text-lg truncate ${theme.colors.textPrimary}`}>{formatCompact(card.value)}</p>
                       </div>
                       <div className={`w-full h-2 rounded-full overflow-hidden`} style={{ backgroundColor: `${COLORS[index % COLORS.length]}15` }}>
                         <div
@@ -961,10 +961,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </div>
 
         <div className="mb-4">
-          <p className={`text-4xl font-mono font-bold ${
+          <p className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold truncate ${
             currentStats.balanceTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'
           }`}>
-            {formatCurrency(currentStats.balanceTotal)}
+            {formatCompact(currentStats.balanceTotal)}
           </p>
         </div>
 
@@ -974,8 +974,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               <ArrowUpRight className="text-emerald-500" size={14} />
               <p className={`text-xs ${theme.colors.textMuted}`}>Total Ingresos</p>
             </div>
-            <p className={`text-lg font-mono font-bold ${theme.colors.textPrimary}`}>
-              {formatCurrency(currentStats.ingresosTotal)}
+            <p className={`text-base sm:text-lg font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              {formatCompact(currentStats.ingresosTotal)}
             </p>
           </div>
           <div>
@@ -983,8 +983,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               <ArrowDownRight className="text-rose-500" size={14} />
               <p className={`text-xs ${theme.colors.textMuted}`}>Total Gastos</p>
             </div>
-            <p className={`text-lg font-mono font-bold ${theme.colors.textPrimary}`}>
-              {formatCurrency(currentStats.gastosTotal)}
+            <p className={`text-base sm:text-lg font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              {formatCompact(currentStats.gastosTotal)}
             </p>
           </div>
         </div>
@@ -1001,7 +1001,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </div>
               <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>Billetera Física</span>
             </div>
-            <span className={`text-sm font-mono font-bold ${accountBreakdown.billeteraBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            <span className={`text-sm font-mono font-bold truncate ${accountBreakdown.billeteraBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
               {formatCurrency(accountBreakdown.billeteraBalance)}
             </span>
           </div>
@@ -1017,7 +1017,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                   <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco}</span>
                 </div>
               </div>
-              <span className={`text-sm font-mono font-bold ${acc.balance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <span className={`text-sm font-mono font-bold truncate ${acc.balance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                 {formatCurrency(acc.balance)}
               </span>
             </div>
@@ -1040,7 +1040,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                       )}
                     </div>
                   </div>
-                  <span className="text-sm font-mono font-bold text-purple-400">
+                  <span className="text-sm font-mono font-bold truncate text-purple-400">
                     {formatCurrency(acc.disponible)}
                   </span>
                 </div>
@@ -1068,7 +1068,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </div>
               <div className="text-right">
                 <p className={`text-[10px] ${theme.colors.textMuted}`}>Saldo Disponible</p>
-                <p className={`text-sm font-mono font-bold ${saldoDisponible >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                <p className={`text-sm font-mono font-bold truncate ${saldoDisponible >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                   {formatCurrency(saldoDisponible)}
                 </p>
               </div>
@@ -1301,7 +1301,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                           <span className={`text-xs ${theme.colors.textMuted}`}>{percentage.toFixed(0)}%</span>
-                          <span className={`font-bold text-sm font-mono ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
+                          <span className={`font-bold text-sm font-mono truncate ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
                         </div>
                       </div>
                     );

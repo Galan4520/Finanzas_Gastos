@@ -12,6 +12,8 @@ import { FamiliaView } from './components/FamiliaView';
 import { DebugPanel } from './components/DebugPanel';
 import { ProfileSetupModal } from './components/ui/ProfileSetupModal';
 import { OnboardingWizard } from './components/OnboardingWizard';
+import { BankGuideModal } from './components/ui/BankGuideModal';
+import { BillingEducationModal } from './components/ui/BillingEducationModal';
 import { EditSubscriptionModal } from './components/ui/EditSubscriptionModal';
 import { EditTransactionModal } from './components/ui/EditTransactionModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
@@ -112,6 +114,8 @@ function App() {
   const [toast, setToast] = useState({ msg: '', type: 'success' as 'success' | 'error', visible: false });
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showBankGuide, setShowBankGuide] = useState(false);
+  const [showBillingEducation, setShowBillingEducation] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<PendingExpense | null>(null);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'subscription' | 'card' | 'transaction', item: PendingExpense | CreditCard | Transaction } | null>(null);
@@ -133,6 +137,7 @@ function App() {
   const saveUrl = async (url: string, newPin: string) => {
     localStorage.setItem('scriptUrl', url);
     localStorage.setItem('pin', newPin);
+    setIsInitialLoading(true);
     setScriptUrl(url);
     setPin(newPin);
   };
@@ -717,7 +722,49 @@ function App() {
                   )}
                 </div>
               </div>
+
+              {/* Centro de Ayuda */}
+              <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
+                <h3 className={`text-lg font-bold mb-4 ${theme.colors.textPrimary} flex items-center gap-2`}>
+                  <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+                  Centro de Ayuda
+                </h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowBankGuide(true)}
+                    className={`w-full text-left p-4 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-teal-500/50 transition-all group`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <span className="text-lg">🏦</span>
+                      </div>
+                      <div>
+                        <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>¿Dónde encuentro mis datos?</p>
+                        <p className={`text-xs ${theme.colors.textMuted}`}>Guía paso a paso por banco</p>
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setShowBillingEducation(true)}
+                    className={`w-full text-left p-4 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-teal-500/50 transition-all group`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                        <span className="text-lg">📊</span>
+                      </div>
+                      <div>
+                        <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>¿Cómo funciona la facturación?</p>
+                        <p className={`text-xs ${theme.colors.textMuted}`}>Fechas, cuotas e intereses</p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {/* Modals */}
+            <BankGuideModal isOpen={showBankGuide} onClose={() => setShowBankGuide(false)} />
+            <BillingEducationModal isOpen={showBillingEducation} onClose={() => setShowBillingEducation(false)} />
           </div>
         );
       }

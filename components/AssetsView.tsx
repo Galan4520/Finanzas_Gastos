@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { RealEstateInvestment, RealEstateProperty } from '../types';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatCompact } from '../utils/format';
 import { Home, Search, Filter, Plus, TrendingUp, MapPin, Maximize2, BedDouble, Bath, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
@@ -142,23 +142,23 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Inversión Total</p>
-            <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-              {formatCurrency(totalInversion)}
+            <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              {formatCompact(totalInversion)}
             </p>
           </div>
 
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Valor Actual</p>
-            <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>
-              {formatCurrency(totalValorActual)}
+            <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              {formatCompact(totalValorActual)}
             </p>
           </div>
 
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Plusvalía</p>
             <div className="flex items-center gap-2">
-              <p className={`text-2xl font-mono font-bold ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                {plusvalia >= 0 ? '+' : ''}{formatCurrency(plusvalia)}
+              <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                {plusvalia >= 0 ? '+' : ''}{formatCompact(plusvalia)}
               </p>
               {plusvalia !== 0 && (
                 <span className={`text-xs font-bold ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
@@ -170,8 +170,8 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
 
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Renta Mensual</p>
-            <p className={`text-2xl font-mono font-bold ${totalRentaMensual > 0 ? 'text-emerald-500' : theme.colors.textPrimary}`}>
-              {formatCurrency(totalRentaMensual)}
+            <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${totalRentaMensual > 0 ? 'text-emerald-500' : theme.colors.textPrimary}`}>
+              {formatCompact(totalRentaMensual)}
             </p>
           </div>
         </div>

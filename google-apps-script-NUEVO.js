@@ -355,10 +355,10 @@ function checkForUpdate() {
         if (email) {
           MailApp.sendEmail({
             to: email,
-            subject: 'MoneyCrock actualizado a v' + remote.gas_version,
+            subject: 'Yunai actualizado a v' + remote.gas_version,
             htmlBody: '<div style="font-family:Arial;max-width:500px;margin:0 auto;padding:20px;">' +
               '<div style="background:linear-gradient(135deg,#10b981,#059669);padding:24px;border-radius:16px;text-align:center;">' +
-              '<h1 style="color:white;margin:0;">MoneyCrock</h1>' +
+              '<h1 style="color:white;margin:0;">Yunai</h1>' +
               '<p style="color:#d1fae5;margin:8px 0 0 0;">Tu aplicación fue actualizada automáticamente</p>' +
               '</div>' +
               '<div style="background:white;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 16px 16px;">' +
@@ -1582,7 +1582,7 @@ function enviarNotificacionesVencimiento() {
   try {
     MailApp.sendEmail({
       to: config.email,
-      subject: asunto + ' - MoneyCrock',
+      subject: asunto + ' - Yunai',
       htmlBody: htmlBody
     });
 
@@ -1609,7 +1609,7 @@ function construirEmailHTML(porVencer, vencidas, diasAnticipacion) {
 
   // Header
   html += '<div style="background: linear-gradient(135deg, #10b981, #059669); padding: 24px; border-radius: 16px 16px 0 0; text-align: center;">';
-  html += '<h1 style="color: white; margin: 0; font-size: 24px;">💳 MoneyCrock</h1>';
+  html += '<h1 style="color: white; margin: 0; font-size: 24px;">🦗 Yunai</h1>';
   html += '<p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 14px;">Recordatorio de Pagos</p>';
   html += '</div>';
 
@@ -1672,7 +1672,7 @@ function construirEmailHTML(porVencer, vencidas, diasAnticipacion) {
 
   // Footer
   html += '<div style="text-align: center; padding-top: 16px; border-top: 1px solid #e2e8f0;">';
-  html += '<p style="color: #94a3b8; font-size: 12px; margin: 0;">Enviado automáticamente por MoneyCrock</p>';
+  html += '<p style="color: #94a3b8; font-size: 12px; margin: 0;">Enviado automáticamente por Yunai</p>';
   html += '<p style="color: #94a3b8; font-size: 11px; margin: 4px 0 0 0;">Para desactivar estas notificaciones, ve a Configuración en la app.</p>';
   html += '</div>';
 
@@ -1716,10 +1716,10 @@ function enviarEmailPrueba() {
   try {
     MailApp.sendEmail({
       to: config.email,
-      subject: '✅ Prueba de Notificaciones - MoneyCrock',
+      subject: '✅ Prueba de Notificaciones - Yunai',
       htmlBody: '<div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">' +
         '<div style="background: linear-gradient(135deg, #10b981, #059669); padding: 24px; border-radius: 16px; text-align: center;">' +
-        '<h1 style="color: white; margin: 0;">💳 MoneyCrock</h1>' +
+        '<h1 style="color: white; margin: 0;">🦗 Yunai</h1>' +
         '<p style="color: #d1fae5; margin: 8px 0 0 0;">¡Notificaciones configuradas correctamente!</p>' +
         '</div>' +
         '<div style="background: white; padding: 24px; border: 1px solid #e2e8f0; border-radius: 0 0 16px 16px; text-align: center;">' +

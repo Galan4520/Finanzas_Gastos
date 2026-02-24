@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, CreditCard, PendingExpense } from '../types';
-import { formatCurrency } from '../utils/format';
+import { formatCurrency, formatCompact } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from 'recharts';
 import { TrendingUp, PieChart as PieIcon, Calendar, CreditCard as CardIcon, Download, ArrowUpRight, ArrowDownRight, BarChart3 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
@@ -206,7 +206,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             <p className={`text-sm ${theme.colors.textMuted}`}>Tasa de Ahorro</p>
             <TrendingUp className={healthMetrics.tasaAhorro >= 20 ? 'text-emerald-500' : 'text-amber-500'} size={20} />
           </div>
-          <p className={`text-3xl font-bold ${theme.colors.textPrimary}`}>
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${theme.colors.textPrimary}`}>
             {healthMetrics.tasaAhorro.toFixed(1)}%
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
@@ -219,8 +219,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             <p className={`text-sm ${theme.colors.textMuted}`}>Ahorro Total</p>
             {healthMetrics.ahorro >= 0 ? <ArrowUpRight className="text-emerald-500" size={20} /> : <ArrowDownRight className="text-rose-500" size={20} />}
           </div>
-          <p className={`text-3xl font-bold ${healthMetrics.ahorro >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-            {formatCurrency(healthMetrics.ahorro)}
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${healthMetrics.ahorro >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+            {formatCompact(healthMetrics.ahorro)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Período seleccionado</p>
         </div>
@@ -230,7 +230,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             <p className={`text-sm ${theme.colors.textMuted}`}>Uso de Crédito</p>
             <CardIcon className={healthMetrics.usoCredito > 70 ? 'text-rose-500' : 'text-emerald-500'} size={20} />
           </div>
-          <p className={`text-3xl font-bold ${theme.colors.textPrimary}`}>
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${theme.colors.textPrimary}`}>
             {healthMetrics.usoCredito.toFixed(1)}%
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
@@ -243,8 +243,8 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             <p className={`text-sm ${theme.colors.textMuted}`}>Total Ingresos</p>
             <ArrowUpRight className="text-emerald-500" size={20} />
           </div>
-          <p className={`text-3xl font-bold text-emerald-600`}>
-            {formatCurrency(healthMetrics.totalIngresos)}
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate text-emerald-600`}>
+            {formatCompact(healthMetrics.totalIngresos)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Período seleccionado</p>
         </div>
@@ -295,7 +295,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                         <div className="w-4 h-4 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                         <span className={`font-medium ${theme.colors.textPrimary}`}>{cat.name}</span>
                       </div>
-                      <span className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
+                      <span className={`font-bold truncate ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
                     </div>
                     <div className={`w-full bg-gray-200 rounded-full h-2 ${theme.colors.border}`}>
                       <div
