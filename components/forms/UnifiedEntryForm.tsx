@@ -359,7 +359,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               <label className="text-xs font-bold ${theme.colors.textMuted} uppercase ml-1">Monto</label>
               <div className="relative">
                 <span className="absolute left-4 top-3.5 ${theme.colors.textMuted}">S/</span>
-                <input type="number" name="monto" step="0.01" value={formData.monto} onChange={handleChange} placeholder="0.00" required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-mono text-lg focus:ring-2 focus:ring-indigo-500" />
+                <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} placeholder="0.00" required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-mono text-lg focus:ring-2 focus:ring-indigo-500" />
               </div>
             </div>
           </div>

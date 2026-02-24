@@ -250,6 +250,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                                     type="number"
                                     name="limite"
                                     step="0.01"
+                                    max="99999999"
                                     value={formData.limite}
                                     onChange={handleChange}
                                     required

@@ -83,6 +83,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, pin, on
                 type="number"
                 name="monto"
                 step="0.01"
+                max="99999999"
                 value={formData.monto}
                 onChange={handleChange}
                 placeholder="0.00"

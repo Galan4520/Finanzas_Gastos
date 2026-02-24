@@ -3,7 +3,7 @@ import { PendingExpense, Transaction, CreditCard as CreditCardAccount, Goal, get
 import { sendToSheet, fetchData } from '../../services/googleSheetService';
 import { formatCurrency, formatDate, getLocalISOString } from '../../utils/format';
 import { calcularSaldoPendiente } from '../../utils/debtUtils';
-import { Banknote, Lightbulb, CheckCircle, Loader2, CreditCard } from 'lucide-react';
+import { Banknote, Lightbulb, CheckCircle, Loader2, CreditCard, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface PaymentFormProps {
@@ -349,10 +349,11 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
       </h2>
       <p className={`${theme.colors.textMuted} mb-6 text-sm`}>Registra pagos para disminuir tu deuda en el sistema.</p>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div>
+      {/* ═══ STEP 1: Select debt/subscription ═══ */}
+      {!selectedExpense ? (
+        <div className="space-y-4">
           {/* Toggle tabs */}
-          <div className={`flex rounded-xl p-1 mb-4 ${theme.colors.bgSecondary}`}>
+          <div className={`flex rounded-xl p-1 ${theme.colors.bgSecondary}`}>
             <button
               type="button"
               onClick={() => { setPayMode('deudas'); setSelectedExpenseId(''); }}
@@ -378,45 +379,40 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
           </div>
 
           {/* List based on selected mode */}
-          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1 scrollbar-thin">
             {payMode === 'deudas' ? (
               activeDebts.length === 0 ? (
-                <p className={`text-sm ${theme.colors.textMuted} text-center py-4`}>No hay deudas pendientes</p>
+                <p className={`text-sm ${theme.colors.textMuted} text-center py-8`}>No hay deudas pendientes</p>
               ) : (
                 activeDebts.map(e => {
                   const total = Number(e.monto);
                   const montoPagadoTotal = e.monto_pagado_total || 0;
                   const debt = total - montoPagadoTotal;
                   const progreso = ((total - debt) / total) * 100;
-                  const isSelected = selectedExpenseId === e.id;
                   const cuotasPagadas = Math.floor(Number(e.cuotas_pagadas));
 
                   return (
                     <button
                       type="button"
                       key={e.id}
-                      onClick={() => setSelectedExpenseId(isSelected ? '' : e.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all ${
-                        isSelected
-                          ? `${theme.colors.primary} text-white border-transparent shadow-lg scale-[1.01]`
-                          : `${theme.colors.bgSecondary} ${theme.colors.border} hover:border-indigo-500/50`
-                      }`}
+                      onClick={() => setSelectedExpenseId(e.id)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-indigo-500/50 hover:scale-[1.01]`}
                     >
                       <div className="flex justify-between items-center mb-1">
                         <div className="flex items-center gap-2">
-                          <CreditCard size={14} className={isSelected ? 'text-white/80' : theme.colors.textMuted} />
-                          <span className={`text-xs font-medium ${isSelected ? 'text-white/80' : theme.colors.textMuted}`}>{e.tarjeta}</span>
+                          <CreditCard size={14} className={theme.colors.textMuted} />
+                          <span className={`text-xs font-medium ${theme.colors.textMuted}`}>{e.tarjeta}</span>
                         </div>
-                        <span className={`font-mono font-bold text-sm ${isSelected ? 'text-white' : 'text-red-400'}`}>
+                        <span className="font-mono font-bold text-sm text-red-400">
                           {formatCurrency(debt)}
                         </span>
                       </div>
-                      <p className={`font-semibold text-sm ${isSelected ? 'text-white' : theme.colors.textPrimary}`}>{e.descripcion}</p>
+                      <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{e.descripcion}</p>
                       <div className="flex items-center gap-2 mt-1.5">
-                        <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${isSelected ? 'bg-white/20' : 'bg-gray-700'}`}>
-                          <div className={`h-full rounded-full ${isSelected ? 'bg-white/70' : 'bg-indigo-500'}`} style={{ width: `${progreso}%` }} />
+                        <div className={`flex-1 h-1.5 rounded-full overflow-hidden bg-gray-700`}>
+                          <div className="h-full rounded-full bg-indigo-500" style={{ width: `${progreso}%` }} />
                         </div>
-                        <span className={`text-[10px] ${isSelected ? 'text-white/70' : theme.colors.textMuted}`}>
+                        <span className={`text-[10px] ${theme.colors.textMuted}`}>
                           {cuotasPagadas}/{e.num_cuotas} cuotas
                         </span>
                       </div>
@@ -426,42 +422,50 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
               )
             ) : (
               activeSubs.length === 0 ? (
-                <p className={`text-sm ${theme.colors.textMuted} text-center py-4`}>No hay suscripciones activas</p>
+                <p className={`text-sm ${theme.colors.textMuted} text-center py-8`}>No hay suscripciones activas</p>
               ) : (
-                activeSubs.map(e => {
-                  const isSelected = selectedExpenseId === e.id;
-                  return (
-                    <button
-                      type="button"
-                      key={e.id}
-                      onClick={() => setSelectedExpenseId(isSelected ? '' : e.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all ${
-                        isSelected
-                          ? `bg-purple-600 text-white border-transparent shadow-lg scale-[1.01]`
-                          : `${theme.colors.bgSecondary} ${theme.colors.border} hover:border-purple-500/50`
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white/70' : 'bg-purple-500'}`} />
-                          <p className={`font-semibold text-sm ${isSelected ? 'text-white' : theme.colors.textPrimary}`}>{e.descripcion}</p>
-                        </div>
-                        <span className={`font-mono font-bold text-sm ${isSelected ? 'text-white' : 'text-purple-400'}`}>
-                          {formatCurrency(Number(e.monto))}/mes
-                        </span>
+                activeSubs.map(e => (
+                  <button
+                    type="button"
+                    key={e.id}
+                    onClick={() => setSelectedExpenseId(e.id)}
+                    className={`w-full text-left p-3 rounded-xl border transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-purple-500/50 hover:scale-[1.01]`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-purple-500" />
+                        <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{e.descripcion}</p>
                       </div>
-                    </button>
-                  );
-                })
+                      <span className="font-mono font-bold text-sm text-purple-400">
+                        {formatCurrency(Number(e.monto))}/mes
+                      </span>
+                    </div>
+                  </button>
+                ))
               )
             )}
           </div>
-        </div>
 
-        {selectedExpense && (
-          <div className={`p-5 rounded-xl border text-sm space-y-3 animate-in fade-in slide-in-from-top-2 ${theme.colors.bgSecondary} ${theme.colors.border}`}>
+          <p className={`text-xs ${theme.colors.textMuted} text-center pt-2`}>
+            Selecciona una {payMode === 'deudas' ? 'deuda' : 'suscripción'} para registrar el pago
+          </p>
+        </div>
+      ) : (
+        /* ═══ STEP 2: Payment form ═══ */
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Back button */}
+          <button
+            type="button"
+            onClick={() => { setSelectedExpenseId(''); setCustomAmount(''); }}
+            className={`flex items-center gap-2 text-sm font-medium ${theme.colors.textMuted} hover:${theme.colors.textPrimary} transition-colors -mt-2 mb-1`}
+          >
+            <ArrowLeft size={16} />
+            Volver a la lista
+          </button>
+
+          {/* Selected expense details */}
+          <div className={`p-5 rounded-xl border text-sm space-y-3 ${theme.colors.bgSecondary} ${theme.colors.border}`}>
             {selectedExpense.tipo === 'suscripcion' ? (
-              // Vista para SUSCRIPCIONES
               <>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-0.5 rounded font-bold">SUSCRIPCIÓN RECURRENTE</span>
@@ -482,8 +486,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                 </div>
               </>
             ) : (
-              // Vista para DEUDAS
               <>
+                <p className={`font-bold ${theme.colors.textPrimary}`}>{selectedExpense.descripcion}</p>
                 <div className={`flex justify-between items-center border-b ${theme.colors.border} pb-2`}>
                   <span className={theme.colors.textMuted}>Total Compra:</span>
                   <span className={`font-bold ${theme.colors.textPrimary} text-lg`}>{formatCurrency(selectedExpense.monto)}</span>
@@ -502,172 +506,172 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
               </>
             )}
           </div>
-        )}
 
-        {selectedExpense?.tipo === 'suscripcion' ? (
-          // Para SUSCRIPCIONES: solo monto fijo
-          <div>
-            <label className={labelClass}>Monto a Pagar (Fijo)</label>
-            <div className="relative">
-              <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
-              <input
-                type="number"
-                step="0.01"
-                value={customAmount}
-                readOnly
-                className={`${inputClass} pl-10 font-mono text-lg font-bold text-purple-400`}
-              />
-            </div>
-            <p className={`text-xs ${theme.colors.textMuted} mt-2`}>Las suscripciones se pagan siempre por el monto completo</p>
-          </div>
-        ) : (
-          // Para DEUDAS: opciones flexibles
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Payment type & amount */}
+          {selectedExpense.tipo === 'suscripcion' ? (
             <div>
-              <label className={labelClass}>Tipo de Pago</label>
-              <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className={inputClass}>
-                <option value="Cuota">Pago de 1 Cuota</option>
-                <option value="Total">Liquidar Todo</option>
-                <option value="Parcial">Pago Parcial (Manual)</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelClass}>Monto a Pagar</label>
+              <label className={labelClass}>Monto a Pagar (Fijo)</label>
               <div className="relative">
                 <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
                 <input
                   type="number"
                   step="0.01"
                   value={customAmount}
-                  onChange={(e) => setCustomAmount(e.target.value)}
-                  className={`${inputClass} pl-10 font-mono text-lg font-bold text-emerald-400`}
+                  readOnly
+                  className={`${inputClass} pl-10 font-mono text-lg font-bold text-purple-400`}
                 />
               </div>
+              <p className={`text-xs ${theme.colors.textMuted} mt-2`}>Las suscripciones se pagan siempre por el monto completo</p>
             </div>
-          </div>
-        )}
-
-        {/* Cuenta de origen del pago */}
-        <div>
-          <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase tracking-wide ml-1 mb-1 block`}>
-            Cuenta desde la que pagas
-          </label>
-          <select
-            value={selectedCuentaPago}
-            onChange={e => setSelectedCuentaPago(e.target.value)}
-            className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-current transition-all`}
-          >
-            <option value="">Efectivo / Sin especificar</option>
-            <option value="Billetera">
-              💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)} disponible
-            </option>
-            {debitCards.map(c => (
-              <option key={`${c.alias}-${c.banco}`} value={c.alias}>
-                💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)} disponible
-              </option>
-            ))}
-            {cards.filter(c => getCardType(c) === 'credito').map(c => (
-              <option key={`${c.alias}-${c.banco}`} value={c.alias}>
-                🔵 {c.alias} — {c.banco} (crédito)
-              </option>
-            ))}
-          </select>
-          {isTrackedAccount && (
-            <p className={`text-xs ml-1 mt-1 flex items-center gap-2 ${theme.colors.textMuted}`}>
-              <span>Disponible: <strong>{formatCurrency(saldoActualCuenta)}</strong></span>
-              {montoAPagar > 0 && montoAPagar > saldoActualCuenta && (
-                <span className="text-red-400">⚠ Saldo insuficiente</span>
-              )}
-            </p>
-          )}
-        </div>
-
-        {/* Romper Chanchito — panel inline cuando saldo es insuficiente */}
-        {showBreakOption && (
-          <div className={`p-4 rounded-xl border border-amber-400/40 bg-amber-500/5 space-y-3`}>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🐷</span>
-              <div>
-                <p className="text-sm font-bold text-amber-400">¿Romper chanchito?</p>
-                <p className={`text-xs ${theme.colors.textMuted}`}>
-                  Te faltan <strong className="text-amber-400">{formatCurrency(deficit)}</strong> · Libera fondos de una meta
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>¿De qué meta?</label>
-              <select
-                value={breakMetaId}
-                onChange={e => setBreakMetaId(e.target.value)}
-                className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl px-4 py-2.5 ${theme.colors.textPrimary} text-sm`}
-              >
-                {goalsWithFunds.map(g => (
-                  <option key={g.id} value={g.id}>
-                    {g.nombre} — {formatCurrency(g.monto_ahorrado)} disponibles
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <span className={`absolute left-3 top-2.5 text-sm ${theme.colors.textMuted}`}>S/</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  max={goalsWithFunds.find(g => g.id === breakMetaId)?.monto_ahorrado}
-                  value={breakAmount}
-                  onChange={e => setBreakAmount(e.target.value)}
-                  className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-amber-400`}
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleBreakFromForm}
-                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5 whitespace-nowrap"
-              >
-                🐷 Liberar fondos
-              </button>
-            </div>
-
-            {breakMetaId && (() => {
-              const selectedGoal = goalsWithFunds.find(g => g.id === breakMetaId);
-              if (!selectedGoal) return null;
-              const liberando = Math.min(parseFloat(breakAmount || '0'), selectedGoal.monto_ahorrado);
-              const nuevoSaldo = saldoActualCuenta + liberando;
-              const puedeGastar = nuevoSaldo >= montoAPagar;
-              return (
-                <p className={`text-xs ${puedeGastar ? 'text-emerald-400' : 'text-amber-300/70'}`}>
-                  {puedeGastar
-                    ? `✓ Al liberar quedarás con ${formatCurrency(nuevoSaldo - montoAPagar)} de saldo`
-                    : `Aún te faltarán ${formatCurrency(montoAPagar - nuevoSaldo)} después de liberar`}
-                </p>
-              );
-            })()}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={loading || !selectedExpense}
-          className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
-            ${loading || !selectedExpense ? `${theme.colors.bgSecondary} cursor-not-allowed ${theme.colors.textMuted}` : `${theme.colors.primary} hover:${theme.colors.primaryHover} text-white`}`}
-        >
-          {loading ? (
-            <>
-              <Loader2 size={20} className="animate-spin" />
-              Procesando pago...
-            </>
           ) : (
-            <>
-              <CheckCircle size={20} />
-              Confirmar Pago
-            </>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className={labelClass}>Tipo de Pago</label>
+                <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className={inputClass}>
+                  <option value="Cuota">Pago de 1 Cuota</option>
+                  <option value="Total">Liquidar Todo</option>
+                  <option value="Parcial">Pago Parcial (Manual)</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelClass}>Monto a Pagar</label>
+                <div className="relative">
+                  <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    max="99999999"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    className={`${inputClass} pl-10 font-mono text-lg font-bold text-emerald-400`}
+                  />
+                </div>
+              </div>
+            </div>
           )}
-        </button>
-      </form>
+
+          {/* Cuenta de origen del pago */}
+          <div>
+            <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase tracking-wide ml-1 mb-1 block`}>
+              Cuenta desde la que pagas
+            </label>
+            <select
+              value={selectedCuentaPago}
+              onChange={e => setSelectedCuentaPago(e.target.value)}
+              className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-current transition-all`}
+            >
+              <option value="">Efectivo / Sin especificar</option>
+              <option value="Billetera">
+                💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)} disponible
+              </option>
+              {debitCards.map(c => (
+                <option key={`${c.alias}-${c.banco}`} value={c.alias}>
+                  💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)} disponible
+                </option>
+              ))}
+              {cards.filter(c => getCardType(c) === 'credito').map(c => (
+                <option key={`${c.alias}-${c.banco}`} value={c.alias}>
+                  🔵 {c.alias} — {c.banco} (crédito)
+                </option>
+              ))}
+            </select>
+            {isTrackedAccount && (
+              <p className={`text-xs ml-1 mt-1 flex items-center gap-2 ${theme.colors.textMuted}`}>
+                <span>Disponible: <strong>{formatCurrency(saldoActualCuenta)}</strong></span>
+                {montoAPagar > 0 && montoAPagar > saldoActualCuenta && (
+                  <span className="text-red-400">⚠ Saldo insuficiente</span>
+                )}
+              </p>
+            )}
+          </div>
+
+          {/* Romper Chanchito — panel inline cuando saldo es insuficiente */}
+          {showBreakOption && (
+            <div className={`p-4 rounded-xl border border-amber-400/40 bg-amber-500/5 space-y-3`}>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🐷</span>
+                <div>
+                  <p className="text-sm font-bold text-amber-400">¿Romper chanchito?</p>
+                  <p className={`text-xs ${theme.colors.textMuted}`}>
+                    Te faltan <strong className="text-amber-400">{formatCurrency(deficit)}</strong> · Libera fondos de una meta
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>¿De qué meta?</label>
+                <select
+                  value={breakMetaId}
+                  onChange={e => setBreakMetaId(e.target.value)}
+                  className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl px-4 py-2.5 ${theme.colors.textPrimary} text-sm`}
+                >
+                  {goalsWithFunds.map(g => (
+                    <option key={g.id} value={g.id}>
+                      {g.nombre} — {formatCurrency(g.monto_ahorrado)} disponibles
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className={`absolute left-3 top-2.5 text-sm ${theme.colors.textMuted}`}>S/</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    max={goalsWithFunds.find(g => g.id === breakMetaId)?.monto_ahorrado}
+                    value={breakAmount}
+                    onChange={e => setBreakAmount(e.target.value)}
+                    className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-amber-400`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleBreakFromForm}
+                  className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-white rounded-xl font-bold text-sm transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  🐷 Liberar fondos
+                </button>
+              </div>
+
+              {breakMetaId && (() => {
+                const selectedGoal = goalsWithFunds.find(g => g.id === breakMetaId);
+                if (!selectedGoal) return null;
+                const liberando = Math.min(parseFloat(breakAmount || '0'), selectedGoal.monto_ahorrado);
+                const nuevoSaldo = saldoActualCuenta + liberando;
+                const puedeGastar = nuevoSaldo >= montoAPagar;
+                return (
+                  <p className={`text-xs ${puedeGastar ? 'text-emerald-400' : 'text-amber-300/70'}`}>
+                    {puedeGastar
+                      ? `✓ Al liberar quedarás con ${formatCurrency(nuevoSaldo - montoAPagar)} de saldo`
+                      : `Aún te faltarán ${formatCurrency(montoAPagar - nuevoSaldo)} después de liberar`}
+                  </p>
+                );
+              })()}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-4 rounded-xl font-bold shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2
+              ${loading ? `${theme.colors.bgSecondary} cursor-not-allowed ${theme.colors.textMuted}` : `${theme.colors.primary} hover:${theme.colors.primaryHover} text-white`}`}
+          >
+            {loading ? (
+              <>
+                <Loader2 size={20} className="animate-spin" />
+                Procesando pago...
+              </>
+            ) : (
+              <>
+                <CheckCircle size={20} />
+                Confirmar Pago
+              </>
+            )}
+          </button>
+        </form>
+      )}
     </div>
   );
 };

@@ -153,7 +153,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
             <label className={labelClass}>Monto Total</label>
             <div className="relative">
               <span className="absolute left-4 top-3.5 text-slate-400">S/</span>
-              <input type="number" name="monto" step="0.01" value={formData.monto} onChange={handleChange} required className={`${inputClass} pl-10 font-mono text-lg`} />
+              <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} required className={`${inputClass} pl-10 font-mono text-lg`} />
             </div>
           </div>
         </div>
