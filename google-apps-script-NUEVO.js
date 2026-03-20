@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════════
 // VERSIONAMIENTO Y AUTO-UPDATE
 // ═══════════════════════════════════════════════════════════════
-var GAS_VERSION = 4;
+var GAS_VERSION = 5;
 var SCHEMA_VERSION = 1;
 var VERSION_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/gas-version.json';
 var CODE_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js';
@@ -622,6 +622,23 @@ function doPost(e) {
     }
   }
 
+  // 🆕 Configurar trigger de actualización automática
+  if (action === 'setupUpdateTrigger') {
+    try {
+      const hora = parseInt(params.hora) || 3; // Por defecto 3 AM
+      configurarTriggerActualizacion(hora);
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        message: 'Auto-update programado para las ' + hora + ':00'
+      })).setMimeType(ContentService.MimeType.JSON);
+    } catch (error) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: error.toString()
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   if (action === 'delete') {
     return handleDelete(sheet, params);
   }
@@ -1215,7 +1232,7 @@ function doGet(e) {
     }
   }
 
-  const ingresosSheet = sheet.getSheetByName('Ingresos');
+  const ingresosSheet = ss.getSheetByName('Ingresos');
   if (ingresosSheet) {
     const data = ingresosSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
@@ -1236,7 +1253,7 @@ function doGet(e) {
   }
 
   // 4. Obtener Propiedades Disponibles (Catálogo Inmobiliario)
-  const propiedadesSheet = sheet.getSheetByName('Propiedades_Disponibles');
+  const propiedadesSheet = ss.getSheetByName('Propiedades_Disponibles');
   let availableProperties = [];
   if (propiedadesSheet) {
     const data = propiedadesSheet.getDataRange().getValues();
@@ -1714,6 +1731,27 @@ function configurarTriggerDiario() {
     .create();
 
   Logger.log('Trigger diario configurado para las 8:00 AM');
+}
+
+/**
+ * 🔄 Configura un trigger diario para ejecutar checkForUpdate una vez que el usuario lo programe.
+ */
+function configurarTriggerActualizacion(hora) {
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'checkForUpdate') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+
+  // Crear nuevo trigger diario a la hora elegida (ej: 3 AM)
+  ScriptApp.newTrigger('checkForUpdate')
+    .timeBased()
+    .everyDays(1)
+    .atHour(hora)
+    .create();
+
+  Logger.log('Auto-update programado diariamente a las ' + hora + ':00');
 }
 
 /**
