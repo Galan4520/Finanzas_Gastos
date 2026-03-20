@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     const cleanBase64 = image.includes('base64,') ? image.split('base64,')[1] : image;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
     const promptText = 
       "Eres un asistente financiero experto para la aplicación 'Yunai'. " +
