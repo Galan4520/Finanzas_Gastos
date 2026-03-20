@@ -709,34 +709,83 @@ export const fetchProperties = async (propertiesScriptUrl: string) => {
 // ═══════════════════════════════════════════════════════════════
 // AI SCANNER - Análisis de recibos con Gemini
 // ═══════════════════════════════════════════════════════════════
+
+/**
+ * Retry helper con exponential backoff
+ */
+const retryWithBackoff = async <T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 1000
+): Promise<T> => {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // No reintentar en último intento
+      if (attempt === maxRetries - 1) break;
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.log(`⏳ [retry] Intento ${attempt + 1}/${maxRetries} falló. Reintentando en ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+};
+
 export const analyzeReceiptWithAI = async (
-  scriptUrl: string, // Kept for interface compatibility
-  pin: string,       // Kept for interface compatibility
+  _scriptUrl: string, // Kept for interface compatibility
+  _pin: string,       // Kept for interface compatibility
   base64Image: string
 ): Promise<{ success: boolean; data?: any; error?: string }> => {
   try {
     console.log('🤖 [analyzeReceiptWithAI] Enviando imagen a Vercel Serverless API...');
-    
-    const cleanBase64 = base64Image.includes('base64,') 
-      ? base64Image.split('base64,')[1] 
+
+    const cleanBase64 = base64Image.includes('base64,')
+      ? base64Image.split('base64,')[1]
       : base64Image;
 
-    const response = await fetch('/api/scan', {
-      method: "POST",
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: cleanBase64 })
-    });
+    const result = await retryWithBackoff(async () => {
+      const response = await fetch('/api/scan', {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: cleanBase64 })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Error del servidor: ${response.status}`);
-    }
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.error || `Error del servidor: ${response.status}`;
 
-    const result = await response.json();
+        // Identificar tipo de error para mejor feedback
+        if (response.status === 404) {
+          throw new Error('❌ Servicio de IA no disponible (404). Verifica el despliegue en Vercel.');
+        } else if (response.status === 500) {
+          throw new Error(`⚠️ Error interno del servidor: ${errorMsg}`);
+        } else if (response.status === 400) {
+          throw new Error(`📸 Imagen inválida: ${errorMsg}`);
+        } else {
+          throw new Error(errorMsg);
+        }
+      }
+
+      return await response.json();
+    }, 3, 1000); // 3 intentos, delay inicial de 1s
+
+    console.log('✅ [analyzeReceiptWithAI] Análisis completado exitosamente');
     return result;
+
   } catch (error) {
-    console.error("❌ [analyzeReceiptWithAI] Error:", error);
-    return { success: false, error: error instanceof Error ? error.message : String(error) };
+    console.error("❌ [analyzeReceiptWithAI] Error después de todos los reintentos:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido al analizar imagen'
+    };
   }
 };
 
