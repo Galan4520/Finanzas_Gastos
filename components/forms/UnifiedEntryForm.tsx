@@ -433,7 +433,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 accept="image/*"
-                capture="environment"
                 className="hidden"
               />
             </div>
