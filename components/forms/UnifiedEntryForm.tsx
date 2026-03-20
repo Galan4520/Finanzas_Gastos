@@ -26,7 +26,6 @@ interface UnifiedEntryFormProps {
   customIngresosCategories?: string[];
   onAddCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
   onRemoveCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
-  hasGeminiKey?: boolean;
 }
 
 type EntryType = 'gasto' | 'ingreso' | 'tarjeta';
@@ -36,7 +35,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   onAddPending, onSuccess, notify, onRomperMeta,
   customGastosCategories = [], customIngresosCategories = [],
   onAddCustomCategory, onRemoveCustomCategory,
-  hasGeminiKey = false,
 }) => {
   const { theme, themeName } = useTheme();
   const textColors = getTextColor(themeName);
@@ -412,7 +410,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between ml-1">
                 <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>Monto</label>
-                {hasGeminiKey && (
                   <button
                     type="button"
                     onClick={handleScanClick}
@@ -425,7 +422,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                     <Sparkles size={12} className={isScanning ? 'animate-pulse' : ''} />
                     {isScanning ? 'ANALIZANDO...' : 'ESCANEAR TICKET'}
                   </button>
-                )}
               </div>
               <div className="relative">
                 <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>

@@ -672,7 +672,6 @@ function App() {
             customIngresosCategories={customIngresosCategories}
             onAddCustomCategory={handleAddCustomCategory}
             onRemoveCustomCategory={handleRemoveCustomCategory}
-            hasGeminiKey={hasGeminiKey}
           />
         );
 

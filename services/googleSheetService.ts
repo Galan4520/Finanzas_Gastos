@@ -710,27 +710,26 @@ export const fetchProperties = async (propertiesScriptUrl: string) => {
 // AI SCANNER - Análisis de recibos con Gemini
 // ═══════════════════════════════════════════════════════════════
 export const analyzeReceiptWithAI = async (
-  scriptUrl: string,
-  pin: string,
+  scriptUrl: string, // Kept for interface compatibility
+  pin: string,       // Kept for interface compatibility
   base64Image: string
 ): Promise<{ success: boolean; data?: any; error?: string }> => {
-  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
-
-  const formData = new FormData();
-  formData.append('action', 'analyzeReceipt');
-  formData.append('pin', pin);
-  formData.append('base64Image', base64Image);
-
   try {
-    console.log('🤖 [analyzeReceiptWithAI] Enviando imagen a Gemini...');
-    const response = await fetch(scriptUrl, {
+    console.log('🤖 [analyzeReceiptWithAI] Enviando imagen a Vercel Serverless API...');
+    
+    const cleanBase64 = base64Image.includes('base64,') 
+      ? base64Image.split('base64,')[1] 
+      : base64Image;
+
+    const response = await fetch('/api/scan', {
       method: "POST",
-      body: formData,
-      redirect: 'follow'
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: cleanBase64 })
     });
 
     if (!response.ok) {
-      throw new Error(`Error del servidor: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error del servidor: ${response.status}`);
     }
 
     const result = await response.json();
