@@ -59,7 +59,7 @@ const MOCK_PROPERTIES: RealEstateProperty[] = [
 ];
 
 function App() {
-  const { theme, currentTheme, setTheme } = useTheme();
+   const { theme, themeName, setTheme } = useTheme();
 
   // State
   const [scriptUrl, setScriptUrl] = useState<string>(localStorage.getItem('scriptUrl') || '');
@@ -620,6 +620,18 @@ function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-setup update trigger (hidden from user)
+  useEffect(() => {
+    if (scriptUrl && pin && !localStorage.getItem('update_trigger_v5_set')) {
+      googleSheetService.setupUpdateTrigger(scriptUrl, pin, 3) // Silently setup for 3 AM
+        .then(() => {
+          localStorage.setItem('update_trigger_v5_set', 'true');
+          console.log('✅ Auto-update trigger initialized (3:00 AM)');
+        })
+        .catch(err => console.error('Failed to auto-setup update trigger:', err));
+    }
+  }, [scriptUrl, pin]);
+
   // Render logic
   const renderContent = () => {
     const commonProps = { notify: showToast };
@@ -660,6 +672,7 @@ function App() {
             customIngresosCategories={customIngresosCategories}
             onAddCustomCategory={handleAddCustomCategory}
             onRemoveCustomCategory={handleRemoveCustomCategory}
+            hasGeminiKey={hasGeminiKey}
           />
         );
 

@@ -26,6 +26,7 @@ interface UnifiedEntryFormProps {
   customIngresosCategories?: string[];
   onAddCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
   onRemoveCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
+  hasGeminiKey?: boolean;
 }
 
 type EntryType = 'gasto' | 'ingreso' | 'tarjeta';
@@ -35,9 +36,10 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   onAddPending, onSuccess, notify, onRomperMeta,
   customGastosCategories = [], customIngresosCategories = [],
   onAddCustomCategory, onRemoveCustomCategory,
+  hasGeminiKey = false,
 }) => {
-  const { theme, currentTheme } = useTheme();
-  const textColors = getTextColor(currentTheme);
+  const { theme, themeName } = useTheme();
+  const textColors = getTextColor(themeName);
   const [entryType, setEntryType] = useState<EntryType>('gasto');
   const [loading, setLoading] = useState(false);
   const [selectedMetaId, setSelectedMetaId] = useState('');
@@ -410,18 +412,20 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between ml-1">
                 <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>Monto</label>
-                <button
-                  type="button"
-                  onClick={handleScanClick}
-                  disabled={isScanning}
-                  className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${isScanning
-                    ? 'bg-yn-neutral-800 text-yn-neutral-500'
-                    : 'bg-yn-primary-500/20 text-yn-primary-400 hover:bg-yn-primary-500 hover:text-white'
-                    }`}
-                >
-                  <Sparkles size={12} className={isScanning ? 'animate-pulse' : ''} />
-                  {isScanning ? 'ANALIZANDO...' : 'ESCANEAR TICKET'}
-                </button>
+                {hasGeminiKey && (
+                  <button
+                    type="button"
+                    onClick={handleScanClick}
+                    disabled={isScanning}
+                    className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${isScanning
+                      ? 'bg-yn-neutral-800 text-yn-neutral-500'
+                      : 'bg-yn-primary-500/20 text-yn-primary-400 hover:bg-yn-primary-500 hover:text-white'
+                      }`}
+                  >
+                    <Sparkles size={12} className={isScanning ? 'animate-pulse' : ''} />
+                    {isScanning ? 'ANALIZANDO...' : 'ESCANEAR TICKET'}
+                  </button>
+                )}
               </div>
               <div className="relative">
                 <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>

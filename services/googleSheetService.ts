@@ -423,6 +423,34 @@ export const setupDailyTrigger = async (
   }
 };
 
+export const setupUpdateTrigger = async (
+  scriptUrl: string,
+  pin: string,
+  hora: number
+): Promise<{ success: boolean }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const payload = { action: 'setupUpdateTrigger', pin, hora: hora.toString() };
+  const formData = objectToFormData(payload);
+
+  console.log(`🔄 [setupUpdateTrigger] Configurando auto-update para las ${hora}:00...`);
+
+  try {
+    await fetch(scriptUrl, {
+      method: "POST",
+      mode: "no-cors",
+      body: formData,
+    });
+
+    await delay(1500);
+    console.log('✅ [setupUpdateTrigger] Trigger de actualización configurado');
+    return { success: true };
+  } catch (error) {
+    console.error('❌ [setupUpdateTrigger] Error:', error);
+    throw error;
+  }
+};
+
 // ═══════════════════════════════════════════════════════════════
 // GOALS (METAS DE AHORRO) - CRUD
 // ═══════════════════════════════════════════════════════════════

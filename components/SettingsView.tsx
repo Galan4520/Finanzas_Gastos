@@ -56,8 +56,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   hasGeminiKey,
   onSaveGeminiKey
 }) => {
-  const { theme } = useTheme();
-  const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones' | 'ia'>('general');
+  const { theme, themeName, setTheme } = useTheme();
+  const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
   const [geminiKey, setGeminiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
@@ -66,7 +66,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     { id: 'general' as const, label: 'General', icon: <SettingsIcon size={18} /> },
     { id: 'tarjetas' as const, label: 'Tarjetas', icon: <CreditCard size={18} /> },
     { id: 'notificaciones' as const, label: 'Notificaciones', icon: <Bell size={18} /> },
-    { id: 'ia' as const, label: 'IA (Scanner)', icon: <Pencil size={18} /> }, // Using Pencil as temporary icon for IA setup
   ];
 
   return (
@@ -164,6 +163,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <p className={`text-xs ${theme.colors.textMuted} mt-2`}>
                   Para cambiar el PIN, actualiza la celda A2 en la hoja "Config" de tu Google Sheet
                 </p>
+              </div>
+
+              {/* Tema de la Aplicación */}
+              <div className={`pt-6 border-t ${theme.colors.border}`}>
+                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-4`}>
+                  Apariencia
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setTheme('yunai')}
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${
+                      themeName === 'yunai' 
+                        ? 'bg-yn-primary-500/10 border-yn-primary-500 ring-1 ring-yn-primary-500' 
+                        : `${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-400`
+                    }`}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-yn-primary-500 flex items-center justify-center shadow-lg shadow-yn-primary-500/20">
+                      <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin-slow" />
+                    </div>
+                    <span className={`text-xs font-bold ${themeName === 'yunai' ? 'text-yn-primary-600' : theme.colors.textPrimary}`}>
+                      YUNAI Brand
+                    </span>
+                  </button>
+
+                  <button
+                    disabled
+                    className={`flex flex-col items-center gap-2 p-4 rounded-2xl border ${theme.colors.bgSecondary} opacity-40 cursor-not-allowed`}
+                  >
+                    <div className={`w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center`}>
+                      <div className="w-4 h-4 rounded-sm bg-slate-600" />
+                    </div>
+                    <span className={`text-xs font-medium ${theme.colors.textMuted}`}>
+                      Próximamente...
+                    </span>
+                  </button>
+                </div>
               </div>
 
               {/* Plan Familiar */}
@@ -355,87 +390,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onSetupTrigger={onSetupDailyTrigger}
                 notify={notify}
               />
-            </div>
-          )}
-
-          {/* IA SECTION */}
-          {activeSection === 'ia' && (
-            <div className="space-y-6">
-              <div>
-                <h3 className={`text-lg font-bold ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
-                   Scanner con Inteligencia Artificial
-                </h3>
-                <p className={`text-sm ${theme.colors.textMuted}`}>
-                  Configura tu API Key de Gemini para activar el escaneo automático de tickets y comprobantes.
-                </p>
-              </div>
-
-              <div className={`${theme.colors.bgSecondary} p-6 rounded-2xl border ${theme.colors.border} space-y-4`}>
-                <div className="flex items-center justify-between mb-2">
-                  <label className={`block text-xs font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>
-                    Gemini API Key
-                  </label>
-                  {hasGeminiKey ? (
-                    <span className="flex items-center gap-1 text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full font-bold">
-                      ● CONFIGURADO
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full font-bold">
-                      ● NO CONFIGURADO
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <input
-                    type="password"
-                    value={geminiKey}
-                    onChange={(e) => setGeminiKey(e.target.value)}
-                    placeholder={hasGeminiKey ? "••••••••••••••••" : "Tu API Key de Google Gemini"}
-                    className={`w-full ${theme.colors.bgCard} ${theme.colors.border} border rounded-xl px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-yn-primary-500 outline-none`}
-                  />
-                  <button
-                    onClick={async () => {
-                      if (!geminiKey) return;
-                      setIsSavingKey(true);
-                      try {
-                        const res = await onSaveGeminiKey?.(geminiKey);
-                        if (res?.success) {
-                          setGeminiKey('');
-                          notify('API Key guardada correctamente', 'success');
-                        } else {
-                          notify(res?.error || 'Error al guardar la clave', 'error');
-                        }
-                      } finally {
-                        setIsSavingKey(false);
-                      }
-                    }}
-                    disabled={isSavingKey || !geminiKey}
-                    className={`w-full py-3 rounded-xl font-bold text-white transition-all shadow-lg ${isSavingKey || !geminiKey
-                      ? 'bg-yn-neutral-700 opacity-50'
-                      : 'bg-yn-primary-600 hover:bg-yn-primary-700 active:scale-[0.98]'
-                      }`}
-                  >
-                    {isSavingKey ? 'Guardando...' : 'Guardar API Key'}
-                  </button>
-                </div>
-
-                <div className="pt-4 border-t border-yn-neutral-800/50">
-                  <h4 className={`text-xs font-bold ${theme.colors.textPrimary} uppercase mb-2`}>¿Cómo obtener tu clave?</h4>
-                  <ul className={`text-xs ${theme.colors.textMuted} space-y-2 list-disc pl-4`}>
-                    <li>Ingresa a <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-yn-primary-400 hover:underline">Google AI Studio</a>.</li>
-                    <li>Crea una nueva "API Key" (es gratuita hasta cierto límite).</li>
-                    <li>Pégala aquí y guarda los cambios.</li>
-                    <li>¡Listo! Ya puedes tomar fotos a tus tickets en la pestaña "Registrar".</li>
-                  </ul>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-yn-primary-500/5 border border-yn-primary-500/20">
-                <p className={`text-xs ${theme.colors.textMuted} leading-relaxed italic text-center`}>
-                  Nota: Tu clave se almacena de forma segura en tu propio script de Google y nunca sale de tu ecosistema de Google.
-                </p>
-              </div>
             </div>
           )}
 
