@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
   // Test 3: Test actual API call
   try {
-    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const testUrl = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const testPayload = {
       contents: [{
