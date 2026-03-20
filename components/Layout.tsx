@@ -5,6 +5,7 @@ import { getTextColor } from '../themes';
 import { UserProfile } from '../types';
 import { getAvatarById } from '../avatars';
 import { AvatarSvg } from './ui/AvatarSvg';
+import { YunaiLogo } from './ui/YunaiLogo';
 
 interface NavItemProps {
   id: string;
@@ -110,10 +111,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       <aside className={`hidden md:flex flex-col w-64 fixed h-full ${theme.colors.border} border-r ${theme.colors.bgCard} backdrop-blur-xl p-6 z-20`}>
         <div className="mb-8 px-2">
           <div className="flex items-center gap-2 mb-6">
-            <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center shadow-lg`}>
-              <span className="text-lg">🦗</span>
-            </div>
-            <h1 className={`text-xl font-bold ${theme.colors.textPrimary}`}>
+            <YunaiLogo size={32} className="text-yn-primary-500 drop-shadow-lg" />
+            <h1 className={`text-xl font-brand font-bold ${theme.colors.textPrimary}`}>
               Yunai
             </h1>
           </div>
@@ -123,7 +122,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
             <div className={`flex items-center gap-3 p-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary}`}>
               <div className="relative">
                 <AvatarSvg avatarId={avatar.id} size={40} className="border-2 border-white shadow-sm" />
-                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-yn-success-500 border-2 border-white rounded-full"></div>
               </div>
               <div className="overflow-hidden">
                 <p className={`text-sm font-bold ${theme.colors.textPrimary} truncate`}>{profile.nombre}</p>
@@ -164,13 +163,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       <div className={`md:hidden p-4 flex justify-between items-center ${theme.colors.bgCard} backdrop-blur-lg sticky top-0 z-30 border-b ${theme.colors.border}`}>
         <div className="flex items-center gap-3">
           {profile && avatar ? (
-            <AvatarSvg avatarId={avatar.id} size={32} className="border border-gray-200" />
+            <AvatarSvg avatarId={avatar.id} size={32} className="border border-yn-neutral-200" />
           ) : (
-            <div className={`w-8 h-8 rounded-lg ${theme.colors.gradientPrimary} flex items-center justify-center`}>
-              <span className="text-lg">🦗</span>
-            </div>
+            <YunaiLogo size={28} className="text-yn-primary-500" />
           )}
-          <span className="font-bold text-lg">{profile ? `Hola, ${profile.nombre}` : 'Yunai'}</span>
+          <span className="font-brand font-bold text-lg">{profile ? `Hola, ${profile.nombre}` : 'Yunai'}</span>
         </div>
         <div className="flex items-center gap-1">
           {hasFamilyPlan && (

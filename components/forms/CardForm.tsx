@@ -121,7 +121,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
     }));
   };
 
-  const inputClass = `w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all`;
+  const inputClass = `w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-yn-primary-500 transition-all`;
   const labelClass = `text-xs font-bold ${theme.colors.textMuted} uppercase tracking-wide ml-1 mb-1 block`;
 
   // --- VIEW: LIST OF CARDS ---
@@ -130,11 +130,11 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       <div className="space-y-6 animate-in fade-in duration-300">
         <div className="flex justify-between items-center px-2">
           <h2 className={`text-2xl font-bold ${theme.colors.textPrimary} flex items-center gap-2`}>
-            <Layers className="text-emerald-400" /> Mis Tarjetas
+            <Layers className="text-yn-primary-400" /> Mis Tarjetas
           </h2>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-emerald-500/20 transition-all transform active:scale-95"
+            className="flex items-center gap-2 bg-yn-primary-600 hover:bg-yn-primary-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-yn-primary-500/20 transition-all transform active:scale-95"
           >
             <Plus size={18} /> Nueva
           </button>
@@ -145,7 +145,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
             <Wallet size={48} className="mb-4 opacity-50" />
             <p className="text-lg font-medium">No tienes tarjetas registradas</p>
             <p className="text-sm mb-6">Agrega una para comenzar a controlar tus gastos</p>
-            <button onClick={() => setShowForm(true)} className="text-emerald-400 hover:text-emerald-300 font-bold">
+            <button onClick={() => setShowForm(true)} className="text-yn-primary-400 hover:text-yn-primary-300 font-bold">
               + Agregar primera tarjeta
             </button>
           </div>
@@ -183,7 +183,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                       <div className="w-10 h-7 bg-amber-200/80 rounded-md border border-amber-300/50 flex items-center justify-center">
                         <div className="w-6 h-4 border border-amber-500/30 rounded-sm"></div>
                       </div>
-                      <div className={`text-xl tracking-widest font-mono opacity-80 ${textColor}`}>
+                      <div className={`text-xl tracking-widest font-sans opacity-80 ${textColor}`}>
                         •••• ••••
                       </div>
                     </div>
@@ -192,7 +192,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                       <p className={`text-xs opacity-70 uppercase mb-1 ${textColor}`}>
                         {getCardType(card) === 'debito' ? 'Cuenta Débito' : 'Línea de Crédito'}
                       </p>
-                      <p className={`text-2xl font-mono font-bold ${textColor}`}>{formatCurrency(card.limite)}</p>
+                      <p className={`text-2xl font-sans font-bold ${textColor}`}>{formatCurrency(card.limite)}</p>
                     </div>
 
                     <div className={`pt-3 mt-1 border-t border-white/10 flex justify-between text-xs ${textColor}`}>
@@ -292,8 +292,8 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                     key={card.id}
                     onClick={() => handleSelectCard(card)}
                     className={`p-3 rounded-xl border-2 transition-all ${formData.selectedCardId === card.id
-                      ? 'border-emerald-500 bg-emerald-500/10 shadow-lg'
-                      : `${theme.colors.border} ${theme.colors.bgSecondary} hover:border-emerald-400/50`
+                      ? 'border-yn-primary-500 bg-yn-primary-500/10 shadow-lg'
+                      : `${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-400/50`
                       }`}
                   >
                     <div className={`h-16 rounded-lg bg-gradient-to-br ${card.gradient} mb-2 flex items-center justify-center overflow-hidden`}>
@@ -401,7 +401,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-5 bg-amber-200/80 rounded"></div>
-                    <span className="font-mono tracking-widest text-sm opacity-80">•••• ••••</span>
+                    <span className="font-sans tracking-widest text-sm opacity-80">•••• ••••</span>
                   </div>
                   <p className="text-xs opacity-70">{selectedCard.tipo}</p>
                 </div>
@@ -412,7 +412,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-4 rounded-xl font-bold text-white mt-4 shadow-lg transition-all active:scale-95 ${loading ? 'bg-gray-600' : 'bg-emerald-600 hover:bg-emerald-500'}`}
+            className={`w-full py-4 rounded-xl font-bold text-white mt-4 shadow-lg transition-all active:scale-95 ${loading ? 'bg-gray-600' : 'bg-yn-primary-600 hover:bg-yn-primary-500'}`}
           >
             {loading ? 'Guardando...' : 'Agregar Tarjeta'}
           </button>
@@ -423,7 +423,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       {loading && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className={`${theme.colors.bgCard} p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border ${theme.colors.border}`}>
-            <div className="w-16 h-16 border-4 border-t-emerald-500 border-r-emerald-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+            <div className="w-16 h-16 border-4 border-t-yn-primary-500 border-r-yn-primary-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
             <p className={`${theme.colors.textPrimary} font-semibold text-lg`}>Guardando tarjeta...</p>
             <p className={`${theme.colors.textMuted} text-sm`}>Sincronizando con Google Sheets</p>
           </div>

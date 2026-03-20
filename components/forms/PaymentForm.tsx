@@ -396,21 +396,21 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                       type="button"
                       key={e.id}
                       onClick={() => setSelectedExpenseId(e.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-indigo-500/50 hover:scale-[1.01]`}
+                      className={`w-full text-left p-3 rounded-xl border transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500/50 hover:scale-[1.01]`}
                     >
                       <div className="flex justify-between items-center mb-1">
                         <div className="flex items-center gap-2">
                           <CreditCard size={14} className={theme.colors.textMuted} />
                           <span className={`text-xs font-medium ${theme.colors.textMuted}`}>{e.tarjeta}</span>
                         </div>
-                        <span className="font-mono font-bold text-sm text-red-400">
+                        <span className="font-sans font-bold text-sm text-red-400">
                           {formatCurrency(debt)}
                         </span>
                       </div>
                       <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{e.descripcion}</p>
                       <div className="flex items-center gap-2 mt-1.5">
                         <div className={`flex-1 h-1.5 rounded-full overflow-hidden bg-gray-700`}>
-                          <div className="h-full rounded-full bg-indigo-500" style={{ width: `${progreso}%` }} />
+                          <div className="h-full rounded-full bg-yn-primary-500" style={{ width: `${progreso}%` }} />
                         </div>
                         <span className={`text-[10px] ${theme.colors.textMuted}`}>
                           {cuotasPagadas}/{e.num_cuotas} cuotas
@@ -436,7 +436,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                         <span className="w-2 h-2 rounded-full bg-purple-500" />
                         <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{e.descripcion}</p>
                       </div>
-                      <span className="font-mono font-bold text-sm text-purple-400">
+                      <span className="font-sans font-bold text-sm text-purple-400">
                         {formatCurrency(Number(e.monto))}/mes
                       </span>
                     </div>
@@ -496,7 +496,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                   <span className={theme.colors.textMuted}>Cuotas Pagadas:</span>
                   <div className="flex items-center gap-2">
                     <div className={`w-24 h-2 ${theme.colors.bgSecondary} rounded-full overflow-hidden`}>
-                      <div className="h-full bg-indigo-500" style={{ width: `${(selectedExpense.cuotas_pagadas / selectedExpense.num_cuotas) * 100}%` }}></div>
+                      <div className="h-full bg-yn-primary-500" style={{ width: `${(selectedExpense.cuotas_pagadas / selectedExpense.num_cuotas) * 100}%` }}></div>
                     </div>
                     <span className={`font-bold ${theme.colors.textPrimary}`}>
                       {Math.floor(Number(selectedExpense.cuotas_pagadas))} / {selectedExpense.num_cuotas}
@@ -518,7 +518,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                   step="0.01"
                   value={customAmount}
                   readOnly
-                  className={`${inputClass} pl-10 font-mono text-lg font-bold text-purple-400`}
+                  className={`${inputClass} pl-10 font-sans text-lg font-bold text-purple-400`}
                 />
               </div>
               <p className={`text-xs ${theme.colors.textMuted} mt-2`}>Las suscripciones se pagan siempre por el monto completo</p>
@@ -543,7 +543,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                     max="99999999"
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
-                    className={`${inputClass} pl-10 font-mono text-lg font-bold text-emerald-400`}
+                    className={`${inputClass} pl-10 font-sans text-lg font-bold text-emerald-400`}
                   />
                 </div>
               </div>
@@ -623,7 +623,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                     max={goalsWithFunds.find(g => g.id === breakMetaId)?.monto_ahorrado}
                     value={breakAmount}
                     onChange={e => setBreakAmount(e.target.value)}
-                    className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-amber-400`}
+                    className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-sans text-sm focus:ring-2 focus:ring-amber-400`}
                   />
                 </div>
                 <button

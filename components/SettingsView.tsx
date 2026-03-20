@@ -3,7 +3,6 @@ import { CreditCard as CreditCardType, UserProfile, NotificationConfig, FamilyCo
 import { CardForm } from './forms/CardForm';
 import { NotificationSettings } from './NotificationSettings';
 import { useTheme } from '../contexts/ThemeContext';
-import { themes } from '../themes';
 import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell, Users, Link2, Link2Off } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 import { getAvatarById } from '../avatars';
@@ -13,13 +12,12 @@ interface SettingsViewProps {
   scriptUrl: string;
   pin: string;
   cards: CreditCardType[];
-  currentTheme: string;
   profile?: UserProfile | null;
   notificationConfig?: NotificationConfig | null;
   onAddCard: (card: CreditCardType) => void;
   onEditCard: (card: CreditCardType) => void;
   onDeleteCard: (card: CreditCardType) => void;
-  onSetTheme: (theme: string) => void;
+  onSetTheme?: (theme: string) => void;
   onSync: () => void;
   onSaveNotificationConfig: (config: NotificationConfig) => Promise<{ success: boolean; verified: boolean }>;
   onSendTestEmail: () => Promise<{ enviado: boolean; verified: boolean; razon?: string }>;
@@ -31,18 +29,18 @@ interface SettingsViewProps {
   onNavigateToFamilia?: () => void;
   gasVersion?: number | null;
   schemaVersion?: number | null;
+  hasGeminiKey?: boolean;
+  onSaveGeminiKey?: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   scriptUrl,
   pin,
   cards,
-  currentTheme,
   profile,
   onAddCard,
   onEditCard,
   onDeleteCard,
-  onSetTheme,
   onSync,
   notificationConfig,
   onSaveNotificationConfig,
@@ -54,16 +52,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onDisconnectPartner,
   onNavigateToFamilia,
   gasVersion,
-  schemaVersion
+  schemaVersion,
+  hasGeminiKey,
+  onSaveGeminiKey
 }) => {
   const { theme } = useTheme();
-  const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
+  const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones' | 'ia'>('general');
+  const [geminiKey, setGeminiKey] = useState('');
+  const [isSavingKey, setIsSavingKey] = useState(false);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
   const sections = [
     { id: 'general' as const, label: 'General', icon: <SettingsIcon size={18} /> },
     { id: 'tarjetas' as const, label: 'Tarjetas', icon: <CreditCard size={18} /> },
     { id: 'notificaciones' as const, label: 'Notificaciones', icon: <Bell size={18} /> },
+    { id: 'ia' as const, label: 'IA (Scanner)', icon: <Pencil size={18} /> }, // Using Pencil as temporary icon for IA setup
   ];
 
   return (
@@ -107,47 +110,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className={`${theme.colors.bgSecondary} p-4 rounded-xl border ${theme.colors.border} flex items-center gap-4`}>
                   <div className="relative">
                     <AvatarSvg avatarId={avatar.id} size={64} className="border-4 border-white shadow-md" />
-                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
+                    <div className="absolute bottom-0 right-0 w-4 h-4 bg-yn-success-500 border-2 border-white rounded-full"></div>
                   </div>
                   <div>
                     <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>{profile.nombre}</h3>
                     <p className={`text-sm ${theme.colors.textMuted}`}>{avatar.label}</p>
-                    <p className="text-xs text-emerald-500 font-medium mt-1">● Cuenta Activa</p>
+                    <p className="text-xs text-yn-primary-500 font-medium mt-1">● Cuenta Activa</p>
                   </div>
                 </div>
               )}
 
-              {/* Theme Selector */}
-              <div>
-                <label className={`block text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3`}>
-                  Tema de la Aplicación
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {Object.values(themes).map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => onSetTheme(t.id)}
-                      className={`p-4 rounded-xl border-2 transition-all ${currentTheme === t.id
-                        ? `${t.colors.border} ${t.colors.primaryLight} border-current`
-                        : `${theme.colors.border} ${theme.colors.bgCard} hover:${theme.colors.bgCardHover}`
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-lg ${t.colors.gradientPrimary} shadow-md`}></div>
-                        <div className="text-left">
-                          <p className={`font-bold ${currentTheme === t.id ? theme.colors.textPrimary : theme.colors.textSecondary}`}>
-                            {t.name}
-                          </p>
-                          <p className={`text-xs ${theme.colors.textMuted}`}>
-                            {t.id === 'light-premium' ? 'Verde esmeralda' : 'Azul corporativo'}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+              {/* Divider before URL section */}
               <div className={`pt-6 border-t ${theme.colors.border}`}></div>
 
               {/* Google Script URL */}
@@ -161,7 +134,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     value={scriptUrl}
                     readOnly
                     placeholder="https://script.google.com/..."
-                    className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-current outline-none transition-all`}
+                    className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-sans text-sm focus:ring-2 focus:ring-current outline-none transition-all`}
                   />
                   <button
                     onClick={onSync}
@@ -181,7 +154,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   PIN de Seguridad
                 </label>
                 <div className="flex items-center gap-3">
-                  <div className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm`}>
+                  <div className={`flex-1 ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} font-sans text-sm`}>
                     {'•'.repeat(pin.length)}
                   </div>
                   <span className={`text-xs ${theme.colors.textMuted}`}>
@@ -201,7 +174,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 {familyConfig ? (
                   <div className={`${theme.colors.bgSecondary} rounded-xl border ${theme.colors.border} p-4 flex items-center justify-between`}>
                     <div className="flex items-center gap-2">
-                      <Link2 size={16} className="text-green-400" />
+                      <Link2 size={16} className="text-yn-success-400" />
                       <div>
                         <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{familyConfig.partnerName}</p>
                         <p className={`text-xs ${theme.colors.textMuted}`}>Pareja conectada</p>
@@ -244,7 +217,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     Información del Sistema
                   </label>
                   <div className={`${theme.colors.bgSecondary} rounded-xl p-4 border ${theme.colors.border}`}>
-                    <div className="flex flex-wrap gap-4 text-xs font-mono">
+                    <div className="flex flex-wrap gap-4 text-xs font-sans">
                       {gasVersion !== null && (
                         <div>
                           <span className={theme.colors.textMuted}>GAS</span>{' '}
@@ -277,7 +250,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       window.location.reload();
                     }
                   }}
-                  className={`${theme.colors.danger} hover:bg-rose-700 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2 justify-center`}
+                  className={`${theme.colors.danger} hover:bg-yn-error-700 text-white text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-2 justify-center`}
                 >
                   <AlertTriangle size={16} />
                   Reiniciar aplicación
@@ -302,7 +275,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         className={`${theme.colors.bgSecondary} p-4 rounded-xl border ${theme.colors.border} flex items-center justify-between`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-teal-500 to-emerald-500 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-yn-primary-500 to-yn-primary-700 flex items-center justify-center">
                             <CreditCard size={20} className="text-white" />
                           </div>
                           <div>
@@ -313,7 +286,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         <div className="flex items-center gap-4">
                           <div className="text-right hidden sm:block">
                             <p className={`text-xs ${theme.colors.textMuted}`}>Límite</p>
-                            <p className={`font-mono font-semibold ${theme.colors.textSecondary}`}>{formatCurrency(card.limite)}</p>
+                            <p className={`font-sans font-semibold ${theme.colors.textSecondary}`}>{formatCurrency(card.limite)}</p>
                           </div>
                           <p className={`text-xs ${theme.colors.textMuted} hidden sm:block`}>
                             Cierre: {card.dia_cierre} | Pago: {card.dia_pago}
@@ -322,10 +295,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           <div className="flex gap-1">
                             <button
                               onClick={() => onEditCard(card)}
-                              className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-teal-500/20 transition-colors`}
+                              className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-yn-primary-500/20 transition-colors`}
                               title="Editar"
                             >
-                              <Pencil size={14} className="text-teal-400" />
+                              <Pencil size={14} className="text-yn-primary-500" />
                             </button>
                             <button
                               onClick={() => onDeleteCard(card)}
@@ -382,6 +355,87 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 onSetupTrigger={onSetupDailyTrigger}
                 notify={notify}
               />
+            </div>
+          )}
+
+          {/* IA SECTION */}
+          {activeSection === 'ia' && (
+            <div className="space-y-6">
+              <div>
+                <h3 className={`text-lg font-bold ${theme.colors.textPrimary} mb-2 flex items-center gap-2`}>
+                   Scanner con Inteligencia Artificial
+                </h3>
+                <p className={`text-sm ${theme.colors.textMuted}`}>
+                  Configura tu API Key de Gemini para activar el escaneo automático de tickets y comprobantes.
+                </p>
+              </div>
+
+              <div className={`${theme.colors.bgSecondary} p-6 rounded-2xl border ${theme.colors.border} space-y-4`}>
+                <div className="flex items-center justify-between mb-2">
+                  <label className={`block text-xs font-bold ${theme.colors.textPrimary} uppercase tracking-wider`}>
+                    Gemini API Key
+                  </label>
+                  {hasGeminiKey ? (
+                    <span className="flex items-center gap-1 text-[10px] bg-green-500/10 text-green-500 px-2 py-0.5 rounded-full font-bold">
+                      ● CONFIGURADO
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[10px] bg-red-500/10 text-red-400 px-2 py-0.5 rounded-full font-bold">
+                      ● NO CONFIGURADO
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <input
+                    type="password"
+                    value={geminiKey}
+                    onChange={(e) => setGeminiKey(e.target.value)}
+                    placeholder={hasGeminiKey ? "••••••••••••••••" : "Tu API Key de Google Gemini"}
+                    className={`w-full ${theme.colors.bgCard} ${theme.colors.border} border rounded-xl px-4 py-3 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-yn-primary-500 outline-none`}
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!geminiKey) return;
+                      setIsSavingKey(true);
+                      try {
+                        const res = await onSaveGeminiKey?.(geminiKey);
+                        if (res?.success) {
+                          setGeminiKey('');
+                          notify('API Key guardada correctamente', 'success');
+                        } else {
+                          notify(res?.error || 'Error al guardar la clave', 'error');
+                        }
+                      } finally {
+                        setIsSavingKey(false);
+                      }
+                    }}
+                    disabled={isSavingKey || !geminiKey}
+                    className={`w-full py-3 rounded-xl font-bold text-white transition-all shadow-lg ${isSavingKey || !geminiKey
+                      ? 'bg-yn-neutral-700 opacity-50'
+                      : 'bg-yn-primary-600 hover:bg-yn-primary-700 active:scale-[0.98]'
+                      }`}
+                  >
+                    {isSavingKey ? 'Guardando...' : 'Guardar API Key'}
+                  </button>
+                </div>
+
+                <div className="pt-4 border-t border-yn-neutral-800/50">
+                  <h4 className={`text-xs font-bold ${theme.colors.textPrimary} uppercase mb-2`}>¿Cómo obtener tu clave?</h4>
+                  <ul className={`text-xs ${theme.colors.textMuted} space-y-2 list-disc pl-4`}>
+                    <li>Ingresa a <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-yn-primary-400 hover:underline">Google AI Studio</a>.</li>
+                    <li>Crea una nueva "API Key" (es gratuita hasta cierto límite).</li>
+                    <li>Pégala aquí y guarda los cambios.</li>
+                    <li>¡Listo! Ya puedes tomar fotos a tus tickets en la pestaña "Registrar".</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-yn-primary-500/5 border border-yn-primary-500/20">
+                <p className={`text-xs ${theme.colors.textMuted} leading-relaxed italic text-center`}>
+                  Nota: Tu clave se almacena de forma segura en tu propio script de Google y nunca sale de tu ecosistema de Google.
+                </p>
+              </div>
             </div>
           )}
 

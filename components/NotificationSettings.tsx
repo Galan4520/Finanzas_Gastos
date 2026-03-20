@@ -122,7 +122,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           className="w-full p-4 flex items-center justify-between text-left"
         >
           <div className="flex items-center gap-3">
-            <BookOpen size={20} className={configVerified === false ? 'text-amber-500' : 'text-emerald-500'} />
+            <BookOpen size={20} className={configVerified === false ? 'text-amber-500' : 'text-yn-primary-500'} />
             <div>
               <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>
                 {configVerified === false ? 'Configuración requerida en Apps Script' : 'Guía de configuración inicial'}
@@ -139,7 +139,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           <div className="px-4 pb-4 space-y-4">
             <div className={`rounded-lg p-4 space-y-3 ${theme.colors.bgCard}`}>
               <div className="flex items-start gap-3">
-                <span className="bg-emerald-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
+                <span className="bg-yn-primary-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">1</span>
                 <div>
                   <p className={`font-medium text-sm ${theme.colors.textPrimary}`}>Actualizar el código en Apps Script</p>
                   <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
@@ -150,7 +150,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               </div>
 
               <div className="flex items-start gap-3">
-                <span className="bg-emerald-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
+                <span className="bg-yn-primary-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">2</span>
                 <div>
                   <p className={`font-medium text-sm ${theme.colors.textPrimary}`}>Autorizar permisos de email</p>
                   <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
@@ -162,7 +162,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               </div>
 
               <div className="flex items-start gap-3">
-                <span className="bg-emerald-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
+                <span className="bg-yn-primary-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">3</span>
                 <div>
                   <p className={`font-medium text-sm ${theme.colors.textPrimary}`}>Crear un nuevo deploy</p>
                   <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
@@ -174,7 +174,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               </div>
 
               <div className="flex items-start gap-3">
-                <span className="bg-emerald-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
+                <span className="bg-yn-primary-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 mt-0.5">4</span>
                 <div>
                   <p className={`font-medium text-sm ${theme.colors.textPrimary}`}>Probar desde aquí</p>
                   <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
@@ -190,7 +190,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
       {/* Toggle de notificaciones */}
       <div className={`flex items-center justify-between p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
         <div className="flex items-center gap-3">
-          {activas ? <Bell size={20} className="text-emerald-500" /> : <BellOff size={20} className="text-gray-400" />}
+          {activas ? <Bell size={20} className="text-yn-primary-500" /> : <BellOff size={20} className="text-yn-neutral-400" />}
           <div>
             <p className={`font-semibold ${theme.colors.textPrimary}`}>Notificaciones por Email</p>
             <p className={`text-xs ${theme.colors.textMuted}`}>
@@ -200,7 +200,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
         </div>
         <button
           onClick={() => setActivas(!activas)}
-          className={`relative w-12 h-6 rounded-full transition-colors ${activas ? 'bg-emerald-500' : 'bg-gray-400'}`}
+          className={`relative w-12 h-6 rounded-full transition-colors ${activas ? 'bg-yn-primary-500' : 'bg-yn-neutral-400'}`}
         >
           <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${activas ? 'left-6' : 'left-0.5'}`} />
         </button>
@@ -219,7 +219,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="tu-email@gmail.com"
-              className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-emerald-500 outline-none transition-all`}
+              className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-yn-primary-500 outline-none transition-all`}
             />
             <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
               El email se envía desde la cuenta de Google asociada al Sheet
@@ -239,8 +239,8 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                   onClick={() => setDiasAnticipacion(d)}
                   className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                     diasAnticipacion === d
-                      ? 'bg-emerald-500 text-white shadow-lg'
-                      : `${theme.colors.bgSecondary} ${theme.colors.textSecondary} border ${theme.colors.border} hover:border-emerald-500`
+                      ? 'bg-yn-primary-500 text-white shadow-lg'
+                      : `${theme.colors.bgSecondary} ${theme.colors.textSecondary} border ${theme.colors.border} hover:border-yn-primary-500`
                   }`}
                 >
                   {d} {d === 1 ? 'día' : 'días'}
@@ -259,7 +259,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
             className={`w-full py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2 ${
               isValidEmail(email)
                 ? `${theme.colors.primary} ${theme.colors.primaryHover} text-white shadow-lg`
-                : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                : 'bg-yn-neutral-400 text-yn-neutral-200 cursor-not-allowed'
             }`}
           >
             {saving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle size={18} />}
@@ -268,9 +268,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
 
           {/* Estado de verificación */}
           {configVerified === true && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-              <CheckCircle size={16} className="text-emerald-500" />
-              <p className="text-sm text-emerald-400 font-medium">Configuración verificada en Google Sheet</p>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-yn-primary-500/10 border border-yn-primary-500/30">
+              <CheckCircle size={16} className="text-yn-primary-500" />
+              <p className="text-sm text-yn-primary-500 font-medium">Configuración verificada en Google Sheet</p>
               {lastSent && (
                 <span className={`text-xs ${theme.colors.textMuted} ml-auto`}>
                   Último email: {new Date(lastSent).toLocaleString('es-PE')}
@@ -280,9 +280,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
           )}
 
           {configVerified === false && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-              <XCircle size={16} className="text-red-400" />
-              <p className="text-sm text-red-400 font-medium">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-yn-error-500/10 border border-yn-error-500/30">
+              <XCircle size={16} className="text-yn-error-500" />
+              <p className="text-sm text-yn-error-500 font-medium">
                 No se verificó el guardado. Revisa la guía de configuración arriba.
               </p>
             </div>
@@ -300,9 +300,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 <button
                   onClick={handleTestEmail}
                   disabled={sendingTest}
-                  className={`p-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-emerald-500 transition-all flex items-center gap-3`}
+                  className={`p-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 transition-all flex items-center gap-3`}
                 >
-                  {sendingTest ? <Loader2 size={18} className="animate-spin text-emerald-500" /> : <Send size={18} className="text-emerald-500" />}
+                  {sendingTest ? <Loader2 size={18} className="animate-spin text-yn-primary-500" /> : <Send size={18} className="text-yn-primary-500" />}
                   <div className="text-left">
                     <p className={`font-medium text-sm ${theme.colors.textPrimary}`}>
                       {sendingTest ? 'Enviando y verificando...' : 'Email de Prueba'}
@@ -315,9 +315,9 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                 <button
                   onClick={handleSendNotifications}
                   disabled={sendingNotif}
-                  className={`p-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-blue-500 transition-all flex items-center gap-3`}
+                  className={`p-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-sec1-500 transition-all flex items-center gap-3`}
                 >
-                  {sendingNotif ? <Loader2 size={18} className="animate-spin text-blue-500" /> : <Bell size={18} className="text-blue-500" />}
+                  {sendingNotif ? <Loader2 size={18} className="animate-spin text-yn-sec1-500" /> : <Bell size={18} className="text-yn-sec1-500" />}
                   <div className="text-left">
                     <p className={`font-medium text-sm ${theme.colors.textPrimary}`}>
                       {sendingNotif ? 'Enviando y verificando...' : 'Enviar Ahora'}
@@ -335,7 +335,7 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
                     <p className={`font-medium text-sm ${theme.colors.textPrimary}`}>Notificación Automática Diaria</p>
                     <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
                       Para recibir emails automáticos cada día a las 8:00 AM, ejecuta la función{' '}
-                      <code className="bg-gray-700/50 px-1 rounded text-emerald-400">configurarTriggerDiario</code> desde
+                      <code className="bg-yn-neutral-700/50 px-1 rounded text-yn-primary-500">configurarTriggerDiario</code> desde
                       el editor de Apps Script, o intenta configurarlo desde aquí.
                     </p>
                     <button

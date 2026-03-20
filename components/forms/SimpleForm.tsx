@@ -72,7 +72,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, pin, on
               value={formData.fecha}
               onChange={handleChange}
               required
-              className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yn-primary-500 focus:border-transparent transition-all"
             />
           </div>
           <div className="space-y-1">
@@ -88,7 +88,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, pin, on
                 onChange={handleChange}
                 placeholder="0.00"
                 required
-                className="w-full bg-slate-900/50 border border-slate-600 rounded-xl pl-10 pr-4 py-3 text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full bg-slate-900/50 border border-slate-600 rounded-xl pl-10 pr-4 py-3 text-white font-sans text-lg focus:outline-none focus:ring-2 focus:ring-yn-primary-500 focus:border-transparent transition-all"
               />
             </div>
           </div>
@@ -101,7 +101,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, pin, on
             value={formData.categoria}
             onChange={handleChange}
             required
-            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all appearance-none"
+            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yn-primary-500 focus:border-transparent transition-all appearance-none"
           >
             <option value="">Selecciona una opción...</option>
             {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
@@ -117,7 +117,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, pin, on
             onChange={handleChange}
             placeholder="Ej: Almuerzo, Salario..."
             required
-            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yn-primary-500 focus:border-transparent transition-all"
           />
         </div>
 
@@ -128,7 +128,7 @@ export const SimpleForm: React.FC<SimpleFormProps> = ({ type, scriptUrl, pin, on
             value={formData.notas}
             onChange={handleChange}
             rows={2}
-            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none"
+            className="w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yn-primary-500 focus:border-transparent transition-all resize-none"
           />
         </div>
 

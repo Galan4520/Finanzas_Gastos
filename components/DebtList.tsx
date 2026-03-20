@@ -24,8 +24,8 @@ export const DebtList: React.FC<DebtListProps> = ({ expenses, title = 'Mis Deuda
     if (deudas.length === 0) {
         return (
             <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} text-center`}>
-                <div className="w-12 h-12 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <CheckCircle className="text-emerald-500" size={24} />
+                <div className="w-12 h-12 bg-yn-primary-500/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle className="text-yn-primary-500" size={24} />
                 </div>
                 <h3 className={`font-bold ${theme.colors.textPrimary}`}>¡Estás al día!</h3>
                 <p className={`text-sm ${theme.colors.textMuted}`}>No tienes deudas pendientes registradas.</p>
@@ -40,12 +40,12 @@ export const DebtList: React.FC<DebtListProps> = ({ expenses, title = 'Mis Deuda
         <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
             <div className="flex justify-between items-center mb-4">
                 <h3 className={`text-xl font-bold ${theme.colors.textPrimary} flex items-center gap-2`}>
-                    <CreditCard size={24} className="text-blue-500" />
+                    <CreditCard size={24} className="text-yn-primary-500" />
                     {title}
                 </h3>
                 <div className="text-right">
                     <p className={`text-xs ${theme.colors.textMuted}`}>Total pendiente</p>
-                    <p className={`font-mono font-bold text-red-400`}>{formatCurrency(totalDeuda)}</p>
+                    <p className={`font-sans font-bold text-red-400`}>{formatCurrency(totalDeuda)}</p>
                 </div>
             </div>
 
@@ -66,7 +66,7 @@ export const DebtList: React.FC<DebtListProps> = ({ expenses, title = 'Mis Deuda
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className={`font-mono font-bold ${vencida ? 'text-red-500' : theme.colors.textPrimary}`}>
+                                    <p className={`font-sans font-bold ${vencida ? 'text-red-500' : theme.colors.textPrimary}`}>
                                         {formatCurrency(saldo)}
                                     </p>
                                     <p className="text-[10px] text-gray-500">Restante</p>
@@ -76,7 +76,7 @@ export const DebtList: React.FC<DebtListProps> = ({ expenses, title = 'Mis Deuda
                             {/* Progress Bar */}
                             <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
                                 <div
-                                    className={`h-full ${vencida ? 'bg-red-500' : 'bg-blue-500'}`}
+                                    className={`h-full ${vencida ? 'bg-yn-error-500' : 'bg-yn-primary-500'}`}
                                     style={{ width: `${progreso}%` }}
                                 />
                             </div>

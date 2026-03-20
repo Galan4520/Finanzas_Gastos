@@ -1,5 +1,5 @@
 {
-  "gas_version": 4,
+  "gas_version": 5,
   "code_url": "https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js",
-  "changelog": "v5.3 — Prueba de auto-update: verificar que el GAS se actualiza solo"
+  "changelog": "v5.0 — Integración de Scanner de IA con Gemini y ajustes avanzados"
 }

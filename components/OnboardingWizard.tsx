@@ -273,7 +273,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
   ];
 
   const colorMap: Record<string, { bg: string; text: string; border: string }> = {
-    emerald: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/20' },
+    emerald: { bg: 'bg-yn-primary-500/15', text: 'text-yn-primary-500', border: 'border-yn-primary-500/20' },
     sky: { bg: 'bg-sky-500/15', text: 'text-sky-400', border: 'border-sky-500/20' },
     violet: { bg: 'bg-violet-500/15', text: 'text-violet-400', border: 'border-violet-500/20' },
     amber: { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/20' },
@@ -435,7 +435,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                   <button
                     onClick={addCard}
                     disabled={!cardForm.banco || !cardForm.alias}
-                    className="flex-1 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:cursor-not-allowed text-white py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-emerald-500/25"
+                    className="flex-1 bg-yn-primary-500 hover:bg-yn-primary-300 disabled:opacity-30 disabled:cursor-not-allowed text-white py-2.5 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-yn-primary-500/25"
                   >
                     Agregar
                   </button>
@@ -467,25 +467,25 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
             </LlamaTip>
 
             {/* Billetera */}
-            <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 rounded-2xl p-4 border border-emerald-500/20">
+            <div className="bg-gradient-to-br from-yn-primary-500/10 to-yn-primary-700/5 rounded-2xl p-4 border border-yn-primary-500/20">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-emerald-500/20 rounded-xl flex items-center justify-center">
-                  <Wallet size={20} className="text-emerald-400" />
+                <div className="w-10 h-10 bg-yn-primary-500/20 rounded-xl flex items-center justify-center">
+                  <Wallet size={20} className="text-yn-primary-500" />
                 </div>
                 <div>
                   <p className="text-white font-semibold text-sm">Billetera (Efectivo)</p>
-                  <p className="text-emerald-300/60 text-xs">Dinero fisico que tienes ahora mismo</p>
+                  <p className="text-yn-primary-300/60 text-xs">Dinero fisico que tienes ahora mismo</p>
                 </div>
               </div>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400/60 text-sm font-medium">S/.</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-yn-primary-500/60 text-sm font-medium">S/.</span>
                 <input
                   type="number"
                   max="99999999"
                   value={billetera}
                   onChange={e => setBilletera(e.target.value)}
                   placeholder="0.00"
-                  className="w-full bg-black/20 border border-emerald-500/20 rounded-xl pl-10 pr-3 py-3 text-white text-sm placeholder-white/20 focus:ring-2 focus:ring-emerald-400/50 focus:border-transparent"
+                  className="w-full bg-black/20 border border-yn-primary-500/20 rounded-xl pl-10 pr-3 py-3 text-white text-sm placeholder-white/20 focus:ring-2 focus:ring-yn-primary-500/50 focus:border-transparent"
                 />
               </div>
             </div>
@@ -664,7 +664,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
           <div className="space-y-4">
             {isSubmitting ? (
               <div className="bg-white/5 rounded-2xl p-8 text-center border border-white/10">
-                <Loader2 size={40} className="text-emerald-400 animate-spin mx-auto mb-4" />
+                <Loader2 size={40} className="text-yn-primary-500 animate-spin mx-auto mb-4" />
                 <p className="text-white font-semibold mb-1">Configurando tu cuenta...</p>
                 <p className="text-white/50 text-sm">{submitProgress}</p>
               </div>
@@ -677,7 +677,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                 {/* Cards summary */}
                 {cards.length > 0 && (
                   <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                    <h4 className="text-emerald-400 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <h4 className="text-yn-primary-500 text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2">
                       <CreditCardIcon size={14} />
                       {cards.length} tarjeta{cards.length > 1 ? 's' : ''}
                     </h4>
@@ -703,7 +703,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-white/70">Billetera</span>
-                      <span className="text-emerald-400 font-semibold">S/. {Number(billetera || 0).toFixed(2)}</span>
+                      <span className="text-yn-primary-500 font-semibold">S/. {Number(billetera || 0).toFixed(2)}</span>
                     </div>
                     {debitCards.map(card => (
                       <div key={card.alias} className="flex items-center justify-between text-sm">
@@ -730,7 +730,7 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
                           <div key={card.alias}>
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-white/70">{card.alias}</span>
-                              <span className={`font-semibold ${debtAmount > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                              <span className={`font-semibold ${debtAmount > 0 ? 'text-yn-error-500' : 'text-yn-primary-500'}`}>
                                 S/. {debtAmount.toFixed(2)}
                               </span>
                             </div>
@@ -777,17 +777,17 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ scriptUrl, p
         <div className="bg-white/[0.06] backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
 
           {/* Header with Llama */}
-          <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-500 p-5 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-yn-primary-700 via-yn-primary-500 to-yn-primary-300 p-5 relative overflow-hidden">
             <div className="absolute right-3 -bottom-2 opacity-30">
               <LlamaMascot size={60} />
             </div>
-            <p className="text-emerald-50/80 text-xs font-medium mb-0.5">
+            <p className="text-yn-primary-100/80 text-xs font-medium mb-0.5">
               {step === 0 ? 'Finanzas Gastos' : 'Configuracion inicial'}
             </p>
             <h1 className="text-xl font-bold text-white">
               {step === 0 ? 'Tu dinero, bajo control' : 'Preparemos tus finanzas'}
             </h1>
-            {step > 0 && <p className="text-emerald-100/80 text-sm mt-1">Paso {step} de 3</p>}
+            {step > 0 && <p className="text-yn-primary-100/80 text-sm mt-1">Paso {step} de 3</p>}
           </div>
 
           {/* Step Indicators — hidden on welcome step */}

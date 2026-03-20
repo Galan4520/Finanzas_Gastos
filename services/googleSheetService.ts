@@ -677,3 +677,68 @@ export const fetchProperties = async (propertiesScriptUrl: string) => {
     throw error;
   }
 };
+
+// ═══════════════════════════════════════════════════════════════
+// AI SCANNER - Análisis de recibos con Gemini
+// ═══════════════════════════════════════════════════════════════
+export const analyzeReceiptWithAI = async (
+  scriptUrl: string,
+  pin: string,
+  base64Image: string
+): Promise<{ success: boolean; data?: any; error?: string }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const formData = new FormData();
+  formData.append('action', 'analyzeReceipt');
+  formData.append('pin', pin);
+  formData.append('base64Image', base64Image);
+
+  try {
+    console.log('🤖 [analyzeReceiptWithAI] Enviando imagen a Gemini...');
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      body: formData,
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error del servidor: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("❌ [analyzeReceiptWithAI] Error:", error);
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
+export const saveGeminiApiKey = async (
+  scriptUrl: string,
+  pin: string,
+  key: string
+): Promise<{ success: boolean; message?: string }> => {
+  if (!scriptUrl) throw new Error("URL de Google Apps Script no configurada");
+
+  const formData = new FormData();
+  formData.append('action', 'saveGeminiKey');
+  formData.append('pin', pin);
+  formData.append('key', key);
+
+  try {
+    const response = await fetch(scriptUrl, {
+      method: "POST",
+      body: formData,
+      redirect: 'follow'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("❌ [saveGeminiApiKey] Error:", error);
+    throw error;
+  }
+};

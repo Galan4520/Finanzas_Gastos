@@ -116,7 +116,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
         }));
     };
 
-    const inputClass = `w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-teal-500 transition-all`;
+    const inputClass = `w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-yn-primary-500 transition-all`;
     const labelClass = `text-xs font-bold ${theme.colors.textMuted} uppercase tracking-wide ml-1 mb-1 block`;
 
     return (
@@ -133,7 +133,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                     {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                         <h3 className={`text-xl font-bold ${theme.colors.textPrimary} flex items-center gap-2`}>
-                            <CardIcon className="text-teal-400" size={24} />
+                            <CardIcon className="text-yn-primary-400" size={24} />
                             Editar Tarjeta
                         </h3>
                         <button
@@ -175,8 +175,8 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                                             onClick={() => handleSelectCard(bankCard)}
                                             disabled={loading}
                                             className={`p-3 rounded-xl border-2 transition-all ${formData.selectedCardId === bankCard.id
-                                                ? 'border-teal-500 bg-teal-500/10 shadow-lg'
-                                                : `${theme.colors.border} ${theme.colors.bgSecondary} hover:border-teal-400/50`
+                                                ? 'border-yn-primary-500 bg-yn-primary-500/10 shadow-lg'
+                                                : `${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-400/50`
                                                 }`}
                                         >
                                             <div className={`h-14 rounded-lg bg-gradient-to-br ${bankCard.gradient} mb-2 flex items-center justify-center overflow-hidden`}>
@@ -295,7 +295,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                                         </div>
                                         <div className="flex items-center gap-2">
                                             <div className="w-6 h-4 bg-amber-200/80 rounded"></div>
-                                            <span className="font-mono tracking-widest text-xs opacity-80">•••• ••••</span>
+                                            <span className="font-sans tracking-widest text-xs opacity-80">•••• ••••</span>
                                         </div>
                                     </div>
                                 </div>
@@ -315,7 +315,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className={`flex-1 px-4 py-3 rounded-xl font-semibold text-white transition-all shadow-lg flex items-center justify-center gap-2 ${loading ? 'bg-gray-500' : 'bg-teal-500 hover:bg-teal-600'}`}
+                                className={`flex-1 px-4 py-3 rounded-xl font-semibold text-white transition-all shadow-lg flex items-center justify-center gap-2 ${loading ? 'bg-yn-neutral-500' : 'bg-yn-primary-500 hover:bg-yn-primary-700'}`}
                             >
                                 {loading ? (
                                     <>
@@ -347,3 +347,4 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
         </>
     );
 };
+

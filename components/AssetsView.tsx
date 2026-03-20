@@ -142,14 +142,14 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Inversión Total</p>
-            <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+            <p className={`text-lg sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
               {formatCompact(totalInversion)}
             </p>
           </div>
 
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Valor Actual</p>
-            <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+            <p className={`text-lg sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
               {formatCompact(totalValorActual)}
             </p>
           </div>
@@ -157,11 +157,11 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Plusvalía</p>
             <div className="flex items-center gap-2">
-              <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+              <p className={`text-lg sm:text-2xl font-sans font-bold truncate ${plusvalia >= 0 ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                 {plusvalia >= 0 ? '+' : ''}{formatCompact(plusvalia)}
               </p>
               {plusvalia !== 0 && (
-                <span className={`text-xs font-bold ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                <span className={`text-xs font-bold ${plusvalia >= 0 ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                   ({porcentajePlusvalia > 0 ? '+' : ''}{porcentajePlusvalia.toFixed(1)}%)
                 </span>
               )}
@@ -170,7 +170,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
 
           <div className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Renta Mensual</p>
-            <p className={`text-lg sm:text-2xl font-mono font-bold truncate ${totalRentaMensual > 0 ? 'text-emerald-500' : theme.colors.textPrimary}`}>
+            <p className={`text-lg sm:text-2xl font-sans font-bold truncate ${totalRentaMensual > 0 ? 'text-yn-primary-500' : theme.colors.textPrimary}`}>
               {formatCompact(totalRentaMensual)}
             </p>
           </div>
@@ -244,7 +244,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                         <p className={`text-xs ${theme.colors.textMuted}`}>{inv.tipo}</p>
                       </div>
                       {inv.genera_renta && (
-                        <span className="bg-emerald-500/20 text-emerald-400 text-xs px-2 py-1 rounded font-bold">
+                        <span className="bg-yn-primary-500/20 text-yn-primary-500 text-xs px-2 py-1 rounded font-bold">
                           GENERA RENTA
                         </span>
                       )}
@@ -253,26 +253,26 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div>
                         <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Valor de Compra</p>
-                        <p className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                        <p className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>
                           {formatCurrency(inv.valor_compra)}
                         </p>
                       </div>
                       <div>
                         <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Valor Actual</p>
-                        <p className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                        <p className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>
                           {formatCurrency(inv.valor_actual)}
                         </p>
                       </div>
                     </div>
 
-                    <div className={`p-3 rounded-lg ${plusvalia >= 0 ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                    <div className={`p-3 rounded-lg ${plusvalia >= 0 ? 'bg-yn-primary-500/10' : 'bg-yn-error-500/10'}`}>
                       <div className="flex items-center justify-between">
                         <span className={`text-xs ${theme.colors.textMuted}`}>Plusvalía</span>
                         <div className="text-right">
-                          <p className={`text-sm font-mono font-bold ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          <p className={`text-sm font-sans font-bold ${plusvalia >= 0 ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                             {plusvalia >= 0 ? '+' : ''}{formatCurrency(plusvalia)}
                           </p>
-                          <p className={`text-xs font-semibold ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                          <p className={`text-xs font-semibold ${plusvalia >= 0 ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                             ({porcentaje > 0 ? '+' : ''}{porcentaje.toFixed(1)}%)
                           </p>
                         </div>
@@ -283,7 +283,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                       <div className={`mt-3 p-3 rounded-lg ${theme.colors.bgSecondary}`}>
                         <div className="flex items-center justify-between">
                           <span className={`text-xs ${theme.colors.textMuted}`}>Renta Mensual</span>
-                          <p className="text-sm font-mono font-bold text-emerald-500">
+                          <p className="text-sm font-sans font-bold text-yn-primary-500">
                             {formatCurrency(inv.renta_mensual)}/mes
                           </p>
                         </div>
@@ -415,7 +415,7 @@ export const AssetsView: React.FC<AssetsViewProps> = ({
                     <div className="flex items-end justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
                       <div>
                         <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Precio</p>
-                        <p className={`text-xl font-mono font-bold ${theme.colors.textPrimary}`}>
+                        <p className={`text-xl font-sans font-bold ${theme.colors.textPrimary}`}>
                           {formatCurrency(prop.precio)}
                         </p>
                       </div>

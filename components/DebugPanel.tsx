@@ -138,7 +138,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({ pendingExpenses, onForce
         {/* Info de localStorage */}
         <div className={`text-xs ${theme.colors.textMuted} p-2 rounded ${theme.colors.bgSecondary}`}>
           <div className="font-semibold mb-1">LocalStorage:</div>
-          <div className="font-mono text-[10px]">
+          <div className="font-sans text-[10px]">
             <div>Versión: {localStorage.getItem('app_version') || 'N/A'}</div>
             <div>Deudas: {localStorage.getItem('pendientes') ? JSON.parse(localStorage.getItem('pendientes')!).length : 0}</div>
             <div>Tarjetas: {localStorage.getItem('cards') ? JSON.parse(localStorage.getItem('cards')!).length : 0}</div>

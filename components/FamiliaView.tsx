@@ -10,6 +10,7 @@ import { FamilyConfig, FamilyMember, Transaction, Goal, CreditCard as CreditCard
 import { getAvatarById } from '../avatars';
 import { AvatarSvg } from './ui/AvatarSvg';
 import { formatCurrency } from '../utils/format';
+import { CHART_COLORS, CAT_COLORS, MEMBER_COLORS, CHART_INCOME, CHART_EXPENSE } from '../utils/yunaiColors';
 import {
   faCar, faPlane, faHouse, faGraduationCap, faShield, faBriefcase,
   faLaptop, faHeart, faHeartPulse, faPiggyBank, faMotorcycle,
@@ -42,27 +43,27 @@ const ICON_MAP: Record<string, any> = {
   pet: faDog, game: faGamepad, food: faUtensils, heart: faHeart, piggy: faPiggyBank,
 };
 const ACCENT_MAP: Record<string, { accent: string; bg: string; text: string }> = {
-  car: { accent: '#3b82f6', bg: 'bg-blue-500/10', text: 'text-blue-500' },
-  moto: { accent: '#f97316', bg: 'bg-orange-500/10', text: 'text-orange-500' },
-  plane: { accent: '#0ea5e9', bg: 'bg-sky-500/10', text: 'text-sky-500' },
-  beach: { accent: '#eab308', bg: 'bg-yellow-500/10', text: 'text-yellow-500' },
-  house: { accent: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-600' },
-  edu: { accent: '#6366f1', bg: 'bg-indigo-500/10', text: 'text-indigo-500' },
-  shield: { accent: '#f43f5e', bg: 'bg-rose-500/10', text: 'text-rose-500' },
-  work: { accent: '#d97706', bg: 'bg-amber-500/10', text: 'text-amber-600' },
-  laptop: { accent: '#64748b', bg: 'bg-slate-500/10', text: 'text-slate-500' },
-  ring: { accent: '#ec4899', bg: 'bg-pink-500/10', text: 'text-pink-500' },
-  baby: { accent: '#a855f7', bg: 'bg-purple-500/10', text: 'text-purple-400' },
-  health: { accent: '#ef4444', bg: 'bg-red-500/10', text: 'text-red-500' },
-  pet: { accent: '#d97706', bg: 'bg-amber-200/40', text: 'text-amber-600' },
-  game: { accent: '#8b5cf6', bg: 'bg-violet-500/10', text: 'text-violet-500' },
-  food: { accent: '#fb923c', bg: 'bg-orange-500/10', text: 'text-orange-400' },
-  heart: { accent: '#fb7185', bg: 'bg-rose-500/10', text: 'text-rose-400' },
-  piggy: { accent: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-500' },
+  car: { accent: '#099AFE', bg: 'bg-yn-sec1-500/10', text: 'text-yn-sec1-500' },
+  moto: { accent: '#F6AC2E', bg: 'bg-yn-warning-400/10', text: 'text-yn-warning-400' },
+  plane: { accent: '#32ABFE', bg: 'bg-yn-sec1-400/10', text: 'text-yn-sec1-400' },
+  beach: { accent: '#FED609', bg: 'bg-yn-sec2-500/10', text: 'text-yn-sec2-500' },
+  house: { accent: '#00A750', bg: 'bg-yn-primary-500/10', text: 'text-yn-primary-700' },
+  edu: { accent: '#014E83', bg: 'bg-yn-sec1-800/10', text: 'text-yn-sec1-800' },
+  shield: { accent: '#EF4444', bg: 'bg-yn-error-500/10', text: 'text-yn-error-500' },
+  work: { accent: '#D38B09', bg: 'bg-yn-warning-600/10', text: 'text-yn-warning-600' },
+  laptop: { accent: '#6F7D75', bg: 'bg-yn-neutral-500/10', text: 'text-yn-neutral-500' },
+  ring: { accent: '#EE6060', bg: 'bg-yn-error-400/10', text: 'text-yn-error-400' },
+  baby: { accent: '#016BAF', bg: 'bg-yn-sec1-700/10', text: 'text-yn-sec1-700' },
+  health: { accent: '#EF4444', bg: 'bg-yn-error-500/10', text: 'text-yn-error-500' },
+  pet: { accent: '#D38B09', bg: 'bg-yn-warning-600/10', text: 'text-yn-warning-600' },
+  game: { accent: '#099AFE', bg: 'bg-yn-sec1-500/10', text: 'text-yn-sec1-500' },
+  food: { accent: '#F8BA51', bg: 'bg-yn-warning-300/10', text: 'text-yn-warning-300' },
+  heart: { accent: '#EE6060', bg: 'bg-yn-error-400/10', text: 'text-yn-error-400' },
+  piggy: { accent: '#00A750', bg: 'bg-yn-primary-500/10', text: 'text-yn-primary-500' },
 };
 function getGoalStyle(icono?: string) {
   if (icono && ACCENT_MAP[icono]) return { icon: ICON_MAP[icono] || faPiggyBank, ...ACCENT_MAP[icono] };
-  return { icon: faPiggyBank, accent: '#10b981', bg: 'bg-emerald-500/10', text: 'text-emerald-500' };
+  return { icon: faPiggyBank, accent: '#00A750', bg: 'bg-yn-primary-500/10', text: 'text-yn-primary-500' };
 }
 
 // ── Helper: build N months of data
@@ -86,11 +87,7 @@ function buildMonthlyData(history: Transaction[], months: Period) {
 
 // ── Helper: category breakdown for a period
 type CatFilter = 'mes' | 'periodo';
-const CAT_COLORS = [
-  '#3b82f6','#10b981','#f97316','#a855f7','#ec4899',
-  '#eab308','#14b8a6','#ef4444','#64748b','#6366f1',
-  '#d97706','#0ea5e9','#fb923c','#84cc16'
-];
+// CAT_COLORS imported from yunaiColors
 function buildCategoryData(history: Transaction[], months: Period, filter: CatFilter) {
   const now = new Date();
   const filterKeys: string[] = [];
@@ -125,10 +122,11 @@ function getGoalActivity(history: Transaction[], goalId: string, limit = 4) {
 const ChartTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-xl p-3 shadow-xl text-xs">
-      <p className="font-bold text-gray-300 mb-2">{label}</p>
+    <div style={{ background: '#F6F9F7', border: '1px solid #D7DFDA' }}
+      className="rounded-xl p-3 shadow-xl text-xs">
+      <p className="font-bold mb-2" style={{ color: '#161C19' }}>{label}</p>
       {payload.map((p: any) => (
-        <p key={p.name} style={{ color: p.color }} className="font-mono">
+        <p key={p.name} style={{ color: p.color }} className="font-sans">
           {p.name}: {formatCurrency(p.value)}
         </p>
       ))}
@@ -165,14 +163,14 @@ const GoalCard: React.FC<{
                 {goal.owner}
               </span>
             )}
-            {readOnly && <Eye size={12} className="text-amber-500" />}
+            {readOnly && <Eye size={12} className="text-yn-warning-500" />}
           </div>
           <p className={`text-xs ${theme.colors.textMuted} mt-0.5`}>
             Falta {formatCurrency(falta)}
           </p>
         </div>
         <div className="text-right flex-shrink-0">
-          <p className={`font-bold text-sm font-mono`} style={{ color: style.accent }}>
+          <p className={`font-bold text-sm font-sans`} style={{ color: style.accent }}>
             {formatCurrency(goal.monto_ahorrado)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted}`}>de {formatCurrency(goal.monto_objetivo)}</p>
@@ -198,13 +196,13 @@ const GoalCard: React.FC<{
             return (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className={`text-xs ${isAporte ? 'text-green-400' : 'text-red-400'}`}>
+                  <span className={`text-xs ${isAporte ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
                     {isAporte ? '↑' : '↓'}
                   </span>
                   <span className={`text-xs ${theme.colors.textMuted}`}>{dateStr}</span>
                   {t.cuenta && <span className={`text-xs ${theme.colors.textMuted} opacity-60`}>· {t.cuenta}</span>}
                 </div>
-                <span className={`text-xs font-mono font-semibold ${isAporte ? 'text-green-400' : 'text-red-400'}`}>
+                <span className={`text-xs font-sans font-semibold ${isAporte ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
                   {isAporte ? '+' : '-'}{formatCurrency(Number(t.monto))}
                 </span>
               </div>
@@ -255,7 +253,7 @@ const PersonView: React.FC<{
           <p className={`font-bold ${theme.colors.textPrimary}`}>{nombre}</p>
           <div className="flex items-center gap-2">
             {readOnly && (
-              <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+              <span className="text-xs bg-yn-warning-500/10 text-yn-warning-500 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                 <Eye size={10} /> Solo lectura
               </span>
             )}
@@ -270,7 +268,7 @@ const PersonView: React.FC<{
               onClick={() => onPeriodChange(p.value)}
               className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                 period === p.value
-                  ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                  ? `bg-yn-primary-500/10 text-yn-primary-500 shadow-sm`
                   : `${theme.colors.textMuted}`
               }`}
             >
@@ -283,17 +281,17 @@ const PersonView: React.FC<{
       {/* Summary row */}
       <div className="grid grid-cols-3 gap-3">
         <div className={`${theme.colors.bgSecondary} rounded-xl p-3 text-center`}>
-          <TrendingUp size={14} className="text-green-400 mx-auto mb-1" />
-          <p className="text-green-400 font-bold text-xs font-mono">{formatCurrency(currentMonth.ingresos)}</p>
+          <TrendingUp size={14} className="text-yn-primary-500 mx-auto mb-1" />
+          <p className="text-yn-primary-500 font-bold text-xs font-sans">{formatCurrency(currentMonth.ingresos)}</p>
           <p className={`text-xs ${theme.colors.textMuted}`}>Ingresos</p>
         </div>
         <div className={`${theme.colors.bgSecondary} rounded-xl p-3 text-center`}>
-          <TrendingDown size={14} className="text-red-400 mx-auto mb-1" />
-          <p className="text-red-400 font-bold text-xs font-mono">{formatCurrency(currentMonth.gastos)}</p>
+          <TrendingDown size={14} className="text-yn-error-400 mx-auto mb-1" />
+          <p className="text-yn-error-400 font-bold text-xs font-sans">{formatCurrency(currentMonth.gastos)}</p>
           <p className={`text-xs ${theme.colors.textMuted}`}>Gastos</p>
         </div>
         <div className={`${theme.colors.bgSecondary} rounded-xl p-3 text-center`}>
-          <p className={`font-bold text-xs font-mono ${currentMonth.balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <p className={`font-bold text-xs font-sans ${currentMonth.balance >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
             {currentMonth.balance >= 0 ? '+' : ''}{formatCurrency(currentMonth.balance)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted}`}>Balance</p>
@@ -309,24 +307,24 @@ const PersonView: React.FC<{
           <AreaChart data={monthlyData} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id={`gradIn${nombre}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                <stop offset="5%" stopColor={CHART_INCOME} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_INCOME} stopOpacity={0} />
               </linearGradient>
               <linearGradient id={`gradOut${nombre}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                <stop offset="5%" stopColor={CHART_EXPENSE} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_EXPENSE} stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40}
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#6F7D75' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 9, fill: '#6F7D75' }} axisLine={false} tickLine={false} width={40}
               tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : `${v}`} />
             <RechartTooltip content={<ChartTooltip />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-            <Area type="monotone" dataKey="ingresos" name="Ingresos" stroke="#10b981" strokeWidth={2}
-              fill={`url(#gradIn${nombre})`} dot={{ fill: '#10b981', r: 3 }} activeDot={{ r: 5 }} />
-            <Area type="monotone" dataKey="gastos" name="Gastos" stroke="#ef4444" strokeWidth={2}
-              fill={`url(#gradOut${nombre})`} dot={{ fill: '#ef4444', r: 3 }} activeDot={{ r: 5 }} />
+            <Area type="monotone" dataKey="ingresos" name="Ingresos" stroke={CHART_INCOME} strokeWidth={2}
+              fill={`url(#gradIn${nombre})`} dot={{ fill: CHART_INCOME, r: 3 }} activeDot={{ r: 5 }} />
+            <Area type="monotone" dataKey="gastos" name="Gastos" stroke={CHART_EXPENSE} strokeWidth={2}
+              fill={`url(#gradOut${nombre})`} dot={{ fill: CHART_EXPENSE, r: 3 }} activeDot={{ r: 5 }} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -342,7 +340,7 @@ const PersonView: React.FC<{
               onClick={() => setCatFilter('mes')}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                 catFilter === 'mes'
-                  ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
+                  ? 'bg-yn-primary-500/10 text-yn-primary-500 shadow-sm'
                   : theme.colors.textMuted
               }`}
             >
@@ -352,7 +350,7 @@ const PersonView: React.FC<{
               onClick={() => setCatFilter('periodo')}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                 catFilter === 'periodo'
-                  ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-600 dark:text-white'
+                  ? 'bg-yn-primary-500/10 text-yn-primary-500 shadow-sm'
                   : theme.colors.textMuted
               }`}
             >
@@ -372,8 +370,8 @@ const PersonView: React.FC<{
                     <span className={`text-xs truncate ${theme.colors.textSecondary}`}>{cat}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                    <span className="text-xs font-mono font-semibold" style={{ color }}>{pct.toFixed(0)}%</span>
-                    {!readOnly && <span className={`text-xs font-mono ${theme.colors.textMuted}`}>{formatCurrency(monto)}</span>}
+                    <span className="text-xs font-sans font-semibold" style={{ color }}>{pct.toFixed(0)}%</span>
+                    {!readOnly && <span className={`text-xs font-sans ${theme.colors.textMuted}`}>{formatCurrency(monto)}</span>}
                   </div>
                 </div>
                 <div className={`w-full rounded-full h-1.5 ${theme.colors.bgCard}`}>
@@ -414,7 +412,7 @@ const VistaCombinada: React.FC<{
   onPeriodChange: (p: Period) => void;
 }> = ({ myNombre, myAvatarId, myHistory, myGoals, members, membersData, period, onPeriodChange }) => {
   const { theme } = useTheme();
-  const MEMBER_COLORS = ['#3b82f6', '#a855f7', '#f97316', '#14b8a6', '#ec4899'];
+  // MEMBER_COLORS imported from yunaiColors
   const [catFilter, setCatFilter] = useState<CatFilter>('mes');
 
   const allPeople = [
@@ -499,16 +497,16 @@ const VistaCombinada: React.FC<{
       <div className="grid grid-cols-3 gap-3">
         <div className={`${theme.colors.bgCard} border ${theme.colors.border} rounded-xl p-3 text-center`}>
           <TrendingUp size={14} className="text-green-400 mx-auto mb-1" />
-          <p className="text-green-400 font-bold font-mono text-sm">{formatCurrency(lastMonth.ingresos as number)}</p>
+          <p className="text-green-400 font-bold font-sans text-sm">{formatCurrency(lastMonth.ingresos as number)}</p>
           <p className={`text-xs ${theme.colors.textMuted}`}>Ingresos</p>
         </div>
         <div className={`${theme.colors.bgCard} border ${theme.colors.border} rounded-xl p-3 text-center`}>
           <TrendingDown size={14} className="text-red-400 mx-auto mb-1" />
-          <p className="text-red-400 font-bold font-mono text-sm">{formatCurrency(lastMonth.gastos as number)}</p>
+          <p className="text-red-400 font-bold font-sans text-sm">{formatCurrency(lastMonth.gastos as number)}</p>
           <p className={`text-xs ${theme.colors.textMuted}`}>Gastos</p>
         </div>
         <div className={`${theme.colors.bgCard} border ${theme.colors.border} rounded-xl p-3 text-center`}>
-          <p className={`font-bold font-mono text-sm ${(lastMonth.balance as number) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+          <p className={`font-bold font-sans text-sm ${(lastMonth.balance as number) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {(lastMonth.balance as number) >= 0 ? '+' : ''}{formatCurrency(lastMonth.balance as number)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted}`}>Balance</p>
@@ -612,8 +610,8 @@ const VistaCombinada: React.FC<{
                     <span className={`text-sm truncate ${theme.colors.textSecondary}`}>{cat}</span>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0 ml-2">
-                    <span className={`text-xs font-mono ${theme.colors.textMuted}`}>{pct.toFixed(0)}%</span>
-                    <span className="text-sm font-mono font-semibold" style={{ color }}>{formatCurrency(monto)}</span>
+                    <span className={`text-xs font-sans ${theme.colors.textMuted}`}>{pct.toFixed(0)}%</span>
+                    <span className="text-sm font-sans font-semibold" style={{ color }}>{formatCurrency(monto)}</span>
                   </div>
                 </div>
                 <div className={`w-full rounded-full h-2 ${theme.colors.bgSecondary}`}>

@@ -32,7 +32,13 @@ export const formatCompact = (amount: number): string => {
 
 export const formatDate = (dateString: string) => {
   if (!dateString) return '-';
-  const date = new Date(dateString);
+  // Date-only strings like "2024-01-15" are parsed as UTC midnight by JS,
+  // which shifts the day back by one in negative-offset timezones (e.g. Peru UTC-5).
+  // Appending local midnight time avoids this off-by-one error.
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(dateString)
+    ? dateString + 'T00:00:00'
+    : dateString;
+  const date = new Date(normalized);
   return new Intl.DateTimeFormat('es-PE', {
     day: '2-digit',
     month: '2-digit',

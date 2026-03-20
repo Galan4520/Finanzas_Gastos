@@ -86,6 +86,7 @@ function App() {
   // GAS version info (from doGet response)
   const [gasVersion, setGasVersion] = useState<number | null>(null);
   const [schemaVersion, setSchemaVersion] = useState<number | null>(null);
+  const [hasGeminiKey, setHasGeminiKey] = useState<boolean>(false);
 
   // Custom categories (user-created)
   const [customGastosCategories, setCustomGastosCategories] = useState<string[]>(() => {
@@ -168,6 +169,7 @@ function App() {
         // Track GAS & schema versions
         if (data.gasVersion !== undefined) setGasVersion(data.gasVersion);
         if (data.schemaVersion !== undefined) setSchemaVersion(data.schemaVersion);
+        if (data.hasGeminiKey !== undefined) setHasGeminiKey(data.hasGeminiKey);
 
         // Update state
         setCards(data.cards || []);
@@ -350,6 +352,15 @@ function App() {
 
   const handleSetupDailyTrigger = async () => {
     await googleSheetService.setupDailyTrigger(scriptUrl, pin);
+  };
+
+  const handleSaveGeminiKey = async (apiKey: string): Promise<{ success: boolean }> => {
+    const result = await googleSheetService.saveGeminiApiKey(scriptUrl, pin, apiKey);
+    if (result.success) {
+      setHasGeminiKey(true);
+      showToast('API Key de Gemini guardada correctamente', 'success');
+    }
+    return result;
   };
 
   const handleAddRealEstateInvestment = (investment: RealEstateInvestment) => {
@@ -678,7 +689,7 @@ function App() {
                   <div className={`flex justify-between items-center p-3 rounded-xl ${theme.colors.bgSecondary}`}>
                     <div>
                       <p className={`text-xs ${theme.colors.textMuted}`}>Deuda total pendiente</p>
-                      <p className="font-mono font-bold text-xl text-red-400">{formatCurrencyLocal(totalDeuda)}</p>
+                      <p className="font-mono font-bold text-xl text-yn-error-400">{formatCurrencyLocal(totalDeuda)}</p>
                     </div>
                     <div className={`text-right`}>
                       <p className={`text-2xl font-bold ${theme.colors.textPrimary}`}>{deudasActivas.length}</p>
@@ -688,7 +699,7 @@ function App() {
                   <div className={`flex justify-between items-center p-3 rounded-xl ${theme.colors.bgSecondary}`}>
                     <div>
                       <p className={`text-xs ${theme.colors.textMuted}`}>Suscripciones mensuales</p>
-                      <p className="font-mono font-bold text-lg text-purple-400">{formatCurrencyLocal(totalSuscripciones)}</p>
+                      <p className="font-mono font-bold text-lg text-yn-sec1-700">{formatCurrencyLocal(totalSuscripciones)}</p>
                     </div>
                     <div className={`text-right`}>
                       <p className={`text-2xl font-bold ${theme.colors.textPrimary}`}>{suscripcionesActivas.length}</p>
@@ -701,7 +712,7 @@ function App() {
               {/* Suscripciones Activas */}
               <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
                 <h3 className={`text-lg font-bold mb-4 ${theme.colors.textPrimary} flex items-center gap-2`}>
-                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                  <span className="w-2 h-2 rounded-full bg-yn-sec1-700"></span>
                   Suscripciones Activas
                 </h3>
                 <div className="space-y-3">
@@ -712,8 +723,8 @@ function App() {
                         <p className={`text-sm font-mono ${theme.colors.textMuted}`}>{formatCurrencyLocal(Number(sub.monto))}/mes</p>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => setEditingSubscription(sub)} className="text-blue-500 hover:text-blue-700 text-xs font-medium px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 transition-colors">Editar</button>
-                        <button onClick={() => setDeleteTarget({ type: 'subscription', item: sub })} className="text-red-500 hover:text-red-700 text-xs font-medium px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors">Eliminar</button>
+                        <button onClick={() => setEditingSubscription(sub)} className="text-yn-sec1-500 hover:text-yn-sec1-700 text-xs font-medium px-3 py-1.5 rounded-lg bg-yn-sec1-500/10 hover:bg-yn-sec1-500/20 transition-colors">Editar</button>
+                        <button onClick={() => setDeleteTarget({ type: 'subscription', item: sub })} className="text-yn-error-500 hover:text-yn-error-700 text-xs font-medium px-3 py-1.5 rounded-lg bg-yn-error-500/10 hover:bg-yn-error-500/20 transition-colors">Eliminar</button>
                       </div>
                     </div>
                   ))}
@@ -726,16 +737,16 @@ function App() {
               {/* Centro de Ayuda */}
               <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
                 <h3 className={`text-lg font-bold mb-4 ${theme.colors.textPrimary} flex items-center gap-2`}>
-                  <span className="w-2 h-2 rounded-full bg-teal-500"></span>
+                  <span className="w-2 h-2 rounded-full bg-yn-primary-700"></span>
                   Centro de Ayuda
                 </h3>
                 <div className="space-y-3">
                   <button
                     onClick={() => setShowBankGuide(true)}
-                    className={`w-full text-left p-4 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-teal-500/50 transition-all group`}
+                    className={`w-full text-left p-4 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-700/50 transition-all group`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 rounded-xl bg-yn-primary-700/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                         <span className="text-lg">🏦</span>
                       </div>
                       <div>
@@ -746,10 +757,10 @@ function App() {
                   </button>
                   <button
                     onClick={() => setShowBillingEducation(true)}
-                    className={`w-full text-left p-4 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-teal-500/50 transition-all group`}
+                    className={`w-full text-left p-4 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-700/50 transition-all group`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 rounded-xl bg-yn-primary-700/20 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
                         <span className="text-lg">📊</span>
                       </div>
                       <div>
@@ -796,7 +807,6 @@ function App() {
             scriptUrl={scriptUrl}
             pin={pin}
             profile={profile}
-            currentTheme={currentTheme}
             cards={cards}
             notificationConfig={notificationConfig}
             onAddCard={handleAddCard}
@@ -814,6 +824,8 @@ function App() {
             onNavigateToFamilia={() => setActiveTab('familia')}
             gasVersion={gasVersion}
             schemaVersion={schemaVersion}
+            hasGeminiKey={hasGeminiKey}
+            onSaveGeminiKey={handleSaveGeminiKey}
           />
         );
 
@@ -838,9 +850,9 @@ function App() {
   // Show loading screen while initial sync is happening
   if (isInitialLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-900 text-white">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500 mb-4"></div>
-        <p className="text-slate-400 animate-pulse">Sincronizando con Google Sheets...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-yn-neutral-900 text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yn-primary-700 mb-4"></div>
+        <p className="text-yn-neutral-400 animate-pulse">Sincronizando con Google Sheets...</p>
       </div>
     );
   }

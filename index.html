@@ -3,18 +3,43 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#10b981" />
+    <meta name="theme-color" content="#00A750" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Yunai - Tu gestor de finanzas personales</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              yn: {
+                neutral: { 50: '#F6F9F7', 100: '#E9EFEA', 200: '#D7DFDA', 300: '#B8C3BD', 400: '#96A39C', 500: '#6F7D75', 600: '#56635C', 700: '#404B45', 800: '#2A332F', 900: '#161C19' },
+                primary: { 300: '#99ED8D', 500: '#00A750', 700: '#005B41' },
+                sec1: { 50: '#D6EEFF', 100: '#ADDDFF', 200: '#84CDFF', 300: '#5BBCFE', 400: '#32ABFE', 500: '#099AFE', 600: '#0182DA', 700: '#016BAF', 800: '#014E83', 900: '#003457' },
+                sec2: { 50: '#FFF8D6', 100: '#FFF1AD', 200: '#FFEBB4', 300: '#FEE45B', 400: '#FEDD32', 500: '#FED609', 600: '#E1BC01', 700: '#B89D01', 800: '#967D01', 900: '#705E00' },
+                success: { 50: '#BAF9D1', 100: '#97F5BA', 200: '#75F2A3', 300: '#52EF8C', 400: '#2FEC75', 500: '#15E060', 600: '#11BB50', 700: '#0E9540', 800: '#0B7030', 900: '#074B20' },
+                warning: { 50: '#FCE3B9', 100: '#FBD596', 200: '#F9C874', 300: '#F8BA51', 400: '#F6AC2E', 500: '#F59E0B', 600: '#D38B09', 700: '#B07107', 800: '#8D5A06', 900: '#694404' },
+                error: { 50: '#FCDFDF', 100: '#F8BFBF', 200: '#F5A0A0', 300: '#F2B0B0', 400: '#EE6060', 500: '#EF4444', 600: '#D91717', 700: '#A21111', 800: '#6C0B0B', 900: '#360606' }
+              }
+            },
+            fontFamily: {
+              sans: ['"Titillium Web"', 'sans-serif'],
+              brand: ['"Bruno Ace SC"', 'cursive']
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bruno+Ace+SC&family=Titillium+Web:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
       body {
-        font-family: 'Inter', sans-serif;
-        background-color: #0f172a; /* Slate 900 */
-        color: #f1f5f9; /* Slate 100 */
+        font-family: 'Titillium Web', sans-serif;
+        background-color: #161C19; /* yn-neutral-900 */
+        color: #F6F9F7; /* yn-neutral-50 */
       }
       .font-mono {
         font-family: 'JetBrains Mono', monospace;

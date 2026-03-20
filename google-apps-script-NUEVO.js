@@ -622,12 +622,20 @@ function doPost(e) {
     }
   }
 
-  if (action === 'update') {
-    return handleUpdate(sheet, params);
-  }
-
   if (action === 'delete') {
     return handleDelete(sheet, params);
+  }
+
+  // 🆕 Escanear recibo con IA Gemini
+  if (action === 'analyzeReceipt') {
+    return analyzeReceipt(params.base64Image);
+  }
+
+  // 🆕 Guardar Gemini API Key
+  if (action === 'saveGeminiKey') {
+    PropertiesService.getScriptProperties().setProperty('GEMINI_API_KEY', params.key);
+    return ContentService.createTextOutput(JSON.stringify({ success: true, message: 'API Key de Gemini guardada correctamente' }))
+      .setMimeType(ContentService.MimeType.JSON);
   }
 
   // 🆕 Aporte directo a meta (sobre digital: descuenta saldo disponible)
@@ -1120,13 +1128,16 @@ function doGet(e) {
   // 🔄 Auto-update del código GAS (checa GitHub cada 24h)
   checkForUpdate();
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // 🆕 Verificar si la API Key de Gemini está configurada
+  const hasGeminiKey = !!PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
 
   // 🆕 Obtener Perfil
-  const profile = getProfile(sheet);
+  const profile = getProfile(ss);
 
   // 1. Obtener Tarjetas
-  const tarjetasSheet = sheet.getSheetByName('Tarjetas');
+  const tarjetasSheet = ss.getSheetByName('Tarjetas');
   let cards = [];
   if (tarjetasSheet) {
     const data = tarjetasSheet.getDataRange().getValues();
@@ -1155,7 +1166,7 @@ function doGet(e) {
   }
 
   // 2. Obtener Gastos Pendientes (Deudas y Suscripciones)
-  const pendientesSheet = sheet.getSheetByName('Gastos_Pendientes');
+  const pendientesSheet = ss.getSheetByName('Gastos_Pendientes');
   let pending = [];
   if (pendientesSheet) {
     const data = pendientesSheet.getDataRange().getValues();
@@ -1184,7 +1195,7 @@ function doGet(e) {
 
   // 3. Obtener Historial (Gastos e Ingresos)
   const history = [];
-  const gastosSheet = sheet.getSheetByName('Gastos');
+  const gastosSheet = ss.getSheetByName('Gastos');
   if (gastosSheet) {
     const data = gastosSheet.getDataRange().getValues();
     for (let i = 1; i < data.length; i++) {
@@ -1249,7 +1260,7 @@ function doGet(e) {
   }
 
   // 5. Obtener Metas de Ahorro
-  const goals = getGoals(sheet);
+  const goals = getGoals(ss);
 
   // 📧 Obtener configuración de notificaciones
   var notificationConfig = getNotificationConfig();
@@ -1266,7 +1277,8 @@ function doGet(e) {
     availableProperties: availableProperties, // Catálogo de propiedades
     notificationConfig: notificationConfig,   // 📧 Config de notificaciones
     familyConfig: getFamilyConfig(),          // 👨‍👩‍👧 Plan Familiar
-    customCategories: getCustomCategories()   // 🏷️ Categorías personalizadas
+    customCategories: getCustomCategories(),  // 🏷️ Categorías personalizadas
+    hasGeminiKey: hasGeminiKey                // 🆕 Estado de la IA
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -1782,5 +1794,93 @@ function getCustomCategories() {
     return { gastos: gastos, ingresos: ingresos };
   } catch (e) {
     return { gastos: [], ingresos: [] };
+  }
+}
+
+/**
+ * 🤖 Procesa una imagen base64 usando la API de Gemini 1.5 Flash.
+ * Extrae datos estructurados del recibo para autocompletar el formulario.
+ */
+function analyzeReceipt(base64Image) {
+  try {
+    const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+    if (!apiKey || apiKey === 'undefined' || apiKey === '') {
+      return ContentService.createTextOutput(JSON.stringify({ 
+        success: false,
+        error: 'API Key de Gemini no configurada en el script. Por favor, realiza una prueba de conexión desde los ajustes.' 
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+    
+    const payload = {
+      "contents": [{
+        "parts": [
+          {
+            "text": "Eres un asistente financiero experto para la aplicación 'Yunai'. Tu tarea es extraer información precisa de la foto de este recibo o ticket de compra. " +
+                    "Analiza la imagen y extrae los siguientes campos en un objeto JSON puro:\n" +
+                    "1. monto: el total final pagado (número sin símbolos).\n" +
+                    "2. fecha: la fecha del ticket en formato YYYY-MM-DD.\n" +
+                    "3. categoria: clasifica en UNA de estas: [Alimentos, Transporte, Salud, Entretenimiento, Servicios, Ropa, Restaurantes, Supermercado, Otros].\n" +
+                    "4. descripcion: una descripción muy breve (ej: 'Compra Plaza Vea', 'Cena Pollería').\n\n" +
+                    "REGLAS CRÍTICAS:\n" +
+                    "- Responde ÚNICAMENTE con el objeto JSON.\n" +
+                    "- No incluyas explicaciones ni bloques de código.\n" +
+                    "- Si un dato no es legible, el valor debe ser null."
+          },
+          {
+            "inline_data": {
+              "mime_type": "image/jpeg",
+              "data": base64Image
+            }
+          }
+        ]
+      }]
+    };
+
+    const options = {
+      "method": "post",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    };
+
+    const response = UrlFetchApp.fetch(url, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    if (responseCode !== 200) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: false,
+        error: "Error de API Gemini (" + responseCode + "): " + responseText
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const result = JSON.parse(responseText);
+
+    // Extraer el texto del JSON que devuelve Gemini y parsearlo
+    let aiText = result.candidates[0].content.parts[0].text;
+    
+    // Limpiar posibles bloques de código markdown o textos extra
+    aiText = aiText.replace(/```json/gi, "").replace(/```/gi, "").trim();
+    
+    // Intentar encontrar el JSON si hay texto extra
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      aiText = jsonMatch[0];
+    }
+
+    const data = JSON.parse(aiText);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      success: true,
+      data: data
+    })).setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({
+      success: false,
+      error: "Error de procesamiento: " + error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }

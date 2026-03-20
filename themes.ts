@@ -1,4 +1,4 @@
-export type ThemeName = 'light-premium' | 'blue-corporate';
+export type ThemeName = 'yunai';
 
 export interface Theme {
   name: string;
@@ -42,105 +42,48 @@ export interface Theme {
 }
 
 export const themes: Record<ThemeName, Theme> = {
-  'light-premium': {
-    name: 'Claro Premium',
-    id: 'light-premium',
+  'yunai': {
+    name: 'YUNAI',
+    id: 'yunai',
     colors: {
-      // Backgrounds - Blanco y grises claros
       bgPrimary: 'bg-white',
-      bgSecondary: 'bg-gray-50',
+      bgSecondary: 'bg-yn-neutral-50',
       bgCard: 'bg-white',
-      bgCardHover: 'bg-gray-50',
+      bgCardHover: 'bg-yn-neutral-50',
 
-      // Text
-      textPrimary: 'text-gray-900',
-      textSecondary: 'text-gray-700',
-      textMuted: 'text-gray-500',
+      textPrimary: 'text-yn-neutral-900',
+      textSecondary: 'text-yn-neutral-700',
+      textMuted: 'text-yn-neutral-500',
 
-      // Borders
-      border: 'border-gray-200',
-      borderLight: 'border-gray-100',
+      border: 'border-yn-neutral-200',
+      borderLight: 'border-yn-neutral-100',
 
-      // Accent - Verde esmeralda
-      primary: 'bg-emerald-600',
-      primaryHover: 'hover:bg-emerald-700',
-      primaryLight: 'bg-emerald-50',
-      primaryDark: 'bg-emerald-700',
+      primary: 'bg-yn-primary-500',
+      primaryHover: 'hover:bg-yn-primary-700',
+      primaryLight: 'bg-yn-primary-500/10',
+      primaryDark: 'bg-yn-primary-700',
 
-      // Status
-      success: 'bg-emerald-600',
-      successLight: 'bg-emerald-50',
-      warning: 'bg-amber-500',
-      warningLight: 'bg-amber-50',
-      danger: 'bg-rose-600',
-      dangerLight: 'bg-rose-50',
-      info: 'bg-blue-600',
-      infoLight: 'bg-blue-50',
+      success: 'bg-yn-success-500',
+      successLight: 'bg-yn-success-50',
+      warning: 'bg-yn-warning-500',
+      warningLight: 'bg-yn-warning-50',
+      danger: 'bg-yn-error-500',
+      dangerLight: 'bg-yn-error-50',
+      info: 'bg-yn-sec1-500',
+      infoLight: 'bg-yn-sec1-50',
 
-      // Gradients
-      gradientPrimary: 'bg-gradient-to-r from-emerald-600 to-teal-600',
-      gradientSecondary: 'bg-gradient-to-br from-gray-50 via-white to-emerald-50/30',
-    }
-  },
-  'blue-corporate': {
-    name: 'Azul Corporativo',
-    id: 'blue-corporate',
-    colors: {
-      // Backgrounds - Blanco y grises con tinte azul
-      bgPrimary: 'bg-white',
-      bgSecondary: 'bg-slate-50',
-      bgCard: 'bg-white',
-      bgCardHover: 'bg-slate-50',
-
-      // Text
-      textPrimary: 'text-slate-900',
-      textSecondary: 'text-slate-700',
-      textMuted: 'text-slate-500',
-
-      // Borders
-      border: 'border-slate-200',
-      borderLight: 'border-slate-100',
-
-      // Accent - Azul corporativo
-      primary: 'bg-blue-600',
-      primaryHover: 'hover:bg-blue-700',
-      primaryLight: 'bg-blue-50',
-      primaryDark: 'bg-blue-700',
-
-      // Status
-      success: 'bg-emerald-600',
-      successLight: 'bg-emerald-50',
-      warning: 'bg-amber-500',
-      warningLight: 'bg-amber-50',
-      danger: 'bg-rose-600',
-      dangerLight: 'bg-rose-50',
-      info: 'bg-blue-600',
-      infoLight: 'bg-blue-50',
-
-      // Gradients
-      gradientPrimary: 'bg-gradient-to-r from-blue-600 to-cyan-600',
-      gradientSecondary: 'bg-gradient-to-br from-slate-50 via-white to-blue-50/30',
+      gradientPrimary: 'bg-gradient-to-r from-yn-primary-500 to-yn-primary-700',
+      gradientSecondary: 'bg-gradient-to-br from-yn-neutral-50 via-white to-yn-primary-500/10',
     }
   }
 };
 
 export const getTheme = (themeName: ThemeName): Theme => {
-  return themes[themeName] || themes['light-premium'];
+  return themes[themeName] || themes['yunai'];
 };
 
-// Text color variants for each theme
-export const getTextColor = (themeName: ThemeName) => {
-  const textColors: Record<ThemeName, { primary: string; secondary: string; accent: string }> = {
-    'light-premium': {
-      primary: 'text-emerald-600',
-      secondary: 'text-emerald-700',
-      accent: 'text-teal-600'
-    },
-    'blue-corporate': {
-      primary: 'text-blue-600',
-      secondary: 'text-blue-700',
-      accent: 'text-cyan-600'
-    }
-  };
-  return textColors[themeName];
-};
+export const getTextColor = (_themeName: ThemeName) => ({
+  primary: 'text-yn-primary-500',
+  secondary: 'text-yn-primary-700',
+  accent: 'text-yn-sec1-500'
+});

@@ -7,10 +7,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faWallet, faCreditCard, faMoneyBillWave, faLandmark } from '@fortawesome/free-solid-svg-icons';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
+import { CHART_COLORS, CHART_INCOME, CHART_EXPENSE, CHART_SAVINGS } from '../utils/yunaiColors';
 
 type DateFilterType = 'thisMonth' | 'quarter' | 'year' | 'custom';
 
-const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 interface DashboardProps {
   cards: CreditCard[];
@@ -437,8 +437,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
   // Chart Data
   const barData = [
-    { name: 'Ingresos', amount: currentStats.ingresosMes, color: '#10b981' },
-    { name: 'Gastos (Efec)', amount: currentStats.gastosMes, color: '#f43f5e' },
+    { name: 'Ingresos', amount: currentStats.ingresosMes, color: CHART_INCOME },
+    { name: 'Gastos (Efec)', amount: currentStats.gastosMes, color: CHART_EXPENSE },
   ];
 
   const recentTransactions = [
@@ -539,16 +539,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <div className="flex items-center gap-1 text-emerald-500 mb-1">
+                    <div className="flex items-center gap-1 text-yn-primary-500 mb-1">
                         <ArrowUpRight size={16} /> <span className="text-xs font-bold">Ingresos</span>
                     </div>
-                    <p className={`text-xl md:text-2xl font-mono font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.ingresosMes)}</p>
+                    <p className={`text-xl md:text-2xl font-sans font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.ingresosMes)}</p>
                 </div>
                 <div>
-                    <div className="flex items-center gap-1 text-rose-500 mb-1">
+                    <div className="flex items-center gap-1 text-yn-error-400 mb-1">
                         <ArrowDownRight size={16} /> <span className="text-xs font-bold">Gastos</span>
                     </div>
-                    <p className={`text-xl md:text-2xl font-mono font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.gastosMes)}</p>
+                    <p className={`text-xl md:text-2xl font-sans font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.gastosMes)}</p>
                 </div>
             </div>
 
@@ -556,8 +556,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={barData} layout="vertical" barSize={12}>
                         <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" width={80} tick={{fill: currentTheme === 'light-premium' ? '#64748b' : '#64748b', fontSize: 10}} axisLine={false} tickLine={false}/>
-                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{backgroundColor: currentTheme === 'light-premium' ? '#f8fafc' : '#f1f5f9', borderRadius: '8px', border: `1px solid ${currentTheme === 'light-premium' ? '#e2e8f0' : '#cbd5e1'}`}} itemStyle={{color: currentTheme === 'light-premium' ? '#0f172a' : '#1e293b'}} formatter={(val) => formatCurrency(Number(val))}/>
+                        <YAxis dataKey="name" type="category" width={80} tick={{fill: '#6F7D75', fontSize: 10}} axisLine={false} tickLine={false}/>
+                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{backgroundColor: '#F6F9F7', borderRadius: '8px', border: '1px solid #D7DFDA'}} itemStyle={{color: '#161C19'}} formatter={(val) => formatCurrency(Number(val))}/>
                         <Bar dataKey="amount" radius={[0, 4, 4, 0]}>
                             {barData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
@@ -574,7 +574,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
             <div className="mb-4">
                 <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Deuda Total Tarjetas</p>
-                <p className={`text-xl md:text-2xl font-mono font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.deudaTotal)}</p>
+                <p className={`text-xl md:text-2xl font-sans font-bold ${theme.colors.textPrimary} truncate`}>{formatCurrency(currentStats.deudaTotal)}</p>
             </div>
 
             <div className="space-y-3">
@@ -585,7 +585,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     </div>
                     <div className={`w-full h-2 ${theme.colors.bgSecondary} rounded-full overflow-hidden`}>
                         <div
-                            className={`h-full rounded-full transition-all duration-1000 ${currentStats.usoCredito > 70 ? 'bg-rose-500' : textColors.primary === 'text-emerald-600' ? 'bg-emerald-500' : 'bg-blue-500'}`}
+                            className={`h-full rounded-full transition-all duration-1000 ${currentStats.usoCredito > 70 ? 'bg-yn-error-500' : textColors.primary === 'text-yn-primary-500' ? 'bg-yn-primary-500' : 'bg-yn-sec1-500'}`}
                             style={{width: `${currentStats.usoCredito}%`}}
                         />
                     </div>
@@ -593,7 +593,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
                 <div className={`flex justify-between items-center pt-2 border-t ${theme.colors.borderLight}`}>
                     <span className={`text-xs ${theme.colors.textMuted}`}>Disponible para compras</span>
-                    <span className="text-sm font-mono font-bold text-emerald-500">{formatCurrency(currentStats.disponible)}</span>
+                    <span className="text-sm font-sans font-bold text-yn-primary-500">{formatCurrency(currentStats.disponible)}</span>
                 </div>
             </div>
         </div>
@@ -621,7 +621,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             {/* Inversión Total */}
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Inversión Total</p>
-              <p className={`text-base sm:text-xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              <p className={`text-base sm:text-xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
                 {formatCompact(assetsMetrics.totalInversion)}
               </p>
             </div>
@@ -629,7 +629,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             {/* Valor Actual */}
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Valor Actual</p>
-              <p className={`text-base sm:text-xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              <p className={`text-base sm:text-xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
                 {formatCompact(assetsMetrics.totalValorActual)}
               </p>
             </div>
@@ -638,11 +638,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Plusvalía</p>
               <div className="flex items-center gap-2">
-                <p className={`text-base sm:text-xl font-mono font-bold truncate ${assetsMetrics.plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                <p className={`text-base sm:text-xl font-sans font-bold truncate ${assetsMetrics.plusvalia >= 0 ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                   {assetsMetrics.plusvalia >= 0 ? '+' : ''}{formatCompact(assetsMetrics.plusvalia)}
                 </p>
                 {assetsMetrics.plusvalia !== 0 && (
-                  <span className={`text-xs font-bold ${assetsMetrics.plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  <span className={`text-xs font-bold ${assetsMetrics.plusvalia >= 0 ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                     ({assetsMetrics.porcentajePlusvalia > 0 ? '+' : ''}{assetsMetrics.porcentajePlusvalia.toFixed(1)}%)
                   </span>
                 )}
@@ -652,7 +652,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             {/* Ingresos por Renta */}
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Renta Mensual</p>
-              <p className={`text-base sm:text-xl font-mono font-bold truncate ${assetsMetrics.totalRentaMensual > 0 ? 'text-emerald-500' : theme.colors.textPrimary}`}>
+              <p className={`text-base sm:text-xl font-sans font-bold truncate ${assetsMetrics.totalRentaMensual > 0 ? 'text-yn-primary-500' : theme.colors.textPrimary}`}>
                 {formatCompact(assetsMetrics.totalRentaMensual)}
               </p>
             </div>
@@ -679,10 +679,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                    <p className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>
                       {formatCurrency(inv.valor_actual)}
                     </p>
-                    <p className={`text-xs font-semibold ${plusvalia >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                    <p className={`text-xs font-semibold ${plusvalia >= 0 ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                       {plusvalia >= 0 ? '+' : ''}{formatCurrency(plusvalia)} ({porcentaje > 0 ? '+' : ''}{porcentaje.toFixed(1)}%)
                     </p>
                   </div>
@@ -705,32 +705,32 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           <div className="space-y-4">
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Esta semana</p>
-              <p className={`text-xl sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
                 {formatCompact(weeklyComparison.thisWeek)}
               </p>
             </div>
 
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Semana pasada</p>
-              <p className={`text-lg font-mono font-bold truncate ${theme.colors.textSecondary}`}>
+              <p className={`text-lg font-sans font-bold truncate ${theme.colors.textSecondary}`}>
                 {formatCompact(weeklyComparison.lastWeek)}
               </p>
             </div>
 
             <div className={`p-3 rounded-xl ${
-              weeklyComparison.difference > 0 ? 'bg-red-500/10' : 'bg-green-500/10'
+              weeklyComparison.difference > 0 ? 'bg-yn-error-500/10' : 'bg-yn-success-500/10'
             }`}>
               <div className="flex items-center justify-between">
                 <span className={`text-xs ${theme.colors.textMuted}`}>Variación</span>
                 <div className="flex items-center gap-1">
                   {weeklyComparison.difference > 0 ? (
-                    <ArrowUpRight className="text-red-500" size={16} />
+                    <ArrowUpRight className="text-yn-error-500" size={16} />
                   ) : weeklyComparison.difference < 0 ? (
-                    <ArrowDownRight className="text-green-500" size={16} />
+                    <ArrowDownRight className="text-yn-success-500" size={16} />
                   ) : null}
                   <span className={`font-bold text-sm ${
-                    weeklyComparison.difference > 0 ? 'text-red-500' :
-                    weeklyComparison.difference < 0 ? 'text-green-500' :
+                    weeklyComparison.difference > 0 ? 'text-yn-error-500' :
+                    weeklyComparison.difference < 0 ? 'text-yn-success-500' :
                     theme.colors.textMuted
                   }`}>
                     {weeklyComparison.percentChange > 0 ? '+' : ''}
@@ -757,7 +757,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           <div className="space-y-4">
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total a pagar</p>
-              <p className={`text-xl sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
                 {formatCompact(cardPayments.thisMonth.total)}
               </p>
             </div>
@@ -776,7 +776,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                       }
                     </span>
                   </div>
-                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-emerald-500/10 px-2 py-1 rounded`}>
+                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-yn-primary-500/10 px-2 py-1 rounded`}>
                     {cardPayments.thisMonth.details.length} {cardPayments.thisMonth.details.length === 1 ? 'tarjeta' : 'tarjetas'}
                   </span>
                 </div>
@@ -786,7 +786,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     {cardPayments.thisMonth.details.map((detail, idx) => (
                       <div key={idx} className="flex justify-between items-center">
                         <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
-                        <span className={`text-xs font-mono font-semibold ${theme.colors.textPrimary}`}>
+                        <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
                           {formatCurrency(detail.amount)}
                         </span>
                       </div>
@@ -794,7 +794,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     {cardPayments.thisMonth.details.length > 1 && (
                       <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
                         <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
-                        <span className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                        <span className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>
                           {formatCurrency(cardPayments.thisMonth.total)}
                         </span>
                       </div>
@@ -815,7 +815,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           <div className="space-y-4">
             <div>
               <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total estimado</p>
-              <p className={`text-xl sm:text-2xl font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+              <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
                 {formatCompact(cardPayments.nextMonth.total)}
               </p>
             </div>
@@ -834,7 +834,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                       }
                     </span>
                   </div>
-                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-blue-500/10 px-2 py-1 rounded`}>
+                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-yn-sec1-500/10 px-2 py-1 rounded`}>
                     {cardPayments.nextMonth.details.length} {cardPayments.nextMonth.details.length === 1 ? 'tarjeta' : 'tarjetas'}
                   </span>
                 </div>
@@ -844,7 +844,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     {cardPayments.nextMonth.details.map((detail, idx) => (
                       <div key={idx} className="flex justify-between items-center">
                         <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
-                        <span className={`text-xs font-mono font-semibold ${theme.colors.textPrimary}`}>
+                        <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
                           {formatCurrency(detail.amount)}
                         </span>
                       </div>
@@ -852,7 +852,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     {cardPayments.nextMonth.details.length > 1 && (
                       <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
                         <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
-                        <span className={`text-sm font-mono font-bold ${theme.colors.textPrimary}`}>
+                        <span className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>
                           {formatCurrency(cardPayments.nextMonth.total)}
                         </span>
                       </div>
@@ -915,20 +915,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     <div key={card.name} className={`p-4 rounded-2xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${COLORS[index % COLORS.length]}20` }}>
-                            <CreditIcon size={18} style={{ color: COLORS[index % COLORS.length] }} />
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${CHART_COLORS[index % CHART_COLORS.length]}20` }}>
+                            <CreditIcon size={18} style={{ color: CHART_COLORS[index % CHART_COLORS.length] }} />
                           </div>
                           <div>
                             <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{card.name}</p>
                             <p className={`text-xs ${theme.colors.textMuted}`}>{percentage.toFixed(1)}% del total</p>
                           </div>
                         </div>
-                        <p className={`font-bold font-mono text-base sm:text-lg truncate ${theme.colors.textPrimary}`}>{formatCompact(card.value)}</p>
+                        <p className={`font-bold font-sans text-base sm:text-lg truncate ${theme.colors.textPrimary}`}>{formatCompact(card.value)}</p>
                       </div>
-                      <div className={`w-full h-2 rounded-full overflow-hidden`} style={{ backgroundColor: `${COLORS[index % COLORS.length]}15` }}>
+                      <div className={`w-full h-2 rounded-full overflow-hidden`} style={{ backgroundColor: `${CHART_COLORS[index % CHART_COLORS.length]}15` }}>
                         <div
                           className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
+                          style={{ width: `${percentage}%`, backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                         />
                       </div>
                     </div>
@@ -942,13 +942,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       {/* Balance Total Card - Destacado */}
       <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border-2 ${
-        currentStats.balanceTotal >= 0 ? 'border-emerald-500' : 'border-rose-500'
+        currentStats.balanceTotal >= 0 ? 'border-yn-primary-500' : 'border-yn-error-500'
       } shadow-2xl relative overflow-hidden`}>
         <div className="flex items-center gap-3 mb-4">
           <div className={`p-3 rounded-xl ${
-            currentStats.balanceTotal >= 0 ? 'bg-emerald-500/10' : 'bg-rose-500/10'
+            currentStats.balanceTotal >= 0 ? 'bg-yn-primary-500/10' : 'bg-yn-error-500/10'
           }`}>
-            <Wallet className={currentStats.balanceTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'} size={28} />
+            <Wallet className={currentStats.balanceTotal >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'} size={28} />
           </div>
           <div>
             <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider`}>
@@ -961,8 +961,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </div>
 
         <div className="mb-4">
-          <p className={`text-2xl sm:text-3xl md:text-4xl font-mono font-bold truncate ${
-            currentStats.balanceTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'
+          <p className={`text-2xl sm:text-3xl md:text-4xl font-sans font-bold truncate ${
+            currentStats.balanceTotal >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'
           }`}>
             {formatCompact(currentStats.balanceTotal)}
           </p>
@@ -971,19 +971,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         <div className="grid grid-cols-2 gap-4 pt-4 border-t ${theme.colors.borderLight}">
           <div>
             <div className="flex items-center gap-1 mb-1">
-              <ArrowUpRight className="text-emerald-500" size={14} />
+              <ArrowUpRight className="text-yn-primary-500" size={14} />
               <p className={`text-xs ${theme.colors.textMuted}`}>Total Ingresos</p>
             </div>
-            <p className={`text-base sm:text-lg font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+            <p className={`text-base sm:text-lg font-sans font-bold truncate ${theme.colors.textPrimary}`}>
               {formatCompact(currentStats.ingresosTotal)}
             </p>
           </div>
           <div>
             <div className="flex items-center gap-1 mb-1">
-              <ArrowDownRight className="text-rose-500" size={14} />
+              <ArrowDownRight className="text-yn-error-400" size={14} />
               <p className={`text-xs ${theme.colors.textMuted}`}>Total Gastos</p>
             </div>
-            <p className={`text-base sm:text-lg font-mono font-bold truncate ${theme.colors.textPrimary}`}>
+            <p className={`text-base sm:text-lg font-sans font-bold truncate ${theme.colors.textPrimary}`}>
               {formatCompact(currentStats.gastosTotal)}
             </p>
           </div>
@@ -996,12 +996,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           {/* Billetera */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-emerald-500/10`}>
-                <FontAwesomeIcon icon={faWallet} className="text-emerald-500" style={{ fontSize: '13px' }} />
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-yn-primary-500/10`}>
+                <FontAwesomeIcon icon={faWallet} className="text-yn-primary-500" style={{ fontSize: '13px' }} />
               </div>
               <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>Billetera Física</span>
             </div>
-            <span className={`text-sm font-mono font-bold truncate ${accountBreakdown.billeteraBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+            <span className={`text-sm font-sans font-bold truncate ${accountBreakdown.billeteraBalance >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
               {formatCurrency(accountBreakdown.billeteraBalance)}
             </span>
           </div>
@@ -1009,15 +1009,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           {accountBreakdown.debitAccounts.map(acc => (
             <div key={acc.alias} className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-blue-500/10`}>
-                  <FontAwesomeIcon icon={faMoneyBillWave} className="text-blue-400" style={{ fontSize: '12px' }} />
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-yn-sec1-500/10`}>
+                  <FontAwesomeIcon icon={faMoneyBillWave} className="text-yn-sec1-400" style={{ fontSize: '12px' }} />
                 </div>
                 <div>
                   <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>{acc.alias}</span>
                   <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco}</span>
                 </div>
               </div>
-              <span className={`text-sm font-mono font-bold truncate ${acc.balance >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <span className={`text-sm font-sans font-bold truncate ${acc.balance >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
                 {formatCurrency(acc.balance)}
               </span>
             </div>
@@ -1029,18 +1029,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               {accountBreakdown.creditAccounts.map(acc => (
                 <div key={acc.alias} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-purple-500/10`}>
-                      <FontAwesomeIcon icon={faCreditCard} className="text-purple-400" style={{ fontSize: '12px' }} />
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center bg-yn-sec1-700/10`}>
+                      <FontAwesomeIcon icon={faCreditCard} className="text-yn-sec1-700" style={{ fontSize: '12px' }} />
                     </div>
                     <div>
                       <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>{acc.alias}</span>
                       <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco}</span>
                       {acc.deuda > 0 && (
-                        <span className="text-[10px] text-rose-400 ml-1">· deuda {formatCurrency(acc.deuda)}</span>
+                        <span className="text-[10px] text-yn-error-400 ml-1">· deuda {formatCurrency(acc.deuda)}</span>
                       )}
                     </div>
                   </div>
-                  <span className="text-sm font-mono font-bold truncate text-purple-400">
+                  <span className="text-sm font-sans font-bold truncate text-yn-sec1-700">
                     {formatCurrency(acc.disponible)}
                   </span>
                 </div>
@@ -1068,7 +1068,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </div>
               <div className="text-right">
                 <p className={`text-[10px] ${theme.colors.textMuted}`}>Saldo Disponible</p>
-                <p className={`text-sm font-mono font-bold truncate ${saldoDisponible >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                <p className={`text-sm font-sans font-bold truncate ${saldoDisponible >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
                   {formatCurrency(saldoDisponible)}
                 </p>
               </div>
@@ -1076,8 +1076,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             <div className="space-y-3">
               {activeGoals.slice(0, 4).map(goal => {
                 const pct = goal.monto_objetivo > 0 ? (goal.monto_ahorrado / goal.monto_objetivo) * 100 : 0;
-                const barColor = pct >= 100 ? 'bg-emerald-500' : 'bg-gradient-to-r from-blue-500 to-emerald-500';
-                const pctColor = pct >= 100 ? 'text-emerald-600' : textColors.primary;
+                const barColor = pct >= 100 ? 'bg-yn-primary-500' : 'bg-gradient-to-r from-yn-sec1-500 to-yn-primary-500';
+                const pctColor = pct >= 100 ? 'text-yn-primary-500' : textColors.primary;
 
                 return (
                   <div key={goal.id}>
@@ -1130,15 +1130,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                 <div key={idx} className={`group p-4 flex items-center justify-between hover:${theme.colors.bgCardHover} transition-colors`}>
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
-                                            ${t.tipo === 'Ingresos' ? 'bg-emerald-100 text-emerald-600' :
-                                              t.isCredit ? `${theme.colors.primaryLight} ${textColors.primary}` : 'bg-rose-100 text-rose-600'}`}>
+                                            ${t.tipo === 'Ingresos' ? 'bg-yn-primary-500/10 text-yn-primary-500' :
+                                              t.isCredit ? `${theme.colors.primaryLight} ${textColors.primary}` : 'bg-yn-error-500/10 text-yn-error-500'}`}>
                                             {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
                                               <p className={`font-medium ${theme.colors.textPrimary} text-sm`}>{t.descripcion}</p>
                                               {t.isSuscripcion && (
-                                                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-purple-100 text-purple-600">
+                                                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-yn-sec1-700/10 text-yn-sec1-700">
                                                   Suscripción
                                                 </span>
                                               )}
@@ -1151,21 +1151,21 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => onEditTransaction?.(t as Transaction)}
-                                                    className={`p-1.5 rounded-lg ${theme.colors.bgSecondary} hover:bg-blue-500/20 transition-colors`}
+                                                    className={`p-1.5 rounded-lg ${theme.colors.bgSecondary} hover:bg-yn-sec1-500/20 transition-colors`}
                                                     title="Editar"
                                                 >
-                                                    <Pencil size={14} className="text-blue-400" />
+                                                    <Pencil size={14} className="text-yn-sec1-400" />
                                                 </button>
                                                 <button
                                                     onClick={() => onDeleteTransaction?.(t as Transaction)}
-                                                    className={`p-1.5 rounded-lg ${theme.colors.bgSecondary} hover:bg-red-500/20 transition-colors`}
+                                                    className={`p-1.5 rounded-lg ${theme.colors.bgSecondary} hover:bg-yn-error-500/20 transition-colors`}
                                                     title="Eliminar"
                                                 >
-                                                    <Trash2 size={14} className="text-red-400" />
+                                                    <Trash2 size={14} className="text-yn-error-400" />
                                                 </button>
                                             </div>
                                         )}
-                                        <span className={`font-mono font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                        <span className={`font-sans font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
                                             {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
                                         </span>
                                     </div>
@@ -1265,24 +1265,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                         dataKey="name"
                         type="category"
                         width={120}
-                        tick={{ fill: currentTheme === 'light-premium' ? '#475569' : '#94a3b8', fontSize: 12 }}
+                        tick={{ fill: '#56635C', fontSize: 12 }}
                         axisLine={false}
                         tickLine={false}
                       />
                       <Tooltip
                         cursor={{ fill: 'transparent' }}
                         contentStyle={{
-                          backgroundColor: currentTheme === 'light-premium' ? '#ffffff' : '#1e293b',
+                          backgroundColor: '#ffffff',
                           borderRadius: '12px',
-                          border: `1px solid ${currentTheme === 'light-premium' ? '#e2e8f0' : '#334155'}`,
+                          border: '1px solid #D7DFDA',
                           boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                         }}
-                        itemStyle={{ color: currentTheme === 'light-premium' ? '#0f172a' : '#f1f5f9' }}
+                        itemStyle={{ color: '#161C19' }}
                         formatter={(val: number) => formatCurrency(val)}
                       />
                       <Bar dataKey="value" radius={[0, 8, 8, 0]}>
                         {chartData.map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                         ))}
                       </Bar>
                     </BarChart>
@@ -1296,12 +1296,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     return (
                       <div key={cat.name} className={`flex items-center justify-between p-3 rounded-xl ${theme.colors.bgSecondary}`}>
                         <div className="flex items-center gap-2 min-w-0">
-                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }} />
                           <span className={`font-medium text-sm ${theme.colors.textPrimary} truncate`}>{cat.name}</span>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                           <span className={`text-xs ${theme.colors.textMuted}`}>{percentage.toFixed(0)}%</span>
-                          <span className={`font-bold text-sm font-mono truncate ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
+                          <span className={`font-bold text-sm font-sans truncate ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
                         </div>
                       </div>
                     );
@@ -1363,9 +1363,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     <YAxis stroke={theme.colors.textMuted} style={{ fontSize: '12px' }} tickFormatter={(value) => `S/ ${value}`} />
                     <Tooltip formatter={(value: number) => formatCurrency(value)} />
                     <Legend />
-                    <Line type="monotone" dataKey="ingresos" stroke="#10b981" strokeWidth={2} name="Ingresos" />
-                    <Line type="monotone" dataKey="gastos" stroke="#ef4444" strokeWidth={2} name="Gastos" />
-                    <Line type="monotone" dataKey="ahorro" stroke="#3b82f6" strokeWidth={2} name="Ahorro" />
+                    <Line type="monotone" dataKey="ingresos" stroke={CHART_INCOME} strokeWidth={2} name="Ingresos" />
+                    <Line type="monotone" dataKey="gastos" stroke={CHART_EXPENSE} strokeWidth={2} name="Gastos" />
+                    <Line type="monotone" dataKey="ahorro" stroke={CHART_SAVINGS} strokeWidth={2} name="Ahorro" />
                   </LineChart>
                 </ResponsiveContainer>
               </div>

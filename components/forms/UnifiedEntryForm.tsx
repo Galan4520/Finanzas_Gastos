@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType } from '../../types';
-import { sendToSheet } from '../../services/googleSheetService';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
-import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info } from 'lucide-react';
+import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Camera, Sparkles } from 'lucide-react';
 import { CategoryPicker } from '../ui/CategoryPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
 import { SubscriptionSelector } from './SubscriptionSelector';
 import { SUBSCRIPTION_APPS, SubscriptionApp } from '../../subscriptionApps';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
+import { compressAndToBase64 } from '../../utils/imageUtils';
+import { analyzeReceiptWithAI, sendToSheet } from '../../services/googleSheetService';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
@@ -41,6 +42,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedMetaId, setSelectedMetaId] = useState('');
   const [selectedCuenta, setSelectedCuenta] = useState('Billetera');
+  const [isScanning, setIsScanning] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
@@ -258,8 +261,20 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       }
 
       notify?.('Registrado exitosamente', 'success');
-      // Reset critical fields
-      setFormData(prev => ({ ...prev, monto: '', descripcion: '', notas: '' }));
+      // Reset all form fields to initial state
+      setFormData({
+        fecha: today,
+        monto: '',
+        categoria: '',
+        descripcion: '',
+        notas: '',
+        tarjetaId: '',
+        num_cuotas: '2',
+        fecha_cierre: '',
+        fecha_pago: ''
+      });
+      setUseInstallments(false);
+      setExpenseType('deuda');
       setSelectedMetaId('');
       setSelectedCuenta('Billetera');
       onSuccess();
@@ -268,6 +283,43 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       notify?.("Error al guardar", 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleScanClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsScanning(true);
+    try {
+      const base64 = await compressAndToBase64(file);
+      const result = await analyzeReceiptWithAI(scriptUrl, pin, base64);
+
+      if (result.success && result.data) {
+        const { monto, fecha, categoria, descripcion } = result.data;
+        
+        setFormData(prev => ({
+          ...prev,
+          monto: monto ? String(monto) : prev.monto,
+          fecha: fecha || prev.fecha,
+          descripcion: descripcion || prev.descripcion,
+          categoria: (categories.includes(categoria) || customGastosCategories.includes(categoria)) ? categoria : prev.categoria
+        }));
+
+        notify?.('Ticket analizado correctamente', 'success');
+      } else {
+        notify?.(result.error || 'No se pudo analizar el ticket', 'error');
+      }
+    } catch (error) {
+      notify?.('Error al procesar imagen', 'error');
+    } finally {
+      setIsScanning(false);
+      // Reset input
+      if (e.target) e.target.value = '';
     }
   };
 
@@ -297,9 +349,9 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   return (
     <>
       <LoadingOverlay
-        isVisible={loading}
-        message={getLoadingMessage()}
-        submessage={getLoadingSubmessage()}
+        isVisible={loading || isScanning}
+        message={isScanning ? 'IA Analizando Ticket...' : getLoadingMessage()}
+        submessage={isScanning ? 'Extrayendo montos y detalles mágicamente' : getLoadingSubmessage()}
       />
       <div className="max-w-2xl mx-auto space-y-6">
 
@@ -356,17 +408,40 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current`} />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-bold ${theme.colors.textMuted} uppercase ml-1">Monto</label>
-              <div className="relative">
-                <span className="absolute left-4 top-3.5 ${theme.colors.textMuted}">S/</span>
-                <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} placeholder="0.00" required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-mono text-lg focus:ring-2 focus:ring-indigo-500" />
+              <div className="flex items-center justify-between ml-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>Monto</label>
+                <button
+                  type="button"
+                  onClick={handleScanClick}
+                  disabled={isScanning}
+                  className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${isScanning
+                    ? 'bg-yn-neutral-800 text-yn-neutral-500'
+                    : 'bg-yn-primary-500/20 text-yn-primary-400 hover:bg-yn-primary-500 hover:text-white'
+                    }`}
+                >
+                  <Sparkles size={12} className={isScanning ? 'animate-pulse' : ''} />
+                  {isScanning ? 'ANALIZANDO...' : 'ESCANEAR TICKET'}
+                </button>
               </div>
+              <div className="relative">
+                <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
+                <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} placeholder="0.00" required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-sans text-lg focus:ring-2 focus:ring-yn-primary-500`} />
+              </div>
+              {/* Hidden file input for scanner */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+              />
             </div>
           </div>
 
           {/* Credit Card Specific Fields */}
           {entryType === 'tarjeta' && (
-            <div className="${theme.colors.primaryLight} border border-indigo-500/20 rounded-xl p-4 space-y-4">
+            <div className="${theme.colors.primaryLight} border border-yn-sec1-800/20 rounded-xl p-4 space-y-4">
               {/* Tipo de Gasto: Deuda o Suscripción */}
               <div>
                 <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-2 block">Tipo de Gasto</label>
@@ -375,8 +450,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                     type="button"
                     onClick={() => { setExpenseType('deuda'); setUseInstallments(false); }}
                     className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border-2 ${expenseType === 'deuda'
-                      ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
-                      : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                      ? 'bg-yn-primary-700 border-yn-primary-700 text-white shadow-lg'
+                      : 'border-yn-neutral-600 text-yn-neutral-400 hover:border-yn-neutral-500'
                       }`}
                   >
                     <CreditIcon size={16} className="inline-block mr-1" />
@@ -386,8 +461,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                     type="button"
                     onClick={() => { setExpenseType('suscripcion'); setUseInstallments(false); }}
                     className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border-2 ${expenseType === 'suscripcion'
-                      ? 'bg-purple-500 border-purple-500 text-white shadow-lg'
-                      : 'border-slate-600 text-slate-400 hover:border-slate-500'
+                      ? 'bg-yn-sec1-700 border-yn-sec1-700 text-white shadow-lg'
+                      : 'border-yn-neutral-600 text-yn-neutral-400 hover:border-yn-neutral-500'
                       }`}
                   >
                     <RefreshCw size={16} className="inline-block mr-1" />
@@ -395,7 +470,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                   </button>
                 </div>
                 {expenseType === 'suscripcion' && (
-                  <p className="text-xs text-purple-300 mt-2 ml-1 flex items-center gap-1">
+                  <p className="text-xs text-yn-sec1-300 mt-2 ml-1 flex items-center gap-1">
                     <Lightbulb size={14} />
                     Las suscripciones se renuevan automáticamente cada mes
                   </p>
@@ -413,8 +488,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
               {expenseType === 'deuda' && (
                 <div className="flex items-center gap-3">
-                  <input type="checkbox" id="installments" checked={useInstallments} onChange={e => { setUseInstallments(e.target.checked); if (!e.target.checked) setTipoCuotas('SIN_INTERES'); }} className="w-5 h-5 rounded bg-slate-800 ${theme.colors.border} text-indigo-600 focus:ring-indigo-500" />
-                  <label htmlFor="installments" className="text-sm text-indigo-200 font-medium">Pagar en cuotas</label>
+                  <input type="checkbox" id="installments" checked={useInstallments} onChange={e => { setUseInstallments(e.target.checked); if (!e.target.checked) setTipoCuotas('SIN_INTERES'); }} className="w-5 h-5 rounded bg-yn-neutral-800 ${theme.colors.border} text-yn-sec1-800 focus:ring-yn-sec1-800" />
+                  <label htmlFor="installments" className="text-sm text-yn-primary-200 font-medium">Pagar en cuotas</label>
                 </div>
               )}
 
@@ -428,7 +503,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                         type="button"
                         onClick={() => setTipoCuotas('SIN_INTERES')}
                         className={`py-3 px-4 rounded-xl font-semibold text-sm transition-all border-2 ${tipoCuotas === 'SIN_INTERES'
-                          ? 'bg-teal-500 border-teal-500 text-white shadow-lg'
+                          ? 'bg-yn-primary-500 border-yn-primary-500 text-white shadow-lg'
                           : 'border-slate-300 text-slate-500 hover:border-slate-400'
                           }`}
                       >
@@ -457,7 +532,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                     </div>
                     <div>
                       <label className="text-xs text-slate-500 uppercase font-bold ml-1">Mensual aprox.</label>
-                      <div className="w-full px-4 py-3 text-right font-mono text-teal-600 font-bold text-lg bg-teal-50 border border-teal-200 rounded-xl">
+                      <div className="w-full px-4 py-3 text-right font-sans text-yn-primary-700 font-bold text-lg bg-yn-primary-500/5 border border-yn-primary-500/20 rounded-xl">
                         {formData.monto ? formatCurrency(parseFloat(formData.monto) / parseInt(formData.num_cuotas)) : '-'}
                       </div>
                     </div>
@@ -483,19 +558,19 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div>
                               <p className="text-[10px] text-slate-500 uppercase">Cuota/Mes</p>
-                              <p className="text-sm font-mono font-bold text-amber-600">{formatCurrency(simulacion.cuotaMensual)}</p>
+                              <p className="text-sm font-sans font-bold text-amber-600">{formatCurrency(simulacion.cuotaMensual)}</p>
                             </div>
                             <div>
                               <p className="text-[10px] text-slate-500 uppercase">Total a pagar</p>
-                              <p className="text-sm font-mono font-bold text-slate-700">{formatCurrency(simulacion.totalAPagar)}</p>
+                              <p className="text-sm font-sans font-bold text-slate-700">{formatCurrency(simulacion.totalAPagar)}</p>
                             </div>
                             <div>
                               <p className="text-[10px] text-slate-500 uppercase">Intereses</p>
-                              <p className="text-sm font-mono font-bold text-rose-600">{formatCurrency(simulacion.interesesTotales)}</p>
+                              <p className="text-sm font-sans font-bold text-rose-600">{formatCurrency(simulacion.interesesTotales)}</p>
                             </div>
                             <div>
                               <p className="text-[10px] text-slate-500 uppercase">% Extra</p>
-                              <p className="text-sm font-mono font-bold text-rose-600">+{simulacion.porcentajeExtraPagado.toFixed(2)}%</p>
+                              <p className="text-sm font-sans font-bold text-rose-600">+{simulacion.porcentajeExtraPagado.toFixed(2)}%</p>
                             </div>
                           </div>
                           <p className="text-[10px] text-slate-500 mt-1">
@@ -539,7 +614,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 value={selectedCuenta}
                 onChange={e => setSelectedCuenta(e.target.value)}
                 required
-                className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500`}
+                className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-yn-primary-500`}
               >
                 <option value="Billetera">
                   💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)} disponible
@@ -608,7 +683,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                     max={goalsWithFunds.find(g => g.id === breakMetaId)?.monto_ahorrado}
                     value={breakAmount}
                     onChange={e => setBreakAmount(e.target.value)}
-                    className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-mono text-sm focus:ring-2 focus:ring-amber-400`}
+                    className={`w-full ${theme.colors.bgSecondary} border border-amber-400/30 rounded-xl pl-9 pr-4 py-2.5 ${theme.colors.textPrimary} font-sans text-sm focus:ring-2 focus:ring-amber-400`}
                   />
                 </div>
                 <button
@@ -628,7 +703,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 const nuevoSaldo = saldoActual + liberando;
                 const puedeGastar = nuevoSaldo >= montoTyped;
                 return (
-                  <p className={`text-xs ${puedeGastar ? 'text-emerald-400' : 'text-amber-300/70'}`}>
+                  <p className={`text-xs ${puedeGastar ? 'text-yn-primary-400' : 'text-amber-300/70'}`}>
                     {puedeGastar
                       ? `✓ Al liberar quedarás con ${formatCurrency(nuevoSaldo - montoTyped)} de saldo`
                       : `Aún te faltarán ${formatCurrency(montoTyped - nuevoSaldo)} después de liberar`}
@@ -687,7 +762,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 <select
                   value={selectedMetaId}
                   onChange={e => setSelectedMetaId(e.target.value)}
-                  className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500`}
+                  className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-yn-primary-500`}
                 >
                   <option value="">Ninguna - saldo libre</option>
                   {goals.filter(g => g.estado === 'activa').map(g => (
@@ -706,7 +781,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             {!(entryType === 'tarjeta' && expenseType === 'suscripcion' && selectedSubscriptionApp && selectedSubscriptionApp !== 'other') && (
               <div className="space-y-1">
                 <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Descripción</label>
-                <input type="text" name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Ej: Compra supermercado" required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-indigo-500`} />
+                <input type="text" name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Ej: Compra supermercado" required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-yn-primary-500`} />
               </div>
             )}
           </div>
@@ -715,7 +790,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             type="submit"
             disabled={loading}
             className={`w-full py-4 rounded-xl font-bold text-lg ${theme.colors.textPrimary} shadow-lg transition-all transform active:scale-95
-            ${entryType === 'ingreso' ? 'bg-gradient-to-r from-emerald-600 to-teal-600' : '${theme.colors.gradientPrimary}'}
+            ${entryType === 'ingreso' ? 'bg-gradient-to-r from-yn-primary-600 to-yn-primary-800' : '${theme.colors.gradientPrimary}'}
             ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:brightness-110'}`}
           >
             {loading ? 'Guardando...' : 'Registrar Movimiento'}

@@ -111,7 +111,7 @@ export const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({
                                 max="99999999"
                                 value={formData.monto}
                                 onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
-                                className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-mono focus:ring-2 focus:ring-purple-500`}
+                                className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-sans focus:ring-2 focus:ring-purple-500`}
                                 required
                             />
                         </div>

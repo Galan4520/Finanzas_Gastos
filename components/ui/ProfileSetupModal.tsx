@@ -42,7 +42,7 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ isOpen, on
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
             <div className={`${theme.colors.bgCard} w-full max-w-lg rounded-3xl shadow-2xl border ${theme.colors.border} overflow-hidden animate-slideUp`}>
                 {/* Header with gradient */}
-                <div className="relative bg-gradient-to-r from-teal-500 via-emerald-500 to-cyan-500 px-6 py-8 text-center">
+                <div className="relative bg-gradient-to-r from-yn-primary-500 via-yn-primary-700 to-indigo-600 px-6 py-8 text-center">
                     <div className="absolute inset-0 bg-black/10"></div>
                     <div className="relative">
                         <div className="text-5xl mb-3">👋</div>
@@ -66,16 +66,16 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ isOpen, on
                                     key={avatar.id}
                                     onClick={() => setSelectedAvatar(avatar.id)}
                                     className={`relative group flex flex-col items-center gap-1.5 p-2 rounded-xl transition-all duration-300 transform hover:scale-105 border-2 ${selectedAvatar === avatar.id
-                                            ? 'border-teal-500 ring-4 ring-teal-500/30 scale-105 bg-teal-500/10'
-                                            : `border-transparent hover:border-teal-400/50 ${theme.colors.bgSecondary}`
+                                            ? 'border-yn-primary-500 ring-4 ring-yn-primary-500/30 scale-105 bg-yn-primary-500/10'
+                                            : `border-transparent hover:border-yn-primary-400/50 ${theme.colors.bgSecondary}`
                                         }`}
                                 >
                                     <AvatarSvg avatarId={avatar.id} size={56} className="shadow-lg" />
-                                    <span className={`text-[10px] font-semibold ${selectedAvatar === avatar.id ? 'text-teal-400' : theme.colors.textMuted}`}>
+                                    <span className={`text-[10px] font-semibold ${selectedAvatar === avatar.id ? 'text-yn-primary-500' : theme.colors.textMuted}`}>
                                         {avatar.label}
                                     </span>
                                     {selectedAvatar === avatar.id && (
-                                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-teal-500 rounded-full flex items-center justify-center shadow-lg">
+                                        <div className="absolute -top-1 -right-1 w-5 h-5 bg-yn-primary-500 rounded-full flex items-center justify-center shadow-lg">
                                             <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                             </svg>
@@ -98,7 +98,7 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ isOpen, on
                                 onChange={(e) => setNombre(e.target.value)}
                                 placeholder="Ingresa tu nombre"
                                 maxLength={30}
-                                className={`w-full px-4 py-3 rounded-xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textPrimary} placeholder:text-gray-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all text-lg font-medium`}
+                                className={`w-full px-4 py-3 rounded-xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textPrimary} placeholder:text-gray-400 focus:border-yn-primary-500 focus:ring-2 focus:ring-yn-primary-500/20 outline-none transition-all text-lg font-medium`}
                             />
                             <div className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs ${theme.colors.textMuted}`}>
                                 {nombre.length}/30
@@ -119,7 +119,7 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ isOpen, on
                         disabled={isLoading}
                         className={`w-full py-4 rounded-xl font-bold text-white text-lg shadow-lg transition-all duration-300 ${isLoading
                                 ? 'bg-gray-400 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
+                                : 'bg-gradient-to-r from-yn-primary-500 to-yn-primary-700 hover:from-yn-primary-600 hover:to-yn-primary-800 hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]'
                             }`}
                     >
                         {isLoading ? (
@@ -164,3 +164,4 @@ export const ProfileSetupModal: React.FC<ProfileSetupModalProps> = ({ isOpen, on
         </div>
     );
 };
+

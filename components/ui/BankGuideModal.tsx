@@ -162,13 +162,13 @@ export const BankGuideModal: React.FC<BankGuideModalProps> = ({ isOpen, onClose 
                     {/* Steps */}
                     <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
                         <p className={`text-sm font-semibold mb-3 ${theme.colors.textPrimary} flex items-center gap-2`}>
-                            <ArrowRight className="w-4 h-4 text-teal-400" />
+                            <ArrowRight className="w-4 h-4 text-yn-primary-500" />
                             Pasos para encontrar tus datos:
                         </p>
                         <div className="space-y-3">
                             {data.steps.map((step, i) => (
                                 <div key={i} className="flex items-start gap-3">
-                                    <div className="w-6 h-6 rounded-full bg-teal-500/20 text-teal-400 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
+                                    <div className="w-6 h-6 rounded-full bg-yn-primary-500/20 text-yn-primary-500 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
                                     <p className={`text-sm ${theme.colors.textSecondary}`}>{step}</p>
                                 </div>
                             ))}
@@ -179,8 +179,8 @@ export const BankGuideModal: React.FC<BankGuideModalProps> = ({ isOpen, onClose 
                     <p className={`text-sm font-semibold ${theme.colors.textPrimary}`}>Busca estos datos:</p>
                     <div className="grid grid-cols-2 gap-3">
                         {data.fields.map((field, i) => (
-                            <div key={i} className={`p-3 rounded-xl bg-teal-500/5 border ${theme.colors.border}`}>
-                                <div className="flex items-center gap-2 mb-1 text-teal-400">
+                            <div key={i} className={`p-3 rounded-xl bg-yn-primary-500/5 border ${theme.colors.border}`}>
+                                <div className="flex items-center gap-2 mb-1 text-yn-primary-500">
                                     {field.icon}
                                     <p className="text-sm font-bold">{field.label}</p>
                                 </div>
@@ -192,16 +192,16 @@ export const BankGuideModal: React.FC<BankGuideModalProps> = ({ isOpen, onClose 
                     {/* Extra info (bank-specific) */}
                     {data.extra && (
                         <div className={`flex items-start gap-3 p-3 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
-                            <AlertTriangle className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
+                            <AlertTriangle className="w-4 h-4 text-yn-primary-500 flex-shrink-0 mt-0.5" />
                             <p className={`text-sm ${theme.colors.textSecondary}`}>{data.extra}</p>
                         </div>
                     )}
 
                     {/* Tip */}
-                    <div className={`flex items-start gap-3 p-3 rounded-xl bg-teal-500/10 border border-teal-500/30`}>
-                        <Lightbulb className="w-4 h-4 text-teal-400 flex-shrink-0 mt-0.5" />
+                    <div className={`flex items-start gap-3 p-3 rounded-xl bg-yn-primary-500/10 border border-yn-primary-500/30`}>
+                        <Lightbulb className="w-4 h-4 text-yn-primary-500 flex-shrink-0 mt-0.5" />
                         <p className={`text-sm ${theme.colors.textSecondary}`}>
-                            <span className="font-semibold text-teal-400">Tip: </span>{data.tip}
+                            <span className="font-semibold text-yn-primary-500">Tip: </span>{data.tip}
                         </p>
                     </div>
                 </div>
@@ -222,3 +222,4 @@ export const BankGuideModal: React.FC<BankGuideModalProps> = ({ isOpen, onClose 
         </div>
     );
 };
+

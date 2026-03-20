@@ -21,8 +21,8 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
       <div className={`${theme.colors.bgCard} p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4 border ${theme.colors.border}`}>
         {/* Animated Spinner */}
         <div className="relative w-16 h-16">
-          <div className="absolute inset-0 border-4 border-t-emerald-500 border-r-emerald-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-          <div className="absolute inset-2 border-4 border-t-transparent border-r-transparent border-b-teal-500 border-l-teal-500 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
+          <div className="absolute inset-0 border-4 border-t-yn-primary-500 border-r-yn-primary-500 border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+          <div className="absolute inset-2 border-4 border-t-transparent border-r-transparent border-b-yn-primary-700 border-l-yn-primary-700 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
         </div>
 
         {/* Message */}

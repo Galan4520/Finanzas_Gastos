@@ -132,7 +132,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
     return simularCompraEnCuotas(monto, cuotas, selectedCardTea);
   }, [formData.monto, numeroCuotas, selectedCardTea, pagaEnCuotas, tipoCuotas]);
 
-  const inputClass = "w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all";
+  const inputClass = "w-full bg-slate-900/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-yn-primary-500 transition-all";
   const labelClass = "text-xs font-bold text-slate-400 uppercase tracking-wide ml-1 mb-1 block";
 
   return (
@@ -153,7 +153,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
             <label className={labelClass}>Monto Total</label>
             <div className="relative">
               <span className="absolute left-4 top-3.5 text-slate-400">S/</span>
-              <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} required className={`${inputClass} pl-10 font-mono text-lg`} />
+              <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} required className={`${inputClass} pl-10 font-sans text-lg`} />
             </div>
           </div>
         </div>
@@ -204,7 +204,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
                     onClick={() => setTipoCuotas('SIN_INTERES')}
                     className={`p-3 rounded-xl border-2 text-center text-sm font-semibold transition-all ${
                       tipoCuotas === 'SIN_INTERES'
-                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                        ? 'border-yn-primary-500 bg-yn-primary-500/10 text-yn-primary-500'
                         : 'border-slate-600 bg-slate-800/30 text-slate-400 hover:border-slate-500'
                     }`}
                   >
@@ -238,7 +238,7 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
                 </div>
                 <div>
                   <label className={labelClass}>Monto / Mes (aprox.)</label>
-                  <div className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-emerald-400 font-mono text-right">
+                  <div className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-emerald-400 font-sans text-right">
                     {formatCurrency(montoCuotaSinInteres)}
                   </div>
                 </div>
@@ -258,19 +258,19 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div>
                           <p className="text-[10px] text-slate-400 uppercase">Cuota/Mes</p>
-                          <p className="text-sm font-mono font-bold text-amber-300">{formatCurrency(simulacion.cuotaMensual)}</p>
+                          <p className="text-sm font-sans font-bold text-amber-300">{formatCurrency(simulacion.cuotaMensual)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-400 uppercase">Total a pagar</p>
-                          <p className="text-sm font-mono font-bold text-white">{formatCurrency(simulacion.totalAPagar)}</p>
+                          <p className="text-sm font-sans font-bold text-white">{formatCurrency(simulacion.totalAPagar)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-400 uppercase">Intereses</p>
-                          <p className="text-sm font-mono font-bold text-rose-400">{formatCurrency(simulacion.interesesTotales)}</p>
+                          <p className="text-sm font-sans font-bold text-rose-400">{formatCurrency(simulacion.interesesTotales)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] text-slate-400 uppercase">% Extra</p>
-                          <p className="text-sm font-mono font-bold text-rose-400">+{simulacion.porcentajeExtraPagado.toFixed(2)}%</p>
+                          <p className="text-sm font-sans font-bold text-rose-400">+{simulacion.porcentajeExtraPagado.toFixed(2)}%</p>
                         </div>
                       </div>
                       <p className="text-[10px] text-slate-500 mt-1">
@@ -313,13 +313,13 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
 
         {formData.tarjetaAlias && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div className="bg-emerald-900/10 border border-emerald-500/20 p-3 rounded-lg text-center">
+            <div className="bg-yn-primary-500/5 border border-yn-primary-500/20 p-3 rounded-lg text-center">
               <p className="text-[10px] uppercase text-emerald-500 font-bold mb-1">Cierre Tarjeta</p>
-              <p className="text-emerald-300 font-mono font-bold">{formData.fecha_cierre || '-'}</p>
+              <p className="text-emerald-300 font-sans font-bold">{formData.fecha_cierre || '-'}</p>
             </div>
             <div className="bg-amber-900/10 border border-amber-500/20 p-3 rounded-lg text-center">
               <p className="text-[10px] uppercase text-amber-500 font-bold mb-1">Fecha Límite Pago</p>
-              <p className="text-amber-300 font-mono font-bold">{formData.fecha_pago || '-'}</p>
+              <p className="text-amber-300 font-sans font-bold">{formData.fecha_pago || '-'}</p>
             </div>
           </div>
         )}
@@ -336,3 +336,4 @@ export const CreditExpenseForm: React.FC<CreditExpenseFormProps> = ({ scriptUrl,
     </div>
   );
 };
+

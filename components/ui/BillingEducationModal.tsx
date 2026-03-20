@@ -302,7 +302,7 @@ const TrampaSection: React.FC = () => {
                 <div className="space-y-4">
                     <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
                         <p className={`text-sm ${theme.colors.textSecondary} mb-2`}>Si gastas:</p>
-                        <p className={`text-2xl font-mono font-bold ${theme.colors.textPrimary}`}>S/. 1,000</p>
+                        <p className={`text-2xl font-sans font-bold ${theme.colors.textPrimary}`}>S/. 1,000</p>
                         <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Y solo pagas el mínimo cada mes...</p>
                     </div>
 
@@ -310,17 +310,17 @@ const TrampaSection: React.FC = () => {
                         <div className={`p-3 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border} text-center`}>
                             <TrendingUp className="w-5 h-5 text-red-400 mx-auto mb-1" />
                             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Terminas pagando</p>
-                            <p className="text-lg font-mono font-bold text-red-400">S/. 1,792</p>
+                            <p className="text-lg font-sans font-bold text-red-400">S/. 1,792</p>
                         </div>
                         <div className={`p-3 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border} text-center`}>
                             <Target className="w-5 h-5 text-red-400 mx-auto mb-1" />
                             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Solo en intereses</p>
-                            <p className="text-lg font-mono font-bold text-red-400">S/. 792</p>
+                            <p className="text-lg font-sans font-bold text-red-400">S/. 792</p>
                         </div>
                         <div className={`p-3 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border} text-center`}>
                             <Clock className="w-5 h-5 text-red-400 mx-auto mb-1" />
                             <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Demoras en pagar</p>
-                            <p className="text-lg font-mono font-bold text-red-400">33 meses</p>
+                            <p className="text-lg font-sans font-bold text-red-400">33 meses</p>
                         </div>
                     </div>
                 </div>

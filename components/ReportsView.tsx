@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pi
 import { TrendingUp, PieChart as PieIcon, Calendar, CreditCard as CardIcon, Download, ArrowUpRight, ArrowDownRight, BarChart3 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
+import { CHART_COLORS, CHART_INCOME, CHART_EXPENSE, CHART_SAVINGS } from '../utils/yunaiColors';
 
 interface ReportsViewProps {
   history: Transaction[];
@@ -13,8 +14,6 @@ interface ReportsViewProps {
 }
 
 type DateRange = 'week' | 'month' | 'quarter' | 'year';
-
-const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316'];
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendingExpenses }) => {
   const { theme, currentTheme } = useTheme();
@@ -204,7 +203,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
         <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
           <div className="flex items-center justify-between mb-2">
             <p className={`text-sm ${theme.colors.textMuted}`}>Tasa de Ahorro</p>
-            <TrendingUp className={healthMetrics.tasaAhorro >= 20 ? 'text-emerald-500' : 'text-amber-500'} size={20} />
+            <TrendingUp className={healthMetrics.tasaAhorro >= 20 ? 'text-yn-primary-500' : 'text-yn-warning-500'} size={20} />
           </div>
           <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${theme.colors.textPrimary}`}>
             {healthMetrics.tasaAhorro.toFixed(1)}%
@@ -217,9 +216,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
         <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
           <div className="flex items-center justify-between mb-2">
             <p className={`text-sm ${theme.colors.textMuted}`}>Ahorro Total</p>
-            {healthMetrics.ahorro >= 0 ? <ArrowUpRight className="text-emerald-500" size={20} /> : <ArrowDownRight className="text-rose-500" size={20} />}
+            {healthMetrics.ahorro >= 0 ? <ArrowUpRight className="text-yn-primary-500" size={20} /> : <ArrowDownRight className="text-yn-error-500" size={20} />}
           </div>
-          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${healthMetrics.ahorro >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${healthMetrics.ahorro >= 0 ? 'text-yn-primary-600' : 'text-yn-error-600'}`}>
             {formatCompact(healthMetrics.ahorro)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Período seleccionado</p>
@@ -228,7 +227,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
         <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
           <div className="flex items-center justify-between mb-2">
             <p className={`text-sm ${theme.colors.textMuted}`}>Uso de Crédito</p>
-            <CardIcon className={healthMetrics.usoCredito > 70 ? 'text-rose-500' : 'text-emerald-500'} size={20} />
+            <CardIcon className={healthMetrics.usoCredito > 70 ? 'text-yn-error-500' : 'text-yn-primary-500'} size={20} />
           </div>
           <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${theme.colors.textPrimary}`}>
             {healthMetrics.usoCredito.toFixed(1)}%
@@ -241,9 +240,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
         <div className={`${theme.colors.bgCard} p-6 rounded-2xl border ${theme.colors.border} shadow-lg`}>
           <div className="flex items-center justify-between mb-2">
             <p className={`text-sm ${theme.colors.textMuted}`}>Total Ingresos</p>
-            <ArrowUpRight className="text-emerald-500" size={20} />
+            <ArrowUpRight className="text-yn-primary-500" size={20} />
           </div>
-          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate text-emerald-600`}>
+          <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate text-yn-primary-600`}>
             {formatCompact(healthMetrics.totalIngresos)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Período seleccionado</p>
@@ -271,11 +270,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                     labelLine={false}
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                     outerRadius={100}
-                    fill="#8884d8"
+                    fill="#099AFE"
                     dataKey="value"
                   >
                     {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(value: number) => formatCurrency(value)} />
@@ -292,15 +291,15 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                   <div key={cat.name} className={`p-4 rounded-xl ${theme.colors.bgSecondary}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 rounded" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                        <div className="w-4 h-4 rounded" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}></div>
                         <span className={`font-medium ${theme.colors.textPrimary}`}>{cat.name}</span>
                       </div>
                       <span className={`font-bold truncate ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
                     </div>
-                    <div className={`w-full bg-gray-200 rounded-full h-2 ${theme.colors.border}`}>
+                    <div className={`w-full bg-yn-neutral-200 rounded-full h-2 ${theme.colors.border}`}>
                       <div
                         className="h-2 rounded-full"
-                        style={{ width: `${percentage}%`, backgroundColor: COLORS[index % COLORS.length] }}
+                        style={{ width: `${percentage}%`, backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                       ></div>
                     </div>
                     <p className={`text-xs ${theme.colors.textMuted} mt-1`}>{percentage.toFixed(1)}% del total</p>
@@ -330,9 +329,9 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                 <YAxis stroke={theme.colors.textMuted} tickFormatter={(value) => `S/ ${value}`} />
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
                 <Legend />
-                <Line type="monotone" dataKey="ingresos" stroke="#10b981" strokeWidth={2} name="Ingresos" />
-                <Line type="monotone" dataKey="gastos" stroke="#ef4444" strokeWidth={2} name="Gastos" />
-                <Line type="monotone" dataKey="ahorro" stroke="#3b82f6" strokeWidth={2} name="Ahorro" />
+                <Line type="monotone" dataKey="ingresos" stroke={CHART_INCOME} strokeWidth={2} name="Ingresos" />
+                <Line type="monotone" dataKey="gastos" stroke={CHART_EXPENSE} strokeWidth={2} name="Gastos" />
+                <Line type="monotone" dataKey="ahorro" stroke={CHART_SAVINGS} strokeWidth={2} name="Ahorro" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -354,7 +353,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
               <div key={cat.category} className={`p-4 rounded-xl ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} transition-colors`}>
                 <div className="flex items-center justify-between mb-2">
                   <h4 className={`font-bold ${theme.colors.textPrimary}`}>{cat.category}</h4>
-                  <div className={`flex items-center gap-1 text-sm font-medium ${cat.change > 0 ? 'text-rose-500' : cat.change < 0 ? 'text-emerald-500' : theme.colors.textMuted
+                  <div className={`flex items-center gap-1 text-sm font-medium ${cat.change > 0 ? 'text-yn-error-500' : cat.change < 0 ? 'text-yn-primary-500' : theme.colors.textMuted
                     }`}>
                     {cat.change > 0 ? '↑' : cat.change < 0 ? '↓' : '→'} {Math.abs(cat.change).toFixed(1)}%
                   </div>
@@ -435,11 +434,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className={theme.colors.textMuted}>Uso</span>
-                      <span className={`font-bold ${uso > 70 ? 'text-rose-500' : 'text-emerald-500'}`}>{uso.toFixed(1)}%</span>
+                      <span className={`font-bold ${uso > 70 ? 'text-yn-error-500' : 'text-yn-primary-500'}`}>{uso.toFixed(1)}%</span>
                     </div>
-                    <div className={`w-full bg-gray-200 rounded-full h-2`}>
+                    <div className={`w-full bg-yn-neutral-200 rounded-full h-2`}>
                       <div
-                        className={`h-2 rounded-full ${uso > 70 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                        className={`h-2 rounded-full ${uso > 70 ? 'bg-yn-error-500' : 'bg-yn-primary-500'}`}
                         style={{ width: `${Math.min(uso, 100)}%` }}
                       ></div>
                     </div>
@@ -481,12 +480,12 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                           </div>
                           <div>
                             <p className={theme.colors.textMuted}>Por pagar</p>
-                            <p className="font-bold text-rose-600">{formatCurrency(restante)}</p>
+                            <p className="font-bold text-yn-error-600">{formatCurrency(restante)}</p>
                           </div>
                         </div>
                       </div>
                       {expense.estado === 'Pagado' && (
-                        <span className="bg-emerald-500/20 text-emerald-600 text-xs px-2 py-1 rounded font-bold">PAGADO</span>
+                        <span className="bg-yn-primary-500/20 text-yn-primary-600 text-xs px-2 py-1 rounded font-bold">PAGADO</span>
                       )}
                     </div>
                   </div>

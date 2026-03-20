@@ -359,7 +359,7 @@ export const AvatarSvg: React.FC<AvatarSvgProps> = ({ avatarId, size = 48, class
     // Fallback: colored circle with first letter
     return (
       <div
-        className={`rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white font-bold ${className}`}
+        className={`rounded-full bg-gradient-to-br from-yn-primary-500 to-yn-primary-700 flex items-center justify-center text-white font-bold ${className}`}
         style={{ width: size, height: size, fontSize: size * 0.4 }}
       >
         {avatarId.charAt(0).toUpperCase()}

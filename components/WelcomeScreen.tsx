@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BookOpen, Link as LinkIcon, CheckCircle, ExternalLink, Lock, Wallet, Play, ChevronRight, ChevronLeft, AlertTriangle, Shield, Bell, RefreshCw, Globe, KeyRound, UserPlus, Copy, Cloud } from 'lucide-react';
+import { YunaiLogo } from './ui/YunaiLogo';
 
 interface WelcomeScreenProps {
   onUrlSubmit: (url: string, pin: string) => Promise<void>;
@@ -10,8 +11,8 @@ interface WelcomeScreenProps {
 const VideoPlaceholder: React.FC<{ title: string; description: string }> = ({ title, description }) => (
   <div className="mt-4 bg-slate-950 border-2 border-dashed border-slate-600 rounded-2xl overflow-hidden">
     <div className="aspect-video flex flex-col items-center justify-center p-6 text-center">
-      <div className="w-16 h-16 bg-emerald-600/20 rounded-full flex items-center justify-center mb-3">
-        <Play className="w-8 h-8 text-emerald-400 ml-1" />
+      <div className="w-16 h-16 bg-yn-primary-500/20 rounded-full flex items-center justify-center mb-3">
+        <Play className="w-8 h-8 text-yn-primary-500 ml-1" />
       </div>
       <p className="text-white font-bold text-sm mb-1">{title}</p>
       <p className="text-slate-400 text-xs max-w-xs">{description}</p>
@@ -24,10 +25,10 @@ const StepBadge: React.FC<{ number: number; active: boolean; completed: boolean;
   <button
     onClick={onClick}
     className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${completed
-        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+        ? 'bg-yn-primary-500 text-white shadow-lg shadow-yn-primary-500/30'
         : active
-          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/40 scale-110'
-          : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
+          ? 'bg-yn-primary-700 text-white shadow-lg shadow-yn-primary-700/40 scale-110'
+          : 'bg-yn-neutral-700 text-slate-400 hover:bg-slate-600'
       }`}
   >
     {completed ? <CheckCircle size={16} /> : number}
@@ -105,12 +106,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
 
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
               <p className="text-slate-300 text-sm">Haz clic en el botón verde de abajo. Se abrirá Google Sheets.</p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
-              <p className="text-slate-300 text-sm">Google te pedirá <strong className="text-white">"Hacer una copia"</strong>. Acepta y ponle un nombre como <em className="text-emerald-400">"Mis Finanzas 2026"</em>.</p>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+              <p className="text-slate-300 text-sm">Google te pedirá <strong className="text-white">"Hacer una copia"</strong>. Acepta y ponle un nombre como <em className="text-yn-primary-500">"Mis Finanzas 2026"</em>.</p>
             </div>
           </div>
 
@@ -118,14 +119,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             href="https://docs.google.com/spreadsheets/d/1WNw94cR-IJrxZIKETz1BHGuPl2ZQ2VFSnmgrAT4etsk/copy"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-emerald-600/30 w-full text-center"
+            className="flex items-center justify-center gap-2 bg-yn-primary-700 hover:bg-yn-primary-500 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-yn-primary-700/30 w-full text-center"
           >
             <ExternalLink size={18} />
             Copiar Plantilla
           </a>
 
-          <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3">
-            <p className="text-emerald-200 text-sm flex items-center gap-2">
+          <div className="bg-yn-primary-500/5 border border-yn-primary-500/20 rounded-xl p-3">
+            <p className="text-yn-primary-200 text-sm flex items-center gap-2">
               <CheckCircle size={16} className="flex-shrink-0" />
               La plantilla ya incluye el código y los permisos pre-configurados.
             </p>
@@ -164,15 +165,15 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             <div className="space-y-2">
               <SubStep label="A1." color="text-blue-400">
                 <p>Abre Google Cloud Console con tu misma cuenta de Google:</p>
-                <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 underline text-xs mt-1">
+                <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-yn-primary-500 hover:text-yn-primary-300 underline text-xs mt-1">
                   <ExternalLink size={10} /> Crear proyecto nuevo
                 </a>
               </SubStep>
               <SubStep label="A2." color="text-blue-400">
-                <p>Ponle nombre: <em className="text-emerald-400">"Yunai"</em> y clic en <strong className="text-white">Crear</strong></p>
+                <p>Ponle nombre: <em className="text-yn-primary-500 font-brand">"Yunai"</em> y clic en <strong className="text-white">Crear</strong></p>
               </SubStep>
               <SubStep label="A3." color="text-blue-400">
-                <p>Ve a <strong className="text-white">Configuracion del proyecto</strong> y copia el <strong className="text-emerald-400">"Numero de proyecto"</strong> (es un numero largo)</p>
+                <p>Ve a <strong className="text-white">Configuracion del proyecto</strong> y copia el <strong className="text-yn-primary-500">"Numero de proyecto"</strong> (es un numero largo)</p>
                 <p className="text-xs text-slate-500 mt-1">Ejemplo: 1028272702630</p>
               </SubStep>
             </div>
@@ -187,16 +188,16 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             <div className="space-y-2">
               <SubStep label="B1." color="text-purple-400">
                 <p>Abre este link directo (asegurate de tener seleccionado tu proyecto "Yunai"):</p>
-                <a href="https://console.cloud.google.com/apis/library/script.googleapis.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 underline text-xs mt-1">
+                <a href="https://console.cloud.google.com/apis/library/script.googleapis.com" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-yn-primary-500 hover:text-yn-primary-300 underline text-xs mt-1">
                   <ExternalLink size={10} /> Habilitar Apps Script API
                 </a>
               </SubStep>
               <SubStep label="B2." color="text-purple-400">
-                <p>Clic en el boton <span className="bg-emerald-700 text-white px-2 py-0.5 rounded text-xs">HABILITAR</span></p>
+                <p>Clic en el boton <span className="bg-yn-primary-700 text-white px-2 py-0.5 rounded text-xs">HABILITAR</span></p>
               </SubStep>
               <SubStep label="B3." color="text-purple-400">
                 <p>Tambien activa la API en tu cuenta personal:</p>
-                <a href="https://script.google.com/home/usersettings" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 underline text-xs mt-1">
+                <a href="https://script.google.com/home/usersettings" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-yn-primary-500 hover:text-yn-primary-300 underline text-xs mt-1">
                   <ExternalLink size={10} /> Configuracion de Apps Script
                 </a>
                 <p className="text-xs text-slate-500 mt-1">Activa el switch de "Google Apps Script API"</p>
@@ -212,16 +213,16 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             </h4>
             <div className="space-y-2">
               <SubStep label="C1." color="text-orange-400">
-                <p>Abre tu Google Sheet y ve a <span className="bg-slate-700 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">Extensiones</span> → <span className="bg-slate-700 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">Apps Script</span></p>
+                <p>Abre tu Google Sheet y ve a <span className="bg-yn-neutral-700 text-yn-primary-500 px-1.5 py-0.5 rounded font-sans text-xs">Extensiones</span> → <span className="bg-yn-neutral-700 text-yn-primary-500 px-1.5 py-0.5 rounded font-sans text-xs">Apps Script</span></p>
               </SubStep>
               <SubStep label="C2." color="text-orange-400">
-                <p>En la barra lateral, clic en <span className="bg-slate-700 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">Configuracion del proyecto</span> (icono de engranaje)</p>
+                <p>En la barra lateral, clic en <span className="bg-yn-neutral-700 text-yn-primary-500 px-1.5 py-0.5 rounded font-sans text-xs">Configuracion del proyecto</span> (icono de engranaje)</p>
               </SubStep>
               <SubStep label="C3." color="text-orange-400">
-                <p>Busca <strong className="text-white">"Proyecto de Google Cloud Platform (GCP)"</strong> → clic en <span className="bg-slate-700 text-emerald-400 px-1.5 py-0.5 rounded font-mono text-xs">Cambiar proyecto</span></p>
+                <p>Busca <strong className="text-white">"Proyecto de Google Cloud Platform (GCP)"</strong> → clic en <span className="bg-yn-neutral-700 text-yn-primary-500 px-1.5 py-0.5 rounded font-sans text-xs">Cambiar proyecto</span></p>
               </SubStep>
               <SubStep label="C4." color="text-orange-400">
-                <p>Pega el <strong className="text-emerald-400">Numero de proyecto</strong> que copiaste en el paso A3 y confirma</p>
+                <p>Pega el <strong className="text-yn-primary-500">Numero de proyecto</strong> que copiaste en el paso A3 y confirma</p>
               </SubStep>
             </div>
           </div>
@@ -252,33 +253,33 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
 
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
               <p className="text-slate-300 text-sm">En Apps Script, clic en el boton azul <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold">Implementar</span> (arriba a la derecha)</p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
-              <p className="text-slate-300 text-sm">Selecciona <span className="bg-slate-700 text-emerald-400 px-2 py-0.5 rounded font-mono text-xs">Nueva implementacion</span></p>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+              <p className="text-slate-300 text-sm">Selecciona <span className="bg-yn-neutral-700 text-yn-primary-500 px-2 py-0.5 rounded font-sans text-xs">Nueva implementacion</span></p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
               <p className="text-slate-300 text-sm">En el icono de engranaje al lado de "Seleccionar tipo", elige <strong className="text-white">"Aplicacion web"</strong></p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
               <div className="text-slate-300 text-sm">
                 <p className="mb-2">Configura asi:</p>
                 <div className="bg-slate-950 rounded-lg p-3 space-y-1">
-                  <p className="text-xs"><span className="text-slate-500">Ejecutar como:</span> <span className="text-emerald-400">Yo (tu email)</span></p>
-                  <p className="text-xs"><span className="text-slate-500">Quien tiene acceso:</span> <span className="text-emerald-400">Cualquier persona</span></p>
+                  <p className="text-xs"><span className="text-slate-500">Ejecutar como:</span> <span className="text-yn-primary-500">Yo (tu email)</span></p>
+                  <p className="text-xs"><span className="text-slate-500">Quien tiene acceso:</span> <span className="text-yn-primary-500">Cualquier persona</span></p>
                 </div>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">5</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">5</span>
               <p className="text-slate-300 text-sm">Clic en <span className="bg-blue-600 text-white px-2 py-0.5 rounded text-xs font-bold">Implementar</span></p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">6</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">6</span>
               <div className="text-slate-300 text-sm">
                 <p className="mb-2">Te pedira <strong className="text-white">autorizar permisos</strong>:</p>
                 <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-3 space-y-1">
@@ -291,19 +292,19 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
           </div>
 
           {/* URL Copy Area */}
-          <div className="bg-emerald-900/20 border-2 border-emerald-500/50 rounded-xl p-4">
-            <h4 className="text-emerald-300 font-bold text-sm mb-2 flex items-center gap-2">
+          <div className="bg-yn-primary-500/5 border-2 border-yn-primary-500/30 rounded-xl p-4">
+            <h4 className="text-yn-primary-300 font-bold text-sm mb-2 flex items-center gap-2">
               <CheckCircle size={16} />
               Copia tu URL
             </h4>
             <p className="text-slate-300 text-xs mb-2">Google te dara una URL que se ve asi:</p>
-            <code className="block bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-emerald-400 break-all">
+            <code className="block bg-slate-950 border border-slate-700 rounded-lg p-3 text-xs text-yn-primary-500 break-all">
               https://script.google.com/macros/s/AKfycbx.../exec
             </code>
-            <p className="text-emerald-200 text-xs mt-2 font-bold">Copiala y guardala — la necesitaras en el siguiente paso</p>
+            <p className="text-yn-primary-200 text-xs mt-2 font-bold">Copiala y guardala — la necesitaras en el siguiente paso</p>
           </div>
 
-          <div className="bg-rose-900/20 border border-rose-500/30 rounded-xl p-3">
+          <div className="bg-yn-error-500/5 border border-yn-error-500/20 rounded-xl p-3">
             <p className="text-rose-200 text-sm flex items-start gap-2">
               <Shield size={16} className="flex-shrink-0 mt-0.5" />
               <span><strong>NUNCA compartas esta URL</strong> con nadie. Es la llave de tu informacion financiera.</span>
@@ -335,33 +336,33 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
 
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
               <p className="text-slate-300 text-sm">Clic en <strong className="text-white">"Ya tengo mi URL"</strong> al final de esta guia</p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
               <p className="text-slate-300 text-sm">Pega tu <strong className="text-white">URL del script</strong> en el primer campo</p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
-              <p className="text-slate-300 text-sm">Ingresa tu <strong className="text-white">PIN</strong> (por defecto es <span className="bg-slate-700 text-emerald-400 px-2 py-0.5 rounded font-mono text-xs font-bold">1234</span>)</p>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+              <p className="text-slate-300 text-sm">Ingresa tu <strong className="text-white">PIN</strong> (por defecto es <span className="bg-yn-neutral-700 text-yn-primary-500 px-2 py-0.5 rounded font-sans text-xs font-bold">1234</span>)</p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
               <p className="text-slate-300 text-sm">Clic en <strong className="text-white">"Comenzar"</strong> — deberas ver tu Dashboard</p>
             </div>
           </div>
 
-          <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-4">
-            <h4 className="text-emerald-300 font-bold text-sm mb-2">Para cambiar tu PIN:</h4>
+          <div className="bg-yn-primary-500/5 border border-yn-primary-500/20 rounded-xl p-4">
+            <h4 className="text-yn-primary-300 font-bold text-sm mb-2">Para cambiar tu PIN:</h4>
             <ol className="text-slate-300 text-xs space-y-1 list-decimal list-inside">
-              <li>Abre tu Google Sheet → hoja <span className="text-emerald-400 font-mono">Config</span></li>
-              <li>Cambia el valor de la celda <span className="text-emerald-400 font-mono">A2</span></li>
+              <li>Abre tu Google Sheet → hoja <span className="text-yn-primary-500 font-sans">Config</span></li>
+              <li>Cambia el valor de la celda <span className="text-yn-primary-500 font-sans">A2</span></li>
               <li>Usa el nuevo PIN para entrar</li>
             </ol>
           </div>
 
-          <div className="bg-gradient-to-r from-emerald-900/30 to-blue-900/30 border border-emerald-500/30 rounded-xl p-6 text-center">
+          <div className="bg-gradient-to-r from-yn-primary-900/30 to-blue-900/30 border border-yn-primary-500/30 rounded-xl p-6 text-center">
             <p className="text-3xl mb-2">🎉</p>
             <p className="text-white font-bold text-lg">Felicidades!</p>
             <p className="text-slate-300 text-sm mt-1">Tu app de finanzas esta lista para usar</p>
@@ -381,32 +382,32 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
         <div className="space-y-4">
           <div className="bg-slate-800/50 rounded-xl p-4">
             <p className="text-slate-200 text-sm leading-relaxed">
-              <strong className="text-emerald-400">Paso opcional pero recomendado.</strong> Recibe alertas por email
+              <strong className="text-yn-primary-500">Paso opcional pero recomendado.</strong> Recibe alertas por email
               cuando tus pagos esten proximos a vencer.
             </p>
           </div>
 
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
-              <p className="text-slate-300 text-sm">Dentro de la app, ve a <span className="bg-slate-700 text-emerald-400 px-2 py-0.5 rounded font-mono text-xs">Configuracion</span></p>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+              <p className="text-slate-300 text-sm">Dentro de la app, ve a <span className="bg-yn-neutral-700 text-yn-primary-500 px-2 py-0.5 rounded font-sans text-xs">Configuracion</span></p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
               <p className="text-slate-300 text-sm">Busca <strong className="text-white">"Notificaciones"</strong> y activalas</p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
               <p className="text-slate-300 text-sm">Ingresa tu <strong className="text-white">email</strong> y elige cuantos dias antes quieres el aviso</p>
             </div>
             <div className="flex items-start gap-3">
-              <span className="bg-emerald-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
+              <span className="bg-yn-primary-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">4</span>
               <p className="text-slate-300 text-sm">Clic en <strong className="text-white">"Guardar"</strong> y luego <strong className="text-white">"Enviar email de prueba"</strong> para verificar</p>
             </div>
           </div>
 
-          <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-xl p-3">
-            <p className="text-emerald-200 text-sm flex items-start gap-2">
+          <div className="bg-yn-primary-500/5 border border-yn-primary-500/20 rounded-xl p-3">
+            <p className="text-yn-primary-200 text-sm flex items-start gap-2">
               <Bell size={16} className="flex-shrink-0 mt-0.5" />
               <span>Tambien puedes activar el <strong>Trigger Diario</strong> para recibir un resumen automatico cada manana.
                 Si no llega el email, revisa tu carpeta de <strong>Spam</strong>.</span>
@@ -418,7 +419,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             description="Activa las alertas para nunca olvidar un pago"
           />
 
-          <div className="bg-gradient-to-r from-emerald-900/30 to-blue-900/30 border border-emerald-500/30 rounded-xl p-6 text-center">
+          <div className="bg-gradient-to-r from-yn-primary-900/30 to-blue-900/30 border border-yn-primary-500/30 rounded-xl p-6 text-center">
             <p className="text-3xl mb-2">✅</p>
             <p className="text-white font-bold">Todo listo!</p>
             <p className="text-slate-300 text-sm mt-1">Ya puedes empezar a gestionar tus finanzas</p>
@@ -438,12 +439,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
           <div className="bg-slate-800/60 backdrop-blur-xl rounded-3xl border border-slate-700/50 shadow-2xl overflow-hidden">
 
             {/* Header */}
-            <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 p-5 text-center">
+            <div className="bg-gradient-to-r from-yn-primary-700 to-yn-primary-500 p-5 text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
                 <BookOpen className="w-7 h-7 text-white" />
                 <h1 className="text-2xl font-bold text-white">Guia de Configuracion</h1>
               </div>
-              <p className="text-emerald-50 text-sm">Paso {currentStep + 1} de {steps.length} — {currentStepData.subtitle}</p>
+              <p className="text-yn-primary-50 text-sm">Paso {currentStep + 1} de {steps.length} — {currentStepData.subtitle}</p>
             </div>
 
             {/* Step Indicators */}
@@ -458,7 +459,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
                       onClick={() => setCurrentStep(index)}
                     />
                     {index < steps.length - 1 && (
-                      <div className={`w-6 h-0.5 ${index < currentStep ? 'bg-emerald-500' : 'bg-slate-700'} transition-colors`} />
+                      <div className={`w-6 h-0.5 ${index < currentStep ? 'bg-yn-primary-500' : 'bg-yn-neutral-700'} transition-colors`} />
                     )}
                   </React.Fragment>
                 ))}
@@ -468,7 +469,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             {/* Step Content */}
             <div className="p-6 max-h-[60vh] overflow-y-auto">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-600/20 rounded-xl flex items-center justify-center text-emerald-400">
+                <div className="w-10 h-10 bg-yn-primary-500/20 rounded-xl flex items-center justify-center text-yn-primary-500">
                   {currentStepData.icon}
                 </div>
                 <h2 className="text-xl font-bold text-white">{currentStepData.title}</h2>
@@ -489,7 +490,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
                 {currentStep > 0 && (
                   <button
                     onClick={goToPrevStep}
-                    className="flex items-center gap-1 bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    className="flex items-center gap-1 bg-yn-neutral-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
                     <ChevronLeft size={16} />
                     Anterior
@@ -499,7 +500,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
                 {currentStep < steps.length - 1 ? (
                   <button
                     onClick={goToNextStep}
-                    className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-600/30"
+                    className="flex items-center gap-1 bg-yn-primary-700 hover:bg-yn-primary-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-yn-primary-700/30"
                   >
                     Siguiente
                     <ChevronRight size={16} />
@@ -507,7 +508,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
                 ) : (
                   <button
                     onClick={() => setShowInstructions(false)}
-                    className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-600/30"
+                    className="flex items-center gap-1 bg-yn-primary-700 hover:bg-yn-primary-500 text-white px-5 py-2 rounded-lg text-sm font-bold transition-all shadow-lg shadow-yn-primary-700/30"
                   >
                     Ya tengo mi URL
                   </button>
@@ -527,20 +528,20 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
       <div className="max-w-md w-full">
 
         {/* Green Header with Logo and Title */}
-        <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-t-[2rem] p-8 text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-yn-primary-500 to-yn-primary-700 rounded-t-[2rem] p-8 text-center relative overflow-hidden">
           {/* Decorative circles */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full -mr-16 -mt-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-700/20 rounded-full -ml-12 -mb-12"></div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-yn-primary-300/20 rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-yn-primary-700/20 rounded-full -ml-12 -mb-12"></div>
 
           <div className="relative z-10">
             {/* Logo */}
             <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-              <span className="text-5xl">🦗</span>
+              <YunaiLogo size={64} className="text-white drop-shadow-xl" />
             </div>
 
             {/* Title */}
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Yunai</h1>
-            <p className="text-emerald-50 text-sm font-medium">Tu gestor de finanzas personales</p>
+            <h1 className="text-3xl font-brand font-bold text-white mb-2 tracking-tight">Yunai</h1>
+            <p className="text-yn-primary-50 text-sm font-medium">Tu gestor de finanzas personales</p>
           </div>
         </div>
 
@@ -558,7 +559,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
 
             {/* URL Input */}
             <div>
-              <label className="block text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-2">
+              <label className="block text-sm font-semibold text-yn-primary-700 mb-2 flex items-center gap-2">
                 <LinkIcon size={16} />
                 URL de Google Apps Script
               </label>
@@ -572,13 +573,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
                 placeholder="https://script.google.com/macros/s/..."
                 required
                 disabled={isValidating}
-                className={`w-full bg-gray-50 border ${validationError ? 'border-rose-400' : 'border-gray-200'} rounded-xl px-4 py-3.5 text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-emerald-400 focus:border-transparent focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full bg-gray-50 border ${validationError ? 'border-yn-error-400' : 'border-gray-200'} rounded-xl px-4 py-3.5 text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-yn-primary-500 focus:border-transparent focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
             </div>
 
             {/* PIN Input */}
             <div>
-              <label className="block text-sm font-semibold text-emerald-700 mb-2 flex items-center gap-2">
+              <label className="block text-sm font-semibold text-yn-primary-700 mb-2 flex items-center gap-2">
                 <Lock size={16} />
                 PIN de Seguridad
               </label>
@@ -592,10 +593,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
                 placeholder="Ingresa tu PIN (por defecto: 1234)"
                 required
                 disabled={isValidating}
-                className={`w-full bg-gray-50 border ${validationError ? 'border-rose-400' : 'border-gray-200'} rounded-xl px-4 py-3.5 text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-emerald-400 focus:border-transparent focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-full bg-gray-50 border ${validationError ? 'border-yn-error-400' : 'border-gray-200'} rounded-xl px-4 py-3.5 text-gray-700 placeholder-gray-400 focus:ring-2 focus:ring-yn-primary-500 focus:border-transparent focus:outline-none transition-all ${isValidating ? 'opacity-50 cursor-not-allowed' : ''}`}
               />
               {validationError && (
-                <p className="mt-2 text-sm text-rose-500 flex items-center gap-2">
+                <p className="mt-2 text-sm text-yn-error-500 flex items-center gap-2">
                   <span>X</span> {validationError}
                 </p>
               )}
@@ -605,9 +606,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             <button
               type="submit"
               disabled={isValidating}
-              className={`w-full bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/30 ${isValidating
+              className={`w-full bg-gradient-to-r from-yn-primary-500 to-yn-primary-700 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-yn-primary-500/30 ${isValidating
                   ? 'opacity-70 cursor-not-allowed'
-                  : 'hover:shadow-emerald-500/40 hover:from-emerald-600 hover:to-emerald-700 active:scale-[0.98]'
+                  : 'hover:shadow-yn-primary-500/40 hover:from-yn-primary-700 hover:to-yn-primary-900 active:scale-[0.98]'
                 }`}
             >
               {isValidating ? (
@@ -629,7 +630,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
             <p className="text-gray-500 text-sm mb-2">Primera vez?</p>
             <button
               onClick={() => setShowInstructions(true)}
-              className="inline-flex items-center justify-center gap-2 text-emerald-600 hover:text-emerald-700 font-semibold text-sm transition-colors"
+              className="inline-flex items-center justify-center gap-2 text-yn-primary-700 hover:text-yn-primary-900 font-semibold text-sm transition-colors"
             >
               <BookOpen size={16} />
               Ver guia de configuracion paso a paso
@@ -648,3 +649,5 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onUrlSubmit, isSyn
     </div>
   );
 };
+
+

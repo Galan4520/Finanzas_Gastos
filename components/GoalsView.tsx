@@ -11,27 +11,28 @@ import {
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
+import { YN, CHART_GOALS_SAVED, CHART_GOALS_FREE, CHART_GOALS_EMPTY } from '../utils/yunaiColors';
 
 const uuidv4 = () => self.crypto.randomUUID();
 
 const ICON_OPTIONS = [
-  { key: 'car',     icon: faCar,           label: 'Auto',       color: 'text-blue-500',    bg: 'bg-blue-500/10',    accent: '#3b82f6' },
-  { key: 'moto',    icon: faMotorcycle,    label: 'Moto',       color: 'text-orange-500',  bg: 'bg-orange-500/10',  accent: '#f97316' },
-  { key: 'plane',   icon: faPlane,         label: 'Viaje',      color: 'text-sky-500',     bg: 'bg-sky-500/10',     accent: '#0ea5e9' },
-  { key: 'beach',   icon: faUmbrellaBeach, label: 'Playa',      color: 'text-yellow-500',  bg: 'bg-yellow-500/10',  accent: '#eab308' },
-  { key: 'house',   icon: faHouse,         label: 'Casa',       color: 'text-emerald-600', bg: 'bg-emerald-500/10', accent: '#10b981' },
-  { key: 'edu',     icon: faGraduationCap, label: 'Educación',  color: 'text-indigo-500',  bg: 'bg-indigo-500/10',  accent: '#6366f1' },
-  { key: 'shield',  icon: faShield,        label: 'Emergencia', color: 'text-rose-500',    bg: 'bg-rose-500/10',    accent: '#f43f5e' },
-  { key: 'work',    icon: faBriefcase,     label: 'Negocio',    color: 'text-amber-600',   bg: 'bg-amber-500/10',   accent: '#d97706' },
-  { key: 'laptop',  icon: faLaptop,        label: 'Tech',       color: 'text-slate-500',   bg: 'bg-slate-500/10',   accent: '#64748b' },
-  { key: 'ring',    icon: faRing,          label: 'Boda',       color: 'text-pink-500',    bg: 'bg-pink-500/10',    accent: '#ec4899' },
-  { key: 'baby',    icon: faBaby,          label: 'Bebé',       color: 'text-purple-400',  bg: 'bg-purple-500/10',  accent: '#a855f7' },
-  { key: 'health',  icon: faHeartPulse,    label: 'Salud',      color: 'text-red-500',     bg: 'bg-red-500/10',     accent: '#ef4444' },
-  { key: 'pet',     icon: faDog,           label: 'Mascota',    color: 'text-amber-600',   bg: 'bg-amber-200/40',   accent: '#d97706' },
-  { key: 'game',    icon: faGamepad,       label: 'Gaming',     color: 'text-violet-500',  bg: 'bg-violet-500/10',  accent: '#8b5cf6' },
-  { key: 'food',    icon: faUtensils,      label: 'Comida',     color: 'text-orange-400',  bg: 'bg-orange-500/10',  accent: '#fb923c' },
-  { key: 'heart',   icon: faHeart,         label: 'Amor',       color: 'text-rose-400',    bg: 'bg-rose-500/10',    accent: '#fb7185' },
-  { key: 'piggy',   icon: faPiggyBank,     label: 'Ahorro',     color: 'text-emerald-500', bg: 'bg-emerald-500/10', accent: '#10b981' },
+  { key: 'car',     icon: faCar,           label: 'Auto',       color: 'text-yn-sec1-500',    bg: 'bg-yn-sec1-500/10',    accent: YN.sec1500 },
+  { key: 'moto',    icon: faMotorcycle,    label: 'Moto',       color: 'text-yn-warning-400', bg: 'bg-yn-warning-400/10', accent: YN.warning400 },
+  { key: 'plane',   icon: faPlane,         label: 'Viaje',      color: 'text-yn-sec1-400',    bg: 'bg-yn-sec1-400/10',    accent: YN.sec1400 },
+  { key: 'beach',   icon: faUmbrellaBeach, label: 'Playa',      color: 'text-yn-sec2-500',    bg: 'bg-yn-sec2-500/10',    accent: YN.sec2500 },
+  { key: 'house',   icon: faHouse,         label: 'Casa',       color: 'text-yn-primary-600', bg: 'bg-yn-primary-500/10', accent: YN.primary500 },
+  { key: 'edu',     icon: faGraduationCap, label: 'Educación',  color: 'text-yn-sec1-800',    bg: 'bg-yn-sec1-800/10',    accent: YN.sec1800 },
+  { key: 'shield',  icon: faShield,        label: 'Emergencia', color: 'text-yn-error-500',   bg: 'bg-yn-error-500/10',   accent: YN.error500 },
+  { key: 'work',    icon: faBriefcase,     label: 'Negocio',    color: 'text-yn-warning-600', bg: 'bg-yn-warning-500/10', accent: YN.warning600 },
+  { key: 'laptop',  icon: faLaptop,        label: 'Tech',       color: 'text-yn-neutral-500', bg: 'bg-yn-neutral-500/10', accent: YN.neutral500 },
+  { key: 'ring',    icon: faRing,          label: 'Boda',       color: 'text-yn-error-400',   bg: 'bg-yn-error-400/10',   accent: YN.error400 },
+  { key: 'baby',    icon: faBaby,          label: 'Bebé',       color: 'text-yn-sec1-700',    bg: 'bg-yn-sec1-700/10',    accent: YN.sec1700 },
+  { key: 'health',  icon: faHeartPulse,    label: 'Salud',      color: 'text-yn-error-500',   bg: 'bg-yn-error-500/10',   accent: YN.error500 },
+  { key: 'pet',     icon: faDog,           label: 'Mascota',    color: 'text-yn-warning-600', bg: 'bg-yn-warning-400/10', accent: YN.warning600 },
+  { key: 'game',    icon: faGamepad,       label: 'Gaming',     color: 'text-yn-sec1-600',    bg: 'bg-yn-sec1-600/10',    accent: YN.sec1600 },
+  { key: 'food',    icon: faUtensils,      label: 'Comida',     color: 'text-yn-warning-300', bg: 'bg-yn-warning-300/10', accent: YN.warning300 },
+  { key: 'heart',   icon: faHeart,         label: 'Amor',       color: 'text-yn-error-400',   bg: 'bg-yn-error-400/10',   accent: YN.error400 },
+  { key: 'piggy',   icon: faPiggyBank,     label: 'Ahorro',     color: 'text-yn-primary-500', bg: 'bg-yn-primary-500/10', accent: YN.primary500 },
 ];
 
 interface GoalsViewProps {
@@ -59,36 +60,36 @@ const getGoalMeta = (nombre: string, icono?: string): { icon: any; color: string
   }
   const n = (nombre || '').toLowerCase();
   if (n.includes('carro') || n.includes('auto') || n.includes('coche') || n.includes('vehiculo') || n.includes('camioneta'))
-    return { icon: faCar, color: 'text-blue-500', bg: 'bg-blue-500/10', accent: '#3b82f6' };
+    return { icon: faCar, color: 'text-yn-sec1-500', bg: 'bg-yn-sec1-500/10', accent: YN.sec1500 };
   if (n.includes('moto') || n.includes('scooter'))
-    return { icon: faMotorcycle, color: 'text-orange-500', bg: 'bg-orange-500/10', accent: '#f97316' };
+    return { icon: faMotorcycle, color: 'text-yn-warning-400', bg: 'bg-yn-warning-400/10', accent: YN.warning400 };
   if (n.includes('viaje') || n.includes('vacacion') || n.includes('trip') || n.includes('vuelo'))
-    return { icon: faPlane, color: 'text-sky-500', bg: 'bg-sky-500/10', accent: '#0ea5e9' };
+    return { icon: faPlane, color: 'text-yn-sec1-400', bg: 'bg-yn-sec1-400/10', accent: YN.sec1400 };
   if (n.includes('playa') || n.includes('verano'))
-    return { icon: faUmbrellaBeach, color: 'text-yellow-500', bg: 'bg-yellow-500/10', accent: '#eab308' };
+    return { icon: faUmbrellaBeach, color: 'text-yn-sec2-500', bg: 'bg-yn-sec2-500/10', accent: YN.sec2500 };
   if (n.includes('casa') || n.includes('depto') || n.includes('hogar') || n.includes('departamento') || n.includes('piso'))
-    return { icon: faHouse, color: 'text-emerald-600', bg: 'bg-emerald-500/10', accent: '#10b981' };
+    return { icon: faHouse, color: 'text-yn-primary-600', bg: 'bg-yn-primary-500/10', accent: YN.primary500 };
   if (n.includes('educacion') || n.includes('estudio') || n.includes('maestria') || n.includes('universidad') || n.includes('curso') || n.includes('carrera'))
-    return { icon: faGraduationCap, color: 'text-indigo-500', bg: 'bg-indigo-500/10', accent: '#6366f1' };
+    return { icon: faGraduationCap, color: 'text-yn-sec1-800', bg: 'bg-yn-sec1-800/10', accent: YN.sec1800 };
   if (n.includes('emergencia') || n.includes('fondo') || n.includes('seguro') || n.includes('reserve'))
-    return { icon: faShield, color: 'text-rose-500', bg: 'bg-rose-500/10', accent: '#f43f5e' };
+    return { icon: faShield, color: 'text-yn-error-500', bg: 'bg-yn-error-500/10', accent: YN.error500 };
   if (n.includes('negocio') || n.includes('empresa') || n.includes('inversion') || n.includes('emprendimiento'))
-    return { icon: faBriefcase, color: 'text-amber-600', bg: 'bg-amber-500/10', accent: '#d97706' };
+    return { icon: faBriefcase, color: 'text-yn-warning-600', bg: 'bg-yn-warning-500/10', accent: YN.warning600 };
   if (n.includes('telefono') || n.includes('celular') || n.includes('computadora') || n.includes('laptop') || n.includes('pc') || n.includes('mac'))
-    return { icon: faLaptop, color: 'text-slate-500', bg: 'bg-slate-500/10', accent: '#64748b' };
+    return { icon: faLaptop, color: 'text-yn-neutral-500', bg: 'bg-yn-neutral-500/10', accent: YN.neutral500 };
   if (n.includes('boda') || n.includes('matrimonio') || n.includes('anillo'))
-    return { icon: faRing, color: 'text-pink-500', bg: 'bg-pink-500/10', accent: '#ec4899' };
+    return { icon: faRing, color: 'text-yn-error-400', bg: 'bg-yn-error-400/10', accent: YN.error400 };
   if (n.includes('bebe') || n.includes('hijo') || n.includes('familia') || n.includes('niño'))
-    return { icon: faBaby, color: 'text-purple-400', bg: 'bg-purple-500/10', accent: '#a855f7' };
+    return { icon: faBaby, color: 'text-yn-sec1-700', bg: 'bg-yn-sec1-700/10', accent: YN.sec1700 };
   if (n.includes('salud') || n.includes('medico') || n.includes('hospital'))
-    return { icon: faHeartPulse, color: 'text-red-500', bg: 'bg-red-500/10', accent: '#ef4444' };
+    return { icon: faHeartPulse, color: 'text-yn-error-500', bg: 'bg-yn-error-500/10', accent: YN.error500 };
   if (n.includes('mascota') || n.includes('perro') || n.includes('gato'))
-    return { icon: faDog, color: 'text-amber-600', bg: 'bg-amber-200/40', accent: '#d97706' };
+    return { icon: faDog, color: 'text-yn-warning-600', bg: 'bg-yn-warning-400/10', accent: YN.warning600 };
   if (n.includes('juego') || n.includes('consola') || n.includes('ps') || n.includes('xbox') || n.includes('nintendo'))
-    return { icon: faGamepad, color: 'text-violet-500', bg: 'bg-violet-500/10', accent: '#8b5cf6' };
+    return { icon: faGamepad, color: 'text-yn-sec1-600', bg: 'bg-yn-sec1-600/10', accent: YN.sec1600 };
   if (n.includes('restaurante') || n.includes('comida') || n.includes('cena'))
-    return { icon: faUtensils, color: 'text-orange-400', bg: 'bg-orange-500/10', accent: '#fb923c' };
-  return { icon: faPiggyBank, color: 'text-emerald-500', bg: 'bg-emerald-500/10', accent: '#10b981' };
+    return { icon: faUtensils, color: 'text-yn-warning-300', bg: 'bg-yn-warning-300/10', accent: YN.warning300 };
+  return { icon: faPiggyBank, color: 'text-yn-primary-500', bg: 'bg-yn-primary-500/10', accent: YN.primary500 };
 };
 
 // Custom donut center label
@@ -168,10 +169,10 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
   const donutData = useMemo(() => {
     const libre = Math.max(0, totalSaldoLibre);
     const apartado = totalApartado;
-    if (libre === 0 && apartado === 0) return [{ name: 'Sin datos', value: 1, color: '#374151' }];
+    if (libre === 0 && apartado === 0) return [{ name: 'Sin datos', value: 1, color: CHART_GOALS_EMPTY }];
     const result = [];
-    if (apartado > 0) result.push({ name: 'En metas', value: apartado, color: '#10b981' });
-    if (libre > 0) result.push({ name: 'Libre', value: libre, color: '#6366f1' });
+    if (apartado > 0) result.push({ name: 'En metas', value: apartado, color: CHART_GOALS_SAVED });
+    if (libre > 0) result.push({ name: 'Libre', value: libre, color: CHART_GOALS_FREE });
     return result;
   }, [totalSaldoLibre, totalApartado]);
 
@@ -309,7 +310,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                 </ResponsiveContainer>
                 {/* Center label */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <p className={`text-sm font-mono font-bold ${textColors.primary}`}>
+                  <p className={`text-sm font-sans font-bold ${textColors.primary}`}>
                     {totalObjetivo > 0 ? ((totalApartado / totalObjetivo) * 100).toFixed(0) : 0}%
                   </p>
                   <p className={`text-[10px] ${theme.colors.textMuted}`}>logrado</p>
@@ -331,24 +332,24 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
               {/* Total apartado */}
               <div className={`p-4 rounded-2xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <Target size={14} className="text-emerald-500" />
+                  <div className="w-7 h-7 rounded-lg bg-yn-primary-500/10 flex items-center justify-center">
+                    <Target size={14} className="text-yn-primary-500" />
                   </div>
                   <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wide`}>Apartado</p>
                 </div>
-                <p className={`text-base sm:text-lg font-mono font-bold truncate ${textColors.primary}`}>{formatCompact(totalApartado)}</p>
+                <p className={`text-base sm:text-lg font-sans font-bold truncate ${textColors.primary}`}>{formatCompact(totalApartado)}</p>
                 <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>en {activeGoals.length} meta{activeGoals.length !== 1 ? 's' : ''}</p>
               </div>
 
               {/* Saldo libre */}
               <div className={`p-4 rounded-2xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-                    <FontAwesomeIcon icon={faWallet} className="text-indigo-400" style={{ fontSize: '12px' }} />
+                  <div className="w-7 h-7 rounded-lg bg-yn-primary-500/10 flex items-center justify-center">
+                    <FontAwesomeIcon icon={faWallet} className="text-yn-primary-500" style={{ fontSize: '12px' }} />
                   </div>
                   <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wide`}>Saldo libre</p>
                 </div>
-                <p className={`text-base sm:text-lg font-mono font-bold truncate ${totalSaldoLibre >= 0 ? theme.colors.textPrimary : 'text-rose-400'}`}>
+                <p className={`text-base sm:text-lg font-sans font-bold truncate ${totalSaldoLibre >= 0 ? theme.colors.textPrimary : 'text-rose-400'}`}>
                   {formatCompact(Math.max(0, totalSaldoLibre))}
                 </p>
                 <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>disponible</p>
@@ -362,19 +363,19 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                   </div>
                   <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wide`}>Objetivo</p>
                 </div>
-                <p className={`text-base sm:text-lg font-mono font-bold truncate ${theme.colors.textPrimary}`}>{formatCompact(totalObjetivo)}</p>
+                <p className={`text-base sm:text-lg font-sans font-bold truncate ${theme.colors.textPrimary}`}>{formatCompact(totalObjetivo)}</p>
                 <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>falta {formatCurrency(Math.max(0, totalObjetivo - totalApartado))}</p>
               </div>
 
               {/* Completadas */}
               <div className={`p-4 rounded-2xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
                 <div className="flex items-center gap-2 mb-2">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                    <CheckCircle size={14} className="text-emerald-500" />
+                  <div className="w-7 h-7 rounded-lg bg-yn-primary-500/10 flex items-center justify-center">
+                    <CheckCircle size={14} className="text-yn-primary-500" />
                   </div>
                   <p className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase tracking-wide`}>Completadas</p>
                 </div>
-                <p className={`text-lg font-mono font-bold ${theme.colors.textPrimary}`}>{completedGoals.length}</p>
+                <p className={`text-lg font-sans font-bold ${theme.colors.textPrimary}`}>{completedGoals.length}</p>
                 <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>de {goals.length} en total</p>
               </div>
             </div>
@@ -389,7 +390,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
               </div>
               <div className={`w-full h-2.5 ${theme.colors.bgSecondary} rounded-full overflow-hidden`}>
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-700"
+                  className="h-full rounded-full bg-gradient-to-r from-yn-primary-500 to-yn-primary-700 transition-all duration-700"
                   style={{ width: `${Math.min(100, (totalApartado / totalObjetivo) * 100)}%` }}
                 />
               </div>
@@ -438,7 +439,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                   title="Auto-detectar"
                   className={`flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all ${theme.colors.bgSecondary} ${
                     !formData.icono
-                      ? 'border-emerald-500 opacity-100'
+                      ? 'border-yn-primary-500 opacity-100'
                       : `${theme.colors.border} opacity-50 hover:opacity-80`
                   }`}
                 >
@@ -473,7 +474,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>Monto objetivo (S/)</label>
-                <input type="number" max="99999999" value={formData.monto_objetivo || ''} onChange={e => setFormData(prev => ({ ...prev, monto_objetivo: parseFloat(e.target.value) || 0 }))} placeholder="20000" className={`${inputClass} font-mono`} />
+                <input type="number" max="99999999" value={formData.monto_objetivo || ''} onChange={e => setFormData(prev => ({ ...prev, monto_objetivo: parseFloat(e.target.value) || 0 }))} placeholder="20000" className={`${inputClass} font-sans`} />
               </div>
               <div>
                 <label className={`block text-sm font-medium ${theme.colors.textPrimary} mb-2`}>Notas (opcional)</label>
@@ -541,11 +542,11 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                         <div className="flex justify-between items-end mb-3">
                           <div>
                             <p className={`text-[10px] ${theme.colors.textMuted} uppercase tracking-wide`}>Ahorrado</p>
-                            <p className={`text-lg sm:text-2xl font-mono font-bold truncate`} style={{ color: goalMeta.accent }}>{formatCompact(goal.monto_ahorrado)}</p>
+                            <p className={`text-lg sm:text-2xl font-sans font-bold truncate`} style={{ color: goalMeta.accent }}>{formatCompact(goal.monto_ahorrado)}</p>
                           </div>
                           <div className="text-right">
                             <p className={`text-[10px] ${theme.colors.textMuted} uppercase tracking-wide`}>Objetivo</p>
-                            <p className={`text-sm font-mono truncate ${theme.colors.textMuted}`}>{formatCompact(goal.monto_objetivo)}</p>
+                            <p className={`text-sm font-sans truncate ${theme.colors.textMuted}`}>{formatCompact(goal.monto_objetivo)}</p>
                           </div>
                         </div>
 
@@ -588,7 +589,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                                   type="number" max="99999999" value={contributeAmount}
                                   onChange={e => { setContributeAmount(e.target.value); setContributeError(''); }}
                                   placeholder="0.00" autoFocus
-                                  className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg pl-8 pr-3 py-2 text-sm ${theme.colors.textPrimary} font-mono outline-none focus:ring-2 focus:ring-current`}
+                                  className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-lg pl-8 pr-3 py-2 text-sm ${theme.colors.textPrimary} font-sans outline-none focus:ring-2 focus:ring-current`}
                                   onKeyDown={e => { if (e.key === 'Enter') handleContribute(goal.id); if (e.key === 'Escape') { setContributeId(null); setContributeAmount(''); setContributeError(''); } }}
                                 />
                               </div>
@@ -606,7 +607,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                               <ArrowUpRight size={15} /> Aportar
                             </button>
                             {goal.monto_ahorrado > 0 && (
-                              <button onClick={() => openBreakModal(goal)} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all border border-rose-500/30 text-rose-400 bg-rose-500/10 hover:bg-rose-500/20">
+                              <button onClick={() => openBreakModal(goal)} className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all border border-rose-500/30 text-rose-400 bg-yn-error-500/10 hover:bg-yn-error-500/20">
                                 <FontAwesomeIcon icon={faPiggyBank} style={{ fontSize: '13px' }} /> Romper
                               </button>
                             )}
@@ -628,20 +629,20 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                 {completedGoals.map(goal => {
                   const goalMeta = getGoalMeta(goal.nombre, goal.icono);
                   return (
-                    <div key={goal.id} className={`${theme.colors.bgCard} p-4 rounded-2xl border border-emerald-500/20 shadow flex items-center gap-3`}>
+                    <div key={goal.id} className={`${theme.colors.bgCard} p-4 rounded-2xl border border-yn-primary-500/20 shadow flex items-center gap-3`}>
                       <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${goalMeta.bg}`}>
                         <FontAwesomeIcon icon={goalMeta.icon} className={goalMeta.color} style={{ fontSize: '15px' }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <CheckCircle size={13} className="text-emerald-500 flex-shrink-0" />
+                          <CheckCircle size={13} className="text-yn-primary-500 flex-shrink-0" />
                           <p className={`font-semibold ${theme.colors.textPrimary} text-sm truncate`}>{goal.nombre}</p>
                         </div>
-                        <p className="text-xs font-mono text-emerald-500">{formatCurrency(goal.monto_ahorrado)}</p>
+                        <p className="text-xs font-sans text-yn-primary-500">{formatCurrency(goal.monto_ahorrado)}</p>
                       </div>
                       <div className="flex gap-1 flex-shrink-0">
                         {goal.monto_ahorrado > 0 && (
-                          <button onClick={() => openBreakModal(goal)} className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 transition-colors" title="Retirar fondos">
+                          <button onClick={() => openBreakModal(goal)} className="p-1.5 rounded-lg bg-yn-error-500/10 hover:bg-yn-error-500/20 transition-colors" title="Retirar fondos">
                             <FontAwesomeIcon icon={faPiggyBank} className="text-rose-400" style={{ fontSize: '12px' }} />
                           </button>
                         )}
@@ -678,7 +679,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                 {recentActivity.map((t, i) => {
                   const isAporte = t.tipo === 'Aporte_Meta';
                   const relatedGoal = goals.find(g => g.id === t.meta_id);
-                  const goalMeta = relatedGoal ? getGoalMeta(relatedGoal.nombre, relatedGoal.icono) : { icon: faPiggyBank, color: 'text-emerald-500', bg: 'bg-emerald-500/10', accent: '#10b981' };
+                  const goalMeta = relatedGoal ? getGoalMeta(relatedGoal.nombre, relatedGoal.icono) : { icon: faPiggyBank, color: 'text-yn-primary-500', bg: 'bg-yn-primary-500/10', accent: '#10b981' };
                   const dateStr = new Date(t.timestamp || t.fecha).toLocaleDateString('es-PE', { day: 'numeric', month: 'short' });
                   return (
                     <div key={i} className="flex items-center gap-3">
@@ -691,7 +692,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                         </p>
                         <p className={`text-[10px] ${theme.colors.textMuted}`}>{t.cuenta} · {dateStr}</p>
                       </div>
-                      <span className={`text-xs font-mono font-bold flex-shrink-0 ${isAporte ? 'text-emerald-500' : 'text-rose-400'}`}>
+                      <span className={`text-xs font-sans font-bold flex-shrink-0 ${isAporte ? 'text-yn-primary-500' : 'text-rose-400'}`}>
                         {isAporte ? '+' : '-'}{formatCurrency(Number(t.monto))}
                       </span>
                     </div>
@@ -706,7 +707,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                   {Object.entries(accountBalances).map(([acc, bal]) => (
                     <div key={acc} className="flex justify-between items-center">
                       <span className={`text-xs ${theme.colors.textMuted} truncate`}>{acc === 'Billetera' ? '💵 Billetera' : `💳 ${acc}`}</span>
-                      <span className={`text-xs font-mono font-bold ${bal >= 0 ? textColors.primary : 'text-rose-400'}`}>{formatCurrency(bal)}</span>
+                      <span className={`text-xs font-sans font-bold ${bal >= 0 ? textColors.primary : 'text-rose-400'}`}>{formatCurrency(bal)}</span>
                     </div>
                   ))}
                 </div>
@@ -721,7 +722,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className={`${theme.colors.bgCard} rounded-2xl border ${theme.colors.border} shadow-2xl w-full max-w-md p-6`}>
             <div className="flex items-center gap-3 mb-5">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-2xl bg-yn-error-500/10 flex items-center justify-center">
                 <FontAwesomeIcon icon={faPiggyBank} className="text-rose-400" style={{ fontSize: '22px' }} />
               </div>
               <div>
@@ -730,7 +731,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
               </div>
             </div>
 
-            <div className={`p-4 rounded-xl bg-rose-500/8 border border-rose-500/20 mb-5`}>
+            <div className={`p-4 rounded-xl bg-yn-error-500/8 border border-yn-error-500/20 mb-5`}>
               <p className={`text-sm ${theme.colors.textPrimary} leading-relaxed`}>
                 Estás retirando <strong className="text-rose-400">{breakAmountNum > 0 ? formatCurrency(breakAmountNum) : 'S/ ???'}</strong> de tu meta <strong>"{breakGoal.nombre}"</strong>.
               </p>
@@ -755,7 +756,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
               <div className="relative">
                 <span className={`absolute left-3 top-3 text-sm ${theme.colors.textMuted}`}>S/</span>
                 <input type="number" value={breakAmount} onChange={e => setBreakAmount(e.target.value)} placeholder="0.00" max={breakGoal.monto_ahorrado} autoFocus
-                  className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-xl pl-9 pr-4 py-3 text-sm ${theme.colors.textPrimary} font-mono outline-none focus:ring-2 focus:ring-rose-500`}
+                  className={`w-full ${theme.colors.bgSecondary} ${theme.colors.border} border rounded-xl pl-9 pr-4 py-3 text-sm ${theme.colors.textPrimary} font-sans outline-none focus:ring-2 focus:ring-rose-500`}
                   onKeyDown={e => { if (e.key === 'Enter') handleBreak(); if (e.key === 'Escape') setBreakGoal(null); }}
                 />
               </div>
@@ -769,7 +770,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
                 Cancelar
               </button>
               <button onClick={handleBreak} disabled={!breakAmount || breakAmountNum <= 0 || breakAmountNum > breakGoal.monto_ahorrado}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-rose-500 hover:bg-rose-600 text-white transition-all disabled:opacity-50 shadow-lg">
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-yn-error-500 hover:bg-yn-error-600 text-white transition-all disabled:opacity-50 shadow-lg">
                 Confirmar ruptura
               </button>
             </div>
@@ -823,3 +824,4 @@ export const GoalsView: React.FC<GoalsViewProps> = ({ history, goals, cards, onA
     </div>
   );
 };
+
