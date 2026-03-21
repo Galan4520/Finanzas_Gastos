@@ -458,34 +458,51 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
           {/* Method Selection for Gasto (Manual vs AI) */}
           {entryType === 'gasto' && selectedMethod === null && (
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <button
-                type="button"
-                onClick={() => setSelectedMethod('manual')}
-                className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500 hover:bg-yn-primary-500/10`}
-              >
-                <EditIcon size={32} className="text-yn-primary-500" />
-                <div className="text-center">
-                  <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>MANUAL</p>
-                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Ingresa datos manualmente</p>
-                </div>
-              </button>
+            <>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedMethod('manual')}
+                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500 hover:bg-yn-primary-500/10`}
+                >
+                  <EditIcon size={32} className="text-yn-primary-500" />
+                  <div className="text-center">
+                    <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>MANUAL</p>
+                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Ingresa datos manualmente</p>
+                  </div>
+                </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedMethod('ai');
-                  setTimeout(() => fileInputRef.current?.click(), 100);
-                }}
-                className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-primary-500/10 to-yn-sec1-500/10 border-yn-primary-500 hover:border-yn-primary-400"
-              >
-                <Sparkles size={32} className="text-yn-primary-500" />
-                <div className="text-center">
-                  <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>CON IA</p>
-                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Escanea ticket automáticamente</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMethod('ai');
+                    setTimeout(() => fileInputRef.current?.click(), 100);
+                  }}
+                  className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-primary-500/10 to-yn-sec1-500/10 border-yn-primary-500 hover:border-yn-primary-400"
+                >
+                  <Sparkles size={32} className="text-yn-primary-500" />
+                  <div className="text-center">
+                    <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>CON IA</p>
+                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Sube foto del ticket</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Ayuda para móviles */}
+              <div className={`${theme.colors.bgSecondary} rounded-lg p-3 mb-6 flex items-start gap-2`}>
+                <Camera size={16} className="text-yn-sec1-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className={`text-xs font-medium ${theme.colors.textPrimary}`}>
+                    📸 Recomendación para móviles:
+                  </p>
+                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
+                    1. Toma la foto con tu app de cámara<br/>
+                    2. Click en "CON IA" y sube desde galería<br/>
+                    3. ¡Evita usar la cámara directa del navegador!
+                  </p>
                 </div>
-              </button>
-            </div>
+              </div>
+            </>
           )}
 
           {/* Change Method Button (when already selected) */}
