@@ -489,16 +489,17 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               </div>
 
               {/* Ayuda para móviles */}
-              <div className={`${theme.colors.bgSecondary} rounded-lg p-3 mb-6 flex items-start gap-2`}>
-                <Camera size={16} className="text-yn-sec1-500 mt-0.5 flex-shrink-0" />
+              <div className={`bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-6 flex items-start gap-2`}>
+                <Camera size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className={`text-xs font-medium ${theme.colors.textPrimary}`}>
-                    📸 Recomendación para móviles:
+                  <p className={`text-xs font-bold ${theme.colors.textPrimary}`}>
+                    ⚠️ IMPORTANTE para móviles:
                   </p>
-                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
-                    1. Toma la foto con tu app de cámara<br/>
-                    2. Click en "CON IA" y sube desde galería<br/>
-                    3. ¡Evita usar la cámara directa del navegador!
+                  <p className={`text-xs ${theme.colors.textMuted} mt-1.5 leading-relaxed`}>
+                    <strong className={theme.colors.textPrimary}>1.</strong> Toma foto con tu app de cámara nativa<br/>
+                    <strong className={theme.colors.textPrimary}>2.</strong> Guarda en galería<br/>
+                    <strong className={theme.colors.textPrimary}>3.</strong> Click "CON IA" → Selecciona <strong className="text-amber-600">"GALERÍA"</strong><br/>
+                    <strong className="text-red-500">❌ NO usar "Cámara" del navegador</strong> (causa reinicio)
                   </p>
                 </div>
               </div>
@@ -545,12 +546,12 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
                 <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} placeholder="0.00" required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-sans text-lg focus:ring-2 focus:ring-yn-primary-500`} />
               </div>
-              {/* Hidden file input for scanner */}
+              {/* Hidden file input for scanner - Gallery only to prevent page reload */}
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileChange}
-                accept="image/jpeg,image/jpg,image/png"
+                accept="image/*"
                 className="hidden"
               />
             </div>
