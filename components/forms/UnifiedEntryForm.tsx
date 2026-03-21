@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType } from '../../types';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
-import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Camera, Sparkles, Edit as EditIcon } from 'lucide-react';
+import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Sparkles, Edit as EditIcon } from 'lucide-react';
 import { CategoryPicker } from '../ui/CategoryPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
 import { SubscriptionSelector } from './SubscriptionSelector';
 import { SUBSCRIPTION_APPS, SubscriptionApp } from '../../subscriptionApps';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
-import { compressAndToBase64 } from '../../utils/imageUtils';
 import { analyzeReceiptWithAI, sendToSheet } from '../../services/googleSheetService';
 import { ScanResultSummary } from '../ui/ScanResultSummary';
+import { CameraCapture } from '../ui/CameraCapture';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
@@ -44,12 +44,12 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   const [selectedMetaId, setSelectedMetaId] = useState('');
   const [selectedCuenta, setSelectedCuenta] = useState('Billetera');
   const [isScanning, setIsScanning] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Method selection for Gasto: manual or AI
   const [selectedMethod, setSelectedMethod] = useState<'manual' | 'ai' | null>(null);
   const [scanResult, setScanResult] = useState<any | null>(null);
   const [showScanSummary, setShowScanSummary] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
@@ -299,49 +299,44 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
     }
   };
 
-  const handleScanClick = () => {
-    fileInputRef.current?.click();
-  };
+  // Ya no necesitamos handleScanClick - usamos la cámara directamente
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log('📸 [handleFileChange] Iniciando proceso de escaneo...');
-    const file = e.target.files?.[0];
-    if (!file) {
-      console.log('❌ [handleFileChange] No se seleccionó ningún archivo');
-      return;
-    }
-
-    console.log(`📁 [handleFileChange] Archivo seleccionado: ${file.name}, tamaño: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+  // Handler para cámara in-app (getUserMedia)
+  const handleCameraCapture = async (base64Image: string) => {
+    console.log('📸 [handleCameraCapture] Procesando imagen de cámara...');
     setIsScanning(true);
 
     try {
-      console.log('🔄 [handleFileChange] Comprimiendo imagen...');
-      const base64 = await compressAndToBase64(file);
-      console.log(`✅ [handleFileChange] Imagen comprimida, tamaño Base64: ${(base64.length / 1024).toFixed(2)}KB`);
+      // Extraer solo los datos base64 (sin el prefijo data:image/jpeg;base64,)
+      const base64Clean = base64Image.includes('base64,')
+        ? base64Image.split('base64,')[1]
+        : base64Image;
 
-      console.log('🤖 [handleFileChange] Enviando a IA...');
-      const result = await analyzeReceiptWithAI(scriptUrl, pin, base64);
-      console.log('✅ [handleFileChange] Respuesta de IA recibida:', result);
+      console.log(`📦 [handleCameraCapture] Base64 generado: ${(base64Clean.length / 1024).toFixed(2)}KB`);
+      console.log('🤖 [handleCameraCapture] Enviando a IA...');
+
+      const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean);
+      console.log('✅ [handleCameraCapture] Respuesta de IA recibida:', result);
 
       if (result.success && result.data) {
-        console.log('✅ [handleFileChange] Mostrando resumen...');
+        console.log('✅ [handleCameraCapture] Mostrando resumen...');
         setScanResult(result.data);
         setShowScanSummary(true);
       } else {
-        console.error('❌ [handleFileChange] Error en respuesta IA:', result.error);
+        console.error('❌ [handleCameraCapture] Error en respuesta IA:', result.error);
         notify?.(result.error || 'No se pudo analizar el ticket', 'error');
       }
     } catch (error) {
-      console.error('❌ [handleFileChange] Error capturado:', error);
+      console.error('❌ [handleCameraCapture] Error capturado:', error);
       const errorMsg = error instanceof Error ? error.message : 'Error al procesar imagen';
       notify?.(errorMsg, 'error');
     } finally {
-      console.log('🏁 [handleFileChange] Finalizando proceso...');
+      console.log('🏁 [handleCameraCapture] Finalizando proceso...');
       setIsScanning(false);
-      // Reset input
-      if (e.target) e.target.value = '';
     }
   };
+
+  // Ya no necesitamos handleFileChange - usamos handleCameraCapture
 
   const handleConfirmScan = (cuenta: string) => {
     if (!scanResult) return;
@@ -476,30 +471,29 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                   type="button"
                   onClick={() => {
                     setSelectedMethod('ai');
-                    setTimeout(() => fileInputRef.current?.click(), 100);
+                    setShowCamera(true);
                   }}
                   className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-primary-500/10 to-yn-sec1-500/10 border-yn-primary-500 hover:border-yn-primary-400"
                 >
                   <Sparkles size={32} className="text-yn-primary-500" />
                   <div className="text-center">
                     <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>CON IA</p>
-                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Sube foto del ticket</p>
+                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Escanea con cámara</p>
                   </div>
                 </button>
               </div>
 
-              {/* Ayuda para móviles */}
-              <div className={`bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-6 flex items-start gap-2`}>
-                <Camera size={18} className="text-amber-600 mt-0.5 flex-shrink-0" />
+              {/* Ayuda para escanear con IA */}
+              <div className={`bg-yn-primary-500/10 border border-yn-primary-500/30 rounded-lg p-3 mb-6 flex items-start gap-2`}>
+                <Sparkles size={18} className="text-yn-primary-500 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className={`text-xs font-bold ${theme.colors.textPrimary}`}>
-                    ⚠️ IMPORTANTE para móviles:
+                    ✨ Escaneo con IA:
                   </p>
                   <p className={`text-xs ${theme.colors.textMuted} mt-1.5 leading-relaxed`}>
-                    <strong className={theme.colors.textPrimary}>1.</strong> Toma foto con tu app de cámara nativa<br/>
-                    <strong className={theme.colors.textPrimary}>2.</strong> Guarda en galería<br/>
-                    <strong className={theme.colors.textPrimary}>3.</strong> Click "CON IA" → Selecciona <strong className="text-amber-600">"GALERÍA"</strong><br/>
-                    <strong className="text-red-500">❌ NO usar "Cámara" del navegador</strong> (causa reinicio)
+                    <strong className={theme.colors.textPrimary}>1.</strong> Click "CON IA" para abrir cámara<br/>
+                    <strong className={theme.colors.textPrimary}>2.</strong> Apunta al ticket y captura<br/>
+                    <strong className={theme.colors.textPrimary}>3.</strong> La IA detectará monto, fecha y categoría automáticamente
                   </p>
                 </div>
               </div>
@@ -546,14 +540,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
                 <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} placeholder="0.00" required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-sans text-lg focus:ring-2 focus:ring-yn-primary-500`} />
               </div>
-              {/* Hidden file input for scanner - Gallery only to prevent page reload */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept="image/*"
-                className="hidden"
-              />
+              {/* Ya no necesitamos file input - usamos CameraCapture component */}
             </div>
           </div>
 
@@ -917,6 +904,13 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           )}
 
         </form>
+
+        {/* Camera Capture Modal */}
+        <CameraCapture
+          isOpen={showCamera}
+          onCapture={handleCameraCapture}
+          onClose={() => setShowCamera(false)}
+        />
 
         {/* Scan Result Summary Modal */}
         <ScanResultSummary
