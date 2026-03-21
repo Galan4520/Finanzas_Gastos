@@ -13,10 +13,17 @@ const isMobileDevice = (): boolean => {
 /**
  * Utility to compress an image file and convert it to Base64 (JPEG).
  * Uses Blob API for memory efficiency and platform-specific settings.
- * Mobile: max 600px, quality 0.35 | Desktop: max 1000px, quality 0.7
+ * Mobile: max 400px, quality 0.3 | Desktop: max 1000px, quality 0.7
  */
 export const compressAndToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
+    // Rechazar archivos muy grandes ANTES de procesarlos (>10MB)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    if (file.size > MAX_FILE_SIZE) {
+      reject(`Imagen demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo 10MB`);
+      return;
+    }
+
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
     img.src = objectUrl;
@@ -27,10 +34,10 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
 
       const canvas = document.createElement('canvas');
 
-      // Platform-specific settings - MUY agresivo para móviles
+      // Platform-specific settings - ULTRA agresivo para móviles
       const isMobile = isMobileDevice();
-      const MAX_DIMENSION = isMobile ? 600 : 1000;
-      const QUALITY = isMobile ? 0.35 : 0.7;
+      const MAX_DIMENSION = isMobile ? 400 : 1000;
+      const QUALITY = isMobile ? 0.3 : 0.7;
 
       let width = img.width;
       let height = img.height;
