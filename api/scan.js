@@ -31,7 +31,7 @@ export default async function handler(req, res) {
 
     const cleanBase64 = image.includes('base64,') ? image.split('base64,')[1] : image;
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const promptText =
       "Eres un asistente OCR experto para extraer datos de tickets/boletas de compra peruanos.\n\n" +
