@@ -53,17 +53,22 @@ export default async function handler(req, res) {
 
       "3. CATEGORIA (campo 'categoria'):\n" +
       "   - Lee el NOMBRE del establecimiento para determinar la categoría\n" +
-      "   - DEBE ser EXACTAMENTE una de estas (copia exacta):\n" +
-      "     * 'Supermercado' - Plaza Vea, Metro, Tottus, Wong, bodegas\n" +
-      "     * 'Restaurantes' - Pollerías, chifas, comida rápida, cafeterías\n" +
-      "     * 'Alimentos' - Panaderías, fruterías, carnicerías, mercados\n" +
-      "     * 'Transporte' - Taxis, buses, gasolina, peajes, Uber\n" +
-      "     * 'Salud' - Farmacias, clínicas, laboratorios\n" +
-      "     * 'Entretenimiento' - Cines, juegos, conciertos\n" +
-      "     * 'Servicios' - Luz, agua, internet, teléfono\n" +
-      "     * 'Ropa' - Tiendas de ropa, zapatos\n" +
-      "     * 'Otros' - Todo lo demás\n" +
-      "   - Si no estás seguro, usa 'Otros'\n\n" +
+      "   - DEBE ser EXACTAMENTE una de estas (copia exacta con emoji):\n" +
+      "     * '🍕 Alimentación' - Supermercados, bodegas, mercados, panaderías, restaurantes, pollerías, chifas, cafeterías\n" +
+      "     * '🚗 Transporte' - Taxis, buses, gasolina, peajes, Uber, InDriver, transporte público\n" +
+      "     * '💊 Salud' - Farmacias, clínicas, laboratorios, consultas médicas\n" +
+      "     * '🎮 Entretenimiento' - Cines, juegos, conciertos, streaming, Netflix, Spotify\n" +
+      "     * '💡 Servicios' - Luz, agua, internet, teléfono, cable\n" +
+      "     * '👕 Ropa' - Tiendas de ropa, zapatos, accesorios\n" +
+      "     * '🏠 Vivienda' - Alquiler, mantenimiento del hogar, muebles\n" +
+      "     * '📚 Educación' - Cursos, libros, material educativo\n" +
+      "     * '💅 Cuidado Personal' - Peluquería, barbería, spa, cosméticos\n" +
+      "     * '📱 Tecnología' - Celulares, laptops, accesorios tech\n" +
+      "     * '🎁 Regalos' - Obsequios, flores, detalles\n" +
+      "     * '✈️ Viajes' - Pasajes, hoteles, turismo\n" +
+      "     * '🐕 Mascotas' - Veterinaria, alimento de mascotas\n" +
+      "     * '💳 Otros' - Todo lo demás\n" +
+      "   - Si no estás seguro, usa '💳 Otros'\n\n" +
 
       "4. DESCRIPCION (campo 'descripcion'):\n" +
       "   - Formato: 'NOMBRE_TIENDA - productos'\n" +
@@ -78,8 +83,9 @@ export default async function handler(req, res) {
       "FORMATO DE SALIDA:\n" +
       "- SOLO el objeto JSON, sin explicaciones\n" +
       "- NO usar markdown ni bloques de código\n" +
+      "- La categoría DEBE incluir el emoji exacto\n" +
       "- Estructura exacta:\n" +
-      '{"monto": 45.50, "fecha": "2026-03-20", "categoria": "Supermercado", "descripcion": "Plaza Vea - Manzanas, pan, leche"}\n\n' +
+      '{"monto": 45.50, "fecha": "2026-03-20", "categoria": "🍕 Alimentación", "descripcion": "Plaza Vea - Manzanas, pan, leche"}\n\n' +
 
       "RESPONDE AHORA CON EL JSON:";
 
