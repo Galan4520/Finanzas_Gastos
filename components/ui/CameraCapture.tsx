@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Camera, X, RefreshCw } from 'lucide-react';
+import { Camera, X, RefreshCw, Upload } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface CameraCaptureProps {
@@ -16,11 +16,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   const { theme } = useTheme();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [mode, setMode] = useState<'camera' | 'upload'>('camera');
 
   // Iniciar la cámara web (WebRTC)
   const startCamera = async () => {
@@ -50,7 +52,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   // Iniciar cámara al abrir el modal
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && mode === 'camera') {
       startCamera();
     } else {
       stopCamera();
@@ -58,7 +60,21 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
       setError(null);
     }
     return () => stopCamera();
-  }, [isOpen]);
+  }, [isOpen, mode]);
+
+  // Manejar archivo subido desde galería
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Image = event.target?.result as string;
+      setImagePreview(base64Image);
+      setMode('upload');
+    };
+    reader.readAsDataURL(file);
+  };
 
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -96,6 +112,21 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
   const retakePhoto = () => {
     setImagePreview(null);
+    if (mode === 'camera') {
+      startCamera();
+    }
+  };
+
+  const switchToUpload = () => {
+    stopCamera();
+    setMode('upload');
+    setImagePreview(null);
+    fileInputRef.current?.click();
+  };
+
+  const switchToCamera = () => {
+    setMode('camera');
+    setImagePreview(null);
     startCamera();
   };
 
@@ -103,6 +134,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     stopCamera();
     setImagePreview(null);
     setError(null);
+    setMode('camera');
     onClose();
   };
 
@@ -129,13 +161,20 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         {/* Cámara o Preview */}
         <div className="relative bg-slate-900 aspect-[3/4] flex items-center justify-center">
           {!imagePreview ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
+            mode === 'camera' ? (
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-4 p-8 text-slate-400">
+                <Upload size={64} />
+                <p className="text-center">Selecciona una imagen desde tu galería</p>
+              </div>
+            )
           ) : (
             <img
               src={imagePreview}
@@ -156,6 +195,15 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         {/* Canvas oculto para capturar la foto */}
         <canvas ref={canvasRef} className="hidden" />
 
+        {/* Input oculto para subir archivo */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+
         {/* Mensaje de Error */}
         {error && (
           <div className="p-4 bg-red-50 text-red-700 text-sm border-t border-red-100">
@@ -166,14 +214,45 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
         {/* Controles */}
         <div className="p-4 space-y-3">
           {!imagePreview ? (
-            <button
-              onClick={capturePhoto}
-              disabled={!stream || isCapturing}
-              className="w-full bg-gradient-to-r from-yn-primary-500 to-yn-sec1-500 hover:from-yn-primary-600 hover:to-yn-sec1-600 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
-            >
-              <Camera className="w-5 h-5" />
-              Capturar Foto
-            </button>
+            <>
+              {/* Botón principal según modo */}
+              {mode === 'camera' ? (
+                <button
+                  onClick={capturePhoto}
+                  disabled={!stream || isCapturing}
+                  className="w-full bg-gradient-to-r from-yn-primary-500 to-yn-sec1-500 hover:from-yn-primary-600 hover:to-yn-sec1-600 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                >
+                  <Camera className="w-5 h-5" />
+                  Capturar Foto
+                </button>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full bg-gradient-to-r from-yn-primary-500 to-yn-sec1-500 hover:from-yn-primary-600 hover:to-yn-sec1-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
+                >
+                  <Upload className="w-5 h-5" />
+                  Subir desde Galería
+                </button>
+              )}
+
+              {/* Botón para cambiar de modo */}
+              <button
+                onClick={mode === 'camera' ? switchToUpload : switchToCamera}
+                className={`w-full py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
+              >
+                {mode === 'camera' ? (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    Subir desde Galería
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-5 h-5" />
+                    Usar Cámara
+                  </>
+                )}
+              </button>
+            </>
           ) : (
             <div className="flex gap-3">
               <button
@@ -181,7 +260,7 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
                 className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
               >
                 <RefreshCw className="w-5 h-5" />
-                Tomar Otra
+                {mode === 'camera' ? 'Tomar Otra' : 'Otra Imagen'}
               </button>
               <button
                 onClick={confirmCapture}
