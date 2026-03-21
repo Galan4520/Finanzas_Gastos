@@ -77,6 +77,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   const [dateFilter, setDateFilter] = useState<DateFilterType>('thisMonth');
   const [customRange, setCustomRange] = useState({ from: '', to: '' });
   const [visibleTransactions, setVisibleTransactions] = useState(10);
+  const [mobileTab, setMobileTab] = useState<'resumen' | 'cuentas' | 'analisis'>('resumen');
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -530,8 +531,137 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </div>
       </div>
 
+      {/* Mobile Segmented Control Tabs */}
+      <div className="md:hidden -mt-2">
+        <div className={`flex ${theme.colors.bgSecondary} p-1.5 rounded-2xl`}>
+          {([['resumen', 'Resumen'], ['cuentas', 'Cuentas'], ['analisis', 'Análisis']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setMobileTab(key)}
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all ${
+                mobileTab === key
+                  ? `${theme.colors.bgCard} ${textColors.primary} shadow-sm`
+                  : `${theme.colors.textMuted} hover:${theme.colors.textSecondary}`
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ==================== MOBILE: Tab Resumen ==================== */}
+      {/* Balance Total Card - Mobile Version */}
+      <div className={`md:hidden ${mobileTab !== 'resumen' ? 'hidden' : ''}`}>
+        <section className="relative overflow-hidden bg-gradient-to-br from-yn-primary-600 to-yn-primary-500 rounded-[2rem] p-8 text-white shadow-xl">
+          <div className="relative z-10">
+            <p className="text-white/80 text-sm font-medium mb-1 uppercase tracking-widest">Balance Total</p>
+            <h2 className="text-4xl font-extrabold mb-8 tracking-tight">
+              {formatCurrency(currentStats.balanceTotal)}
+            </h2>
+            <div className="flex gap-4">
+              <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <ArrowDownRight size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/70 uppercase font-bold">Ingresos</p>
+                  <p className="text-sm font-bold">{formatCompact(currentStats.ingresosMes)}</p>
+                </div>
+              </div>
+              <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-yn-error-500/30 flex items-center justify-center">
+                  <ArrowUpRight size={18} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/70 uppercase font-bold">Gastos</p>
+                  <p className="text-sm font-bold">{formatCompact(currentStats.gastosMes)}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Decorative circle */}
+          <div className="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-3xl" />
+        </section>
+      </div>
+
+      {/* Metas de Ahorro - Mobile Carousel */}
+      {goals.length > 0 && (
+        <div className={`md:hidden ${mobileTab !== 'resumen' ? 'hidden' : ''}`}>
+          <section>
+            <div className="flex justify-between items-end mb-4">
+              <h3 className={`text-lg font-bold ${theme.colors.textPrimary}`}>Metas de Ahorro</h3>
+              <button className={`${textColors.primary} text-xs font-bold uppercase tracking-wider`}>Ver todas</button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-2">
+              {goals.filter(g => g.estado === 'activa').slice(0, 6).map(goal => {
+                const pct = goal.monto_objetivo > 0 ? (goal.monto_ahorrado / goal.monto_objetivo) * 100 : 0;
+                return (
+                  <div key={goal.id} className={`min-w-[160px] ${theme.colors.bgCard} p-5 rounded-2xl shadow-sm flex flex-col items-center text-center border ${theme.colors.border}`}>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${pct >= 100 ? 'bg-yn-primary-500/15' : 'bg-yn-sec1-500/15'}`}>
+                      <Target size={22} className={pct >= 100 ? 'text-yn-primary-500' : 'text-yn-sec1-500'} />
+                    </div>
+                    <p className={`text-sm font-bold mb-1 ${theme.colors.textPrimary}`}>{goal.nombre}</p>
+                    <div className={`w-full h-1.5 ${theme.colors.bgSecondary} rounded-full overflow-hidden mb-2`}>
+                      <div className={`h-full rounded-full ${pct >= 100 ? 'bg-yn-primary-500' : 'bg-yn-sec1-500'}`} style={{ width: `${Math.min(100, pct)}%` }} />
+                    </div>
+                    <p className={`text-[10px] ${theme.colors.textMuted} font-medium`}>{pct.toFixed(0)}% • {formatCurrency(goal.monto_objetivo)}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Movimientos Recientes - Mobile Version */}
+      <div className={`md:hidden ${mobileTab !== 'resumen' ? 'hidden' : ''}`}>
+        <section>
+          <div className="flex justify-between items-end mb-4">
+            <h3 className={`text-lg font-bold ${theme.colors.textPrimary}`}>Movimientos</h3>
+            <button className={`${textColors.primary} text-xs font-bold uppercase tracking-wider`}>Historial</button>
+          </div>
+          <div className="space-y-3">
+            {recentTransactions.length === 0 ? (
+              <div className={`p-8 text-center ${theme.colors.textMuted} text-sm`}>No hay actividad reciente.</div>
+            ) : (
+              paginatedTransactions.map((t: any, idx) => (
+                <div key={idx} className={`${theme.colors.bgCard} p-4 rounded-2xl flex items-center justify-between border ${theme.colors.border}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg
+                      ${t.tipo === 'Ingresos' ? 'bg-yn-primary-500/10' :
+                        t.isCredit ? `${theme.colors.primaryLight}` : 'bg-yn-error-500/10'}`}>
+                      {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
+                    </div>
+                    <div>
+                      <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>{t.descripcion}</p>
+                      <p className={`text-[10px] ${theme.colors.textMuted} font-medium`}>
+                        {formatDateLabel(t.timestamp || t.fecha)}, {formatTimeLabel(t.timestamp || t.fecha)} • {t.categoria}
+                      </p>
+                    </div>
+                  </div>
+                  <p className={`text-sm font-bold font-sans ${t.tipo === 'Ingresos' ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
+                    {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
+                  </p>
+                </div>
+              ))
+            )}
+            {hasMoreTransactions && (
+              <button
+                onClick={() => setVisibleTransactions(prev => prev + 10)}
+                className={`w-full py-3 text-sm font-medium ${textColors.primary} ${theme.colors.bgCard} rounded-2xl border ${theme.colors.border}`}
+              >
+                Ver más ({recentTransactions.length - visibleTransactions} restantes)
+              </button>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* ==================== DESKTOP + MOBILE TABS ==================== */}
+
       {/* Hero Stats: Cash Flow vs Credit */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${mobileTab !== 'cuentas' ? 'hidden md:grid' : ''}`}>
 
         {/* Cash Flow Card */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl relative overflow-hidden`}>
@@ -601,7 +731,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       {/* ASSETS SECTION */}
       {realEstateInvestments.length > 0 && (
-        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl ${mobileTab !== 'cuentas' ? 'hidden md:block' : ''}`}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-xl ${theme.colors.gradientPrimary}`}>
@@ -694,7 +824,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       )}
 
       {/* NEW FEATURES ROW */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${mobileTab !== 'analisis' ? 'hidden md:grid' : ''}`}>
 
         {/* Weekly Comparison Card */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
@@ -869,7 +999,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {pendingExpenses.length > 0 && (() => {
         const totalDistribution = cardDistribution.reduce((sum, c) => sum + c.value, 0);
         return (
-          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden ${mobileTab !== 'cuentas' ? 'hidden md:block' : ''}`}>
             <div className={`p-6 border-b ${theme.colors.border}`}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -940,10 +1070,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         );
       })()}
 
-      {/* Balance Total Card - Destacado */}
+      {/* Balance Total Card - Destacado (Desktop only when resumen tab not active on mobile) */}
       <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border-2 ${
         currentStats.balanceTotal >= 0 ? 'border-yn-primary-500' : 'border-yn-error-500'
-      } shadow-2xl relative overflow-hidden`}>
+      } shadow-2xl relative overflow-hidden ${mobileTab !== 'cuentas' ? 'hidden md:block' : ''}`}>
         <div className="flex items-center gap-3 mb-4">
           <div className={`p-3 rounded-xl ${
             currentStats.balanceTotal >= 0 ? 'bg-yn-primary-500/10' : 'bg-yn-error-500/10'
@@ -1050,7 +1180,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </div>
       </div>
 
-      {/* Goals Summary - Savings Goals (Sobres Virtuales) */}
+      {/* Goals Summary - Savings Goals (Desktop version - hidden on mobile, mobile has carousel) */}
       {goals.length > 0 && (() => {
         const activeGoals = goals.filter(g => g.estado === 'activa');
         const totalApartado = goals.reduce((s, g) => s + g.monto_ahorrado, 0);
@@ -1058,7 +1188,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const saldoDisponible = currentStats.balanceTotal;
 
         return (
-          <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+          <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl hidden md:block`}>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Target className={textColors.primary} size={20} />
@@ -1105,8 +1235,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         );
       })()}
 
-      {/* Recent Activity */}
-      <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+      {/* Recent Activity (Desktop version - hidden on mobile, mobile has its own) */}
+      <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden hidden md:block`}>
          <div className={`p-6 border-b ${theme.colors.border}`}>
             <h3 className={`font-bold ${theme.colors.textPrimary}`}>Últimos Movimientos</h3>
          </div>
@@ -1187,7 +1317,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
          )}
       </div>
 
-      {/* Category Analysis - Bar Chart with Period Filter */}
+      {/* Category Analysis - Bar Chart with Period Filter (Tab Análisis) */}
       {(() => {
         const now = new Date();
         const filteredHistory = history.filter(t => {
@@ -1219,7 +1349,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const periodLabels = { week: 'esta semana', month: 'este mes', year: 'este año' };
 
         return (
-          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden ${mobileTab !== 'analisis' ? 'hidden md:block' : ''}`}>
             <div className={`p-6 border-b ${theme.colors.border}`}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -1347,7 +1477,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         if (monthlyData.every(d => d.ingresos === 0 && d.gastos === 0)) return null;
 
         return (
-          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden`}>
+          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden ${mobileTab !== 'analisis' ? 'hidden md:block' : ''}`}>
             <div className={`p-6 border-b ${theme.colors.border}`}>
               <div className="flex items-center gap-2">
                 <TrendingUp className={textColors.primary} size={20} />
