@@ -19,10 +19,11 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     console.log(`🖼️ [compressAndToBase64] Iniciando compresión - Archivo: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
 
-    // Rechazar archivos muy grandes ANTES de procesarlos (>10MB)
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+    // Rechazar archivos muy grandes ANTES de procesarlos (>5MB en móvil, >10MB en desktop)
+    const isMobile = isMobileDevice();
+    const MAX_FILE_SIZE = isMobile ? 5 * 1024 * 1024 : 10 * 1024 * 1024; // 5MB móvil, 10MB desktop
     if (file.size > MAX_FILE_SIZE) {
-      const errorMsg = `Imagen demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo 10MB`;
+      const errorMsg = `Imagen demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo ${isMobile ? '5MB' : '10MB'}`;
       console.error(`❌ [compressAndToBase64] ${errorMsg}`);
       reject(errorMsg);
       return;
@@ -42,8 +43,8 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
 
       // Platform-specific settings - ULTRA agresivo para móviles
       const isMobile = isMobileDevice();
-      const MAX_DIMENSION = isMobile ? 400 : 1000;
-      const QUALITY = isMobile ? 0.3 : 0.7;
+      const MAX_DIMENSION = isMobile ? 300 : 1000; // Reducido a 300px para móviles
+      const QUALITY = isMobile ? 0.2 : 0.7; // Reducido a 0.2 para móviles
       console.log(`📱 [compressAndToBase64] Modo: ${isMobile ? 'MÓVIL' : 'DESKTOP'}, MAX: ${MAX_DIMENSION}px, Calidad: ${QUALITY}`);
 
       let width = img.width;
@@ -74,6 +75,10 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
       // Draw image
       console.log(`🎨 [compressAndToBase64] Dibujando en canvas: ${width}x${height}px`);
       ctx.drawImage(img, 0, 0, width, height);
+
+      // Liberar la imagen de memoria INMEDIATAMENTE después de dibujar
+      (img as any).src = '';
+      console.log('🗑️ [compressAndToBase64] Imagen liberada de memoria');
 
       // Use toBlob instead of toDataURL for better memory efficiency
       console.log('🔄 [compressAndToBase64] Convirtiendo a Blob...');
