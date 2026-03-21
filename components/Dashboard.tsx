@@ -494,7 +494,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const gastos = history
           .filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === c.alias)
           .reduce((sum, t) => sum + Number(t.monto), 0);
-        return { alias: c.alias, banco: c.banco, balance: Number(c.limite || 0) + ingresos - gastos };
+        return { alias: c.alias, banco: c.banco, tipo_tarjeta: c.tipo_tarjeta, balance: Number(c.limite || 0) + ingresos - gastos, url_imagen: c.url_imagen };
       });
 
     // Credit cards: limite - deuda pendiente
@@ -504,7 +504,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const deuda = pendingExpenses
           .filter(p => p.tarjeta === c.alias)
           .reduce((sum, p) => sum + Math.max(0, Number(p.monto) - Number(p.monto_pagado_total || 0)), 0);
-        return { alias: c.alias, banco: c.banco, disponible: Math.max(0, Number(c.limite || 0) - deuda), deuda };
+        return { alias: c.alias, banco: c.banco, tipo_tarjeta: c.tipo_tarjeta, limite: Number(c.limite || 0), disponible: Math.max(0, Number(c.limite || 0) - deuda), deuda, url_imagen: c.url_imagen };
       });
 
     return { billeteraBalance, debitAccounts, creditAccounts };
@@ -735,8 +735,170 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       {/* ==================== DESKTOP + MOBILE TABS ==================== */}
 
-      {/* Hero Stats: Cash Flow vs Credit */}
-      <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${mobileTab !== 'cuentas' ? 'hidden md:grid' : ''}`}>
+      {/* ==================== MOBILE CUENTAS TAB ==================== */}
+      <div className={`md:hidden space-y-8 ${mobileTab !== 'cuentas' ? 'hidden' : ''}`}>
+        {/* Patrimonio Total Header */}
+        <section className="space-y-1">
+          <p className={`text-sm font-medium ${theme.colors.textMuted}`}>Patrimonio Total</p>
+          <h2 className="font-sans font-extrabold text-4xl text-yn-primary-500">
+            {formatCurrency(currentStats.balanceTotal)}
+          </h2>
+        </section>
+
+        {/* Efectivo y Débito */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>Efectivo y Débito</h3>
+            <span className="text-xs font-bold text-yn-primary-700 bg-yn-primary-300/20 px-3 py-1 rounded-full">Liquidez</span>
+          </div>
+          <div className="space-y-3">
+            {/* Billetera Física */}
+            <div className={`${theme.colors.bgCard} p-5 rounded-xl flex items-center justify-between border ${theme.colors.border} shadow-sm`}>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-yn-primary-500/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-yn-primary-500" style={{ fontVariationSettings: "'FILL' 1", fontSize: '24px' }}>account_balance_wallet</span>
+                </div>
+                <div>
+                  <p className={`font-bold ${theme.colors.textPrimary}`}>Billetera Física</p>
+                  <p className={`text-xs ${theme.colors.textMuted}`}>Efectivo</p>
+                </div>
+              </div>
+              <p className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(accountBreakdown.billeteraBalance)}</p>
+            </div>
+            {/* Debit Cards */}
+            {accountBreakdown.debitAccounts.map(acc => (
+              <div key={acc.alias} className={`${theme.colors.bgCard} p-5 rounded-xl flex items-center justify-between border ${theme.colors.border} shadow-sm`}>
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl ${theme.colors.bgSecondary} flex items-center justify-center overflow-hidden`}>
+                    {acc.url_imagen ? (
+                      <img src={acc.url_imagen} alt={acc.banco} className="w-8 h-8 rounded-md object-contain" />
+                    ) : (
+                      <span className="material-symbols-outlined text-yn-sec1-500" style={{ fontSize: '24px' }}>account_balance</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className={`font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
+                    <p className={`text-xs ${theme.colors.textMuted}`}>{acc.banco}</p>
+                  </div>
+                </div>
+                <p className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(acc.balance)}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Crédito Disponible */}
+        {accountBreakdown.creditAccounts.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>Crédito Disponible</h3>
+              <span className="text-xs font-bold text-yn-error-500 bg-yn-error-500/10 px-3 py-1 rounded-full">Líneas de crédito</span>
+            </div>
+            <div className="space-y-3">
+              {accountBreakdown.creditAccounts.map((acc, index) => {
+                const usoPct = acc.limite > 0 ? ((acc.deuda / acc.limite) * 100) : 0;
+                // First card gets the green gradient style
+                if (index === 0) {
+                  return (
+                    <div key={acc.alias} className="p-5 rounded-xl space-y-4 shadow-lg text-white"
+                      style={{ background: 'linear-gradient(135deg, #006b3d, #00874e)' }}>
+                      <div className="flex justify-between items-start">
+                        <span className="material-symbols-outlined text-white/70">credit_card</span>
+                        <p className="text-xs font-bold text-white/50">{acc.banco.toUpperCase()}</p>
+                      </div>
+                      <div>
+                        <p className="font-bold">{acc.alias}</p>
+                        <p className="text-2xl font-extrabold mt-1">{formatCurrency(acc.disponible)}</p>
+                      </div>
+                      {acc.deuda > 0 && (
+                        <>
+                          <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                            <div className="bg-white h-full rounded-full" style={{ width: `${usoPct}%` }} />
+                          </div>
+                          <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-white/70">
+                            <span>Deuda: {formatCurrency(acc.deuda)}</span>
+                            <span>Límite: {formatCurrency(acc.limite)}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+                // Other cards get neutral card style
+                return (
+                  <div key={acc.alias} className={`${theme.colors.bgCard} p-5 rounded-xl space-y-4 border ${theme.colors.border}`}>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 rounded-xl ${theme.colors.bgSecondary} flex items-center justify-center overflow-hidden`}>
+                          {acc.url_imagen ? (
+                            <img src={acc.url_imagen} alt={acc.banco} className="w-8 h-8 rounded-md object-contain" />
+                          ) : (
+                            <span className="material-symbols-outlined text-yn-sec1-700" style={{ fontSize: '24px' }}>credit_card</span>
+                          )}
+                        </div>
+                        <div>
+                          <p className={`font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
+                          <p className={`text-xs ${theme.colors.textMuted}`}>{acc.banco}</p>
+                        </div>
+                      </div>
+                      <p className={`text-xl font-extrabold ${theme.colors.textPrimary}`}>{formatCurrency(acc.disponible)}</p>
+                    </div>
+                    {acc.deuda > 0 && (
+                      <>
+                        <div className={`w-full h-2 rounded-full overflow-hidden ${theme.colors.bgSecondary}`}>
+                          <div className="bg-yn-primary-500 h-full rounded-full" style={{ width: `${usoPct}%` }} />
+                        </div>
+                        <div className={`flex justify-between text-[10px] uppercase tracking-wider font-bold ${theme.colors.textMuted}`}>
+                          <span>Deuda: {formatCurrency(acc.deuda)}</span>
+                          <span>Disponible: {formatCurrency(acc.disponible)}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Card Distribution - Mobile Cuentas */}
+        {pendingExpenses.length > 0 && (() => {
+          const totalDist = cardDistribution.reduce((sum, c) => sum + c.value, 0);
+          if (totalDist === 0) return null;
+          return (
+            <section className="space-y-4">
+              <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
+              <div className="space-y-3">
+                {cardDistribution.map((card, idx) => {
+                  const pct = (card.value / totalDist) * 100;
+                  return (
+                    <div key={card.name} className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}20` }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: CHART_COLORS[idx % CHART_COLORS.length] }}>credit_card</span>
+                          </div>
+                          <div>
+                            <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{card.name}</p>
+                            <p className={`text-xs ${theme.colors.textMuted}`}>{pct.toFixed(1)}%</p>
+                          </div>
+                        </div>
+                        <p className={`font-bold text-base ${theme.colors.textPrimary}`}>{formatCurrency(card.value)}</p>
+                      </div>
+                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}15` }}>
+                        <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })()}
+      </div>
+
+      {/* Hero Stats: Cash Flow vs Credit (Desktop only) */}
+      <div className={`hidden md:grid grid-cols-1 md:grid-cols-2 gap-6`}>
 
         {/* Cash Flow Card */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl relative overflow-hidden`}>
@@ -806,7 +968,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       {/* ASSETS SECTION */}
       {realEstateInvestments.length > 0 && (
-        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl ${mobileTab !== 'cuentas' ? 'hidden md:block' : ''}`}>
+        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl hidden md:block`}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-xl ${theme.colors.gradientPrimary}`}>
@@ -1074,7 +1236,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {pendingExpenses.length > 0 && (() => {
         const totalDistribution = cardDistribution.reduce((sum, c) => sum + c.value, 0);
         return (
-          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden ${mobileTab !== 'cuentas' ? 'hidden md:block' : ''}`}>
+          <div className={`${theme.colors.bgCard} backdrop-blur-md rounded-3xl border ${theme.colors.border} shadow-xl overflow-hidden hidden md:block`}>
             <div className={`p-6 border-b ${theme.colors.border}`}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
@@ -1148,7 +1310,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {/* Balance Total Card - Destacado (Desktop only when resumen tab not active on mobile) */}
       <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border-2 ${
         currentStats.balanceTotal >= 0 ? 'border-yn-primary-500' : 'border-yn-error-500'
-      } shadow-2xl relative overflow-hidden ${mobileTab !== 'cuentas' ? 'hidden md:block' : ''}`}>
+      } shadow-2xl relative overflow-hidden hidden md:block`}>
         <div className="flex items-center gap-3 mb-4">
           <div className={`p-3 rounded-xl ${
             currentStats.balanceTotal >= 0 ? 'bg-yn-primary-500/10' : 'bg-yn-error-500/10'
