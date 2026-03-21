@@ -16,48 +16,57 @@ export default async function handler(req, res) {
 
   if (!apiKey) {
     return res.status(200).json({
-      error: 'GEMINI_API_KEY no configurada'
+      status: 'error',
+      message: 'GEMINI_API_KEY no está configurada'
     });
   }
 
   try {
-    // List all available models
-    const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
-
-    const response = await fetch(listUrl, {
-      method: 'GET'
-    });
+    // Llamar al endpoint de Google para listar modelos
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
 
     if (!response.ok) {
       const errorText = await response.text();
       return res.status(200).json({
-        error: `Error listando modelos (${response.status})`,
-        detail: errorText
+        status: 'error',
+        message: `Error al obtener modelos (${response.status})`,
+        errorDetail: errorText.substring(0, 500)
       });
     }
 
     const data = await response.json();
 
-    // Filter only models that support generateContent
-    const modelsWithGenerate = data.models?.filter(m =>
-      m.supportedGenerationMethods?.includes('generateContent')
-    ) || [];
+    // Filtrar solo modelos de Gemini que soporten generateContent
+    const geminiModels = data.models
+      ?.filter(model =>
+        model.name.includes('gemini') &&
+        model.supportedGenerationMethods?.includes('generateContent')
+      )
+      .map(model => ({
+        name: model.name.replace('models/', ''),
+        displayName: model.displayName,
+        description: model.description,
+        inputTokenLimit: model.inputTokenLimit,
+        outputTokenLimit: model.outputTokenLimit
+      }));
 
     return res.status(200).json({
-      success: true,
-      totalModels: data.models?.length || 0,
-      modelsWithGenerateContent: modelsWithGenerate.length,
-      availableModels: modelsWithGenerate.map(m => ({
-        name: m.name,
-        displayName: m.displayName,
-        description: m.description?.substring(0, 100),
-        supportedMethods: m.supportedGenerationMethods
-      }))
+      status: 'success',
+      totalModels: geminiModels?.length || 0,
+      models: geminiModels || [],
+      apiKeyPreview: `${apiKey.substring(0, 10)}...`
     });
 
   } catch (error) {
     return res.status(200).json({
-      error: `Error: ${error.message}`
+      status: 'error',
+      message: `Error: ${error.message}`
     });
   }
 }
