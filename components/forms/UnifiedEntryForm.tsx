@@ -304,24 +304,39 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('📸 [handleFileChange] Iniciando proceso de escaneo...');
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log('❌ [handleFileChange] No se seleccionó ningún archivo');
+      return;
+    }
 
+    console.log(`📁 [handleFileChange] Archivo seleccionado: ${file.name}, tamaño: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
     setIsScanning(true);
+
     try {
+      console.log('🔄 [handleFileChange] Comprimiendo imagen...');
       const base64 = await compressAndToBase64(file);
+      console.log(`✅ [handleFileChange] Imagen comprimida, tamaño Base64: ${(base64.length / 1024).toFixed(2)}KB`);
+
+      console.log('🤖 [handleFileChange] Enviando a IA...');
       const result = await analyzeReceiptWithAI(scriptUrl, pin, base64);
+      console.log('✅ [handleFileChange] Respuesta de IA recibida:', result);
 
       if (result.success && result.data) {
-        // Instead of directly filling the form, show the summary modal
+        console.log('✅ [handleFileChange] Mostrando resumen...');
         setScanResult(result.data);
         setShowScanSummary(true);
       } else {
+        console.error('❌ [handleFileChange] Error en respuesta IA:', result.error);
         notify?.(result.error || 'No se pudo analizar el ticket', 'error');
       }
     } catch (error) {
-      notify?.('Error al procesar imagen', 'error');
+      console.error('❌ [handleFileChange] Error capturado:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Error al procesar imagen';
+      notify?.(errorMsg, 'error');
     } finally {
+      console.log('🏁 [handleFileChange] Finalizando proceso...');
       setIsScanning(false);
       // Reset input
       if (e.target) e.target.value = '';
