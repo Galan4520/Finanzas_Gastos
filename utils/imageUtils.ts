@@ -13,7 +13,7 @@ const isMobileDevice = (): boolean => {
 /**
  * Utility to compress an image file and convert it to Base64 (JPEG).
  * Uses Blob API for memory efficiency and platform-specific settings.
- * Mobile: max 800px, quality 0.5 | Desktop: max 1200px, quality 0.7
+ * Mobile: max 600px, quality 0.35 | Desktop: max 1000px, quality 0.7
  */
 export const compressAndToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -27,10 +27,10 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
 
       const canvas = document.createElement('canvas');
 
-      // Platform-specific settings
+      // Platform-specific settings - MUY agresivo para móviles
       const isMobile = isMobileDevice();
-      const MAX_DIMENSION = isMobile ? 800 : 1200;
-      const QUALITY = isMobile ? 0.5 : 0.7;
+      const MAX_DIMENSION = isMobile ? 600 : 1000;
+      const QUALITY = isMobile ? 0.35 : 0.7;
 
       let width = img.width;
       let height = img.height;
@@ -64,6 +64,9 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
       canvas.toBlob(
         (blob) => {
           if (!blob) {
+            // Limpiar canvas
+            canvas.width = 0;
+            canvas.height = 0;
             reject('Failed to create blob from canvas');
             return;
           }
@@ -72,9 +75,17 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
           const reader = new FileReader();
           reader.onloadend = () => {
             const base64 = (reader.result as string).split(',')[1];
+
+            // Limpiar canvas y liberar memoria agresivamente
+            canvas.width = 0;
+            canvas.height = 0;
+
             resolve(base64);
           };
           reader.onerror = () => {
+            // Limpiar canvas
+            canvas.width = 0;
+            canvas.height = 0;
             reject('Failed to read blob as base64');
           };
           reader.readAsDataURL(blob);
