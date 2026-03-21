@@ -173,18 +173,21 @@ export const compressAndToBase64 = (file: File): Promise<string> => {
 
     const isMobile = isMobileDevice();
 
-    // MOBILE: Validación MUY estricta - rechazar fotos de cámara muy grandes
-    const MAX_FILE_SIZE = isMobile ? 8 * 1024 * 1024 : 15 * 1024 * 1024; // 8MB móvil, 15MB desktop
+    // MOBILE: Validación solo para archivos EXTREMADAMENTE grandes (>20MB)
+    const MAX_FILE_SIZE = isMobile ? 20 * 1024 * 1024 : 30 * 1024 * 1024; // 20MB móvil, 30MB desktop
     if (file.size > MAX_FILE_SIZE) {
-      const errorMsg = `Imagen demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). ${isMobile ? 'Por favor, usa una foto de menor resolución o súbela desde galería.' : 'Máximo 15MB'}`;
+      const errorMsg = `Imagen demasiado grande (${(file.size / 1024 / 1024).toFixed(1)}MB). Máximo ${isMobile ? '20MB' : '30MB'}`;
       console.error(`❌ [compressAndToBase64] ${errorMsg}`);
       reject(errorMsg);
       return;
     }
 
-    // MOBILE: Si la imagen es muy grande (>4MB), hacer compresión en DOS PASOS
-    if (isMobile && file.size > 4 * 1024 * 1024) {
-      console.log('⚡ [compressAndToBase64] MODO DOS PASOS activado para imagen grande en móvil');
+    // MOBILE: Si la imagen es grande (>3MB), hacer compresión en DOS PASOS
+    // Desktop: Si es muy grande (>8MB), también usar dos pasos
+    const needsTwoStep = isMobile ? file.size > 3 * 1024 * 1024 : file.size > 8 * 1024 * 1024;
+
+    if (needsTwoStep) {
+      console.log(`⚡ [compressAndToBase64] MODO DOS PASOS activado - ${isMobile ? 'MÓVIL' : 'DESKTOP'}`);
       compressTwoStep(file, resolve, reject);
       return;
     }
