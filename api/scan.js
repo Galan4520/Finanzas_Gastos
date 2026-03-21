@@ -34,43 +34,54 @@ export default async function handler(req, res) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
     const promptText =
-      "Eres un asistente financiero experto para la aplicación 'Yunai'. " +
-      "Analiza la foto de este recibo o ticket de compra y extrae los siguientes campos en un objeto JSON puro:\n\n" +
+      "Eres un asistente OCR experto para extraer datos de tickets/boletas de compra peruanos.\n\n" +
 
-      "1. monto: el total final pagado (número sin símbolos ni comas, usa punto para decimales).\n" +
-      "   Ejemplo: 45.50\n\n" +
+      "INSTRUCCIONES CRÍTICAS:\n\n" +
 
-      "2. fecha: la fecha del ticket en formato YYYY-MM-DD.\n" +
-      "   Ejemplo: 2026-03-20\n\n" +
+      "1. MONTO (campo 'monto'):\n" +
+      "   - Busca las palabras: 'TOTAL', 'IMPORTE TOTAL', 'TOTAL A PAGAR', 'MONTO TOTAL'\n" +
+      "   - Es el ÚLTIMO monto grande del ticket (después de impuestos/IGV)\n" +
+      "   - Formato: número decimal con punto (ej: 45.50)\n" +
+      "   - NO usar comas ni símbolos de moneda\n" +
+      "   - Si no encuentras el total, usa null\n\n" +
 
-      "3. categoria: clasifica de manera PRECISA en UNA de estas categorías:\n" +
-      "   - Supermercado: compras en supermercados, mercados, bodegas\n" +
-      "   - Restaurantes: comida en restaurantes, cafeterías, food courts\n" +
-      "   - Alimentos: frutas, verduras, panadería, carnicería\n" +
-      "   - Transporte: taxis, buses, combustible, Uber, peajes\n" +
-      "   - Salud: farmacias, medicinas, consultas médicas\n" +
-      "   - Entretenimiento: cine, conciertos, juegos, streaming\n" +
-      "   - Servicios: agua, luz, internet, teléfono\n" +
-      "   - Ropa: tiendas de ropa, zapatos, accesorios\n" +
-      "   - Otros: todo lo demás\n" +
-      "   Ejemplo: 'Supermercado'\n\n" +
+      "2. FECHA (campo 'fecha'):\n" +
+      "   - Busca las palabras: 'FECHA', 'DATE', 'FECHA DE EMISIÓN'\n" +
+      "   - Formato OBLIGATORIO: YYYY-MM-DD (ej: 2026-03-20)\n" +
+      "   - Si NO encuentras la fecha en el ticket, usa la fecha de HOY: " + new Date().toISOString().split('T')[0] + "\n" +
+      "   - Si ves solo día/mes, usa el año actual: 2026\n\n" +
 
-      "4. descripcion: usa el nombre del establecimiento + lista breve de productos principales (máximo 60 caracteres).\n" +
-      "   Ejemplos:\n" +
-      "   - 'Plaza Vea - Frutas, verduras, pan, leche'\n" +
-      "   - 'Pollería Los Ángeles - 1/4 pollo + papas'\n" +
-      "   - 'Farmacia Universal - Paracetamol, alcohol'\n" +
-      "   - 'Metro - Arroz, aceite, huevos, pollo'\n\n" +
+      "3. CATEGORIA (campo 'categoria'):\n" +
+      "   - Lee el NOMBRE del establecimiento para determinar la categoría\n" +
+      "   - DEBE ser EXACTAMENTE una de estas (copia exacta):\n" +
+      "     * 'Supermercado' - Plaza Vea, Metro, Tottus, Wong, bodegas\n" +
+      "     * 'Restaurantes' - Pollerías, chifas, comida rápida, cafeterías\n" +
+      "     * 'Alimentos' - Panaderías, fruterías, carnicerías, mercados\n" +
+      "     * 'Transporte' - Taxis, buses, gasolina, peajes, Uber\n" +
+      "     * 'Salud' - Farmacias, clínicas, laboratorios\n" +
+      "     * 'Entretenimiento' - Cines, juegos, conciertos\n" +
+      "     * 'Servicios' - Luz, agua, internet, teléfono\n" +
+      "     * 'Ropa' - Tiendas de ropa, zapatos\n" +
+      "     * 'Otros' - Todo lo demás\n" +
+      "   - Si no estás seguro, usa 'Otros'\n\n" +
 
-      "REGLAS CRÍTICAS:\n" +
-      "- Responde ÚNICAMENTE con el objeto JSON.\n" +
-      "- No incluyas explicaciones ni bloques de código markdown.\n" +
-      "- La categoría DEBE ser exactamente una de las 9 opciones listadas.\n" +
-      "- La descripción DEBE incluir productos/items cuando sea posible.\n" +
-      "- Si un dato no es legible, usa null.\n\n" +
+      "4. DESCRIPCION (campo 'descripcion'):\n" +
+      "   - Formato: 'NOMBRE_TIENDA - productos'\n" +
+      "   - Lee los 3-5 productos PRINCIPALES del ticket\n" +
+      "   - Máximo 60 caracteres total\n" +
+      "   - Ejemplos reales:\n" +
+      "     * 'Plaza Vea - Manzanas, pan, leche, huevos'\n" +
+      "     * 'Pollería Norky - 1/4 pollo + papas + gaseosa'\n" +
+      "     * 'Farmacia Universal - Paracetamol 500mg'\n" +
+      "   - Si no hay productos legibles, solo pon el nombre de la tienda\n\n" +
 
-      "Formato de respuesta:\n" +
-      '{"monto": 45.50, "fecha": "2026-03-20", "categoria": "Supermercado", "descripcion": "Plaza Vea - Frutas, verduras, pan"}';
+      "FORMATO DE SALIDA:\n" +
+      "- SOLO el objeto JSON, sin explicaciones\n" +
+      "- NO usar markdown ni bloques de código\n" +
+      "- Estructura exacta:\n" +
+      '{"monto": 45.50, "fecha": "2026-03-20", "categoria": "Supermercado", "descripcion": "Plaza Vea - Manzanas, pan, leche"}\n\n' +
+
+      "RESPONDE AHORA CON EL JSON:";
 
     const payload = {
       contents: [{
