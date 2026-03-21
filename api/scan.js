@@ -33,17 +33,44 @@ export default async function handler(req, res) {
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     
-    const promptText = 
+    const promptText =
       "Eres un asistente financiero experto para la aplicación 'Yunai'. " +
-      "Analiza la foto de este recibo o ticket de compra y extrae los siguientes campos en un objeto JSON puro:\n" +
+      "Analiza la foto de este recibo o ticket de compra y extrae los siguientes campos en un objeto JSON puro:\n\n" +
+
       "1. monto: el total final pagado (número sin símbolos ni comas, usa punto para decimales).\n" +
+      "   Ejemplo: 45.50\n\n" +
+
       "2. fecha: la fecha del ticket en formato YYYY-MM-DD.\n" +
-      "3. categoria: clasifica de manera inteligente el gasto en UNA de estas: [Alimentos, Transporte, Salud, Entretenimiento, Servicios, Ropa, Restaurantes, Supermercado, Otros].\n" +
-      "4. descripcion: usa el establecimiento principal y una descripción muy breve (ej: 'Compra Plaza Vea', 'Cena Pollería').\n\n" +
+      "   Ejemplo: 2026-03-20\n\n" +
+
+      "3. categoria: clasifica de manera PRECISA en UNA de estas categorías:\n" +
+      "   - Supermercado: compras en supermercados, mercados, bodegas\n" +
+      "   - Restaurantes: comida en restaurantes, cafeterías, food courts\n" +
+      "   - Alimentos: frutas, verduras, panadería, carnicería\n" +
+      "   - Transporte: taxis, buses, combustible, Uber, peajes\n" +
+      "   - Salud: farmacias, medicinas, consultas médicas\n" +
+      "   - Entretenimiento: cine, conciertos, juegos, streaming\n" +
+      "   - Servicios: agua, luz, internet, teléfono\n" +
+      "   - Ropa: tiendas de ropa, zapatos, accesorios\n" +
+      "   - Otros: todo lo demás\n" +
+      "   Ejemplo: 'Supermercado'\n\n" +
+
+      "4. descripcion: usa el nombre del establecimiento + lista breve de productos principales (máximo 60 caracteres).\n" +
+      "   Ejemplos:\n" +
+      "   - 'Plaza Vea - Frutas, verduras, pan, leche'\n" +
+      "   - 'Pollería Los Ángeles - 1/4 pollo + papas'\n" +
+      "   - 'Farmacia Universal - Paracetamol, alcohol'\n" +
+      "   - 'Metro - Arroz, aceite, huevos, pollo'\n\n" +
+
       "REGLAS CRÍTICAS:\n" +
       "- Responde ÚNICAMENTE con el objeto JSON.\n" +
-      "- No incluyas explicaciones ni bloques de código.\n" +
-      "- Si un dato exacto no es legible o deducible, el valor debe ser null.";
+      "- No incluyas explicaciones ni bloques de código markdown.\n" +
+      "- La categoría DEBE ser exactamente una de las 9 opciones listadas.\n" +
+      "- La descripción DEBE incluir productos/items cuando sea posible.\n" +
+      "- Si un dato no es legible, usa null.\n\n" +
+
+      "Formato de respuesta:\n" +
+      '{"monto": 45.50, "fecha": "2026-03-20", "categoria": "Supermercado", "descripcion": "Plaza Vea - Frutas, verduras, pan"}';
 
     const payload = {
       contents: [{

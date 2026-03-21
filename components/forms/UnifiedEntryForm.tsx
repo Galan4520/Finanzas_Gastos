@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType } from '../../types';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
-import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Camera, Sparkles } from 'lucide-react';
+import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Camera, Sparkles, Edit as EditIcon } from 'lucide-react';
 import { CategoryPicker } from '../ui/CategoryPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
@@ -10,6 +10,7 @@ import { SUBSCRIPTION_APPS, SubscriptionApp } from '../../subscriptionApps';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { compressAndToBase64 } from '../../utils/imageUtils';
 import { analyzeReceiptWithAI, sendToSheet } from '../../services/googleSheetService';
+import { ScanResultSummary } from '../ui/ScanResultSummary';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
@@ -44,6 +45,11 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   const [selectedCuenta, setSelectedCuenta] = useState('Billetera');
   const [isScanning, setIsScanning] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Method selection for Gasto: manual or AI
+  const [selectedMethod, setSelectedMethod] = useState<'manual' | 'ai' | null>(null);
+  const [scanResult, setScanResult] = useState<any | null>(null);
+  const [showScanSummary, setShowScanSummary] = useState(false);
 
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
@@ -167,6 +173,13 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
     const suggested = Math.min(deficit, goal.monto_ahorrado);
     setBreakAmount(suggested > 0 ? String(Math.round(suggested * 100) / 100) : '');
   }, [showBreakOption, deficit, breakMetaId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset method selection when changing entry type
+  useEffect(() => {
+    setSelectedMethod(null);
+    setScanResult(null);
+    setShowScanSummary(false);
+  }, [entryType]);
 
   const handleBreakFromForm = () => {
     const amount = parseFloat(breakAmount);
@@ -300,17 +313,9 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       const result = await analyzeReceiptWithAI(scriptUrl, pin, base64);
 
       if (result.success && result.data) {
-        const { monto, fecha, categoria, descripcion } = result.data;
-        
-        setFormData(prev => ({
-          ...prev,
-          monto: monto ? String(monto) : prev.monto,
-          fecha: fecha || prev.fecha,
-          descripcion: descripcion || prev.descripcion,
-          categoria: (categories.includes(categoria) || customGastosCategories.includes(categoria)) ? categoria : prev.categoria
-        }));
-
-        notify?.('Ticket analizado correctamente', 'success');
+        // Instead of directly filling the form, show the summary modal
+        setScanResult(result.data);
+        setShowScanSummary(true);
       } else {
         notify?.(result.error || 'No se pudo analizar el ticket', 'error');
       }
@@ -321,6 +326,41 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       // Reset input
       if (e.target) e.target.value = '';
     }
+  };
+
+  const handleConfirmScan = (cuenta: string) => {
+    if (!scanResult) return;
+
+    const { monto, fecha, categoria, descripcion } = scanResult;
+
+    setFormData(prev => ({
+      ...prev,
+      monto: monto ? String(monto) : prev.monto,
+      fecha: fecha || prev.fecha,
+      descripcion: descripcion || prev.descripcion,
+      categoria: (categories.includes(categoria) || customGastosCategories.includes(categoria)) ? categoria : prev.categoria
+    }));
+
+    setSelectedCuenta(cuenta);
+    setShowScanSummary(false);
+    notify?.('Datos cargados. Revisa y confirma', 'success');
+  };
+
+  const handleEditScan = () => {
+    if (!scanResult) return;
+
+    const { monto, fecha, categoria, descripcion } = scanResult;
+
+    setFormData(prev => ({
+      ...prev,
+      monto: monto ? String(monto) : '',
+      fecha: fecha || today,
+      descripcion: descripcion || '',
+      categoria: categoria || ''
+    }));
+
+    setShowScanSummary(false);
+    setSelectedMethod('manual');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -401,28 +441,74 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             </h2>
           </div>
 
-          {/* Date & Amount */}
+          {/* Method Selection for Gasto (Manual vs AI) */}
+          {entryType === 'gasto' && selectedMethod === null && (
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <button
+                type="button"
+                onClick={() => setSelectedMethod('manual')}
+                className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500 hover:bg-yn-primary-500/10`}
+              >
+                <EditIcon size={32} className="text-blue-500" />
+                <div className="text-center">
+                  <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>MANUAL</p>
+                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Ingresa datos manualmente</p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMethod('ai');
+                  setTimeout(() => fileInputRef.current?.click(), 100);
+                }}
+                className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-primary-500/10 to-yn-sec1-500/10 border-yn-primary-500 hover:border-yn-primary-400"
+              >
+                <Sparkles size={32} className="text-yn-primary-500" />
+                <div className="text-center">
+                  <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>CON IA</p>
+                  <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Escanea ticket automáticamente</p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Change Method Button (when already selected) */}
+          {entryType === 'gasto' && selectedMethod !== null && (
+            <div className="flex justify-center mb-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMethod(null);
+                  setFormData(prev => ({ ...prev, monto: '', descripcion: '', categoria: '' }));
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
+              >
+                {selectedMethod === 'manual' ? (
+                  <>
+                    <Sparkles size={16} />
+                    Cambiar a IA
+                  </>
+                ) : (
+                  <>
+                    <EditIcon size={16} />
+                    Cambiar a Manual
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Date & Amount - Only show if method selected or not gasto */}
+          {(entryType !== 'gasto' || selectedMethod !== null) && (
+          <>{/* Date & Amount */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Fecha</label>
               <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current`} />
             </div>
             <div className="space-y-1">
-              <div className="flex items-center justify-between ml-1">
-                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>Monto</label>
-                  <button
-                    type="button"
-                    onClick={handleScanClick}
-                    disabled={isScanning}
-                    className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-1 rounded-lg transition-all ${isScanning
-                      ? 'bg-yn-neutral-800 text-yn-neutral-500'
-                      : 'bg-yn-primary-500/20 text-yn-primary-400 hover:bg-yn-primary-500 hover:text-white'
-                      }`}
-                  >
-                    <Sparkles size={12} className={isScanning ? 'animate-pulse' : ''} />
-                    {isScanning ? 'ANALIZANDO...' : 'ESCANEAR TICKET'}
-                  </button>
-              </div>
+              <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Monto</label>
               <div className="relative">
                 <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
                 <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} placeholder="0.00" required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-sans text-lg focus:ring-2 focus:ring-yn-primary-500`} />
@@ -794,8 +880,23 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           >
             {loading ? 'Guardando...' : 'Registrar Movimiento'}
           </button>
+          </>
+          )}
 
         </form>
+
+        {/* Scan Result Summary Modal */}
+        <ScanResultSummary
+          isOpen={showScanSummary}
+          result={scanResult || { monto: 0, fecha: today, categoria: '', descripcion: '' }}
+          availableAccounts={debitCards.map(card => ({
+            alias: card.alias,
+            balance: accountBalances[card.alias] || 0
+          }))}
+          onConfirm={handleConfirmScan}
+          onEdit={handleEditScan}
+          onClose={() => setShowScanSummary(false)}
+        />
       </div>
     </>
   );
