@@ -449,7 +449,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 onClick={() => setSelectedMethod('manual')}
                 className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500 hover:bg-yn-primary-500/10`}
               >
-                <EditIcon size={32} className="text-blue-500" />
+                <EditIcon size={32} className="text-yn-primary-500" />
                 <div className="text-center">
                   <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>MANUAL</p>
                   <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Ingresa datos manualmente</p>
