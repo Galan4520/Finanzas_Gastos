@@ -69,6 +69,33 @@ const formatTimeLabel = (dateStr: string): string => {
   return `${hours}:${minutes}`;
 };
 
+// Map categories to Material Symbols icon names
+const getCategoryIcon = (categoria: string, tipo: string): string => {
+  if (tipo === 'Ingresos') {
+    if (categoria?.includes('Salario')) return 'work';
+    if (categoria?.includes('Freelance')) return 'laptop_mac';
+    if (categoria?.includes('Inversiones')) return 'trending_up';
+    if (categoria?.includes('Intereses')) return 'account_balance';
+    if (categoria?.includes('Bonos')) return 'card_giftcard';
+    if (categoria?.includes('Rentas')) return 'home';
+    return 'payments';
+  }
+  if (categoria?.includes('Alimentación')) return 'restaurant';
+  if (categoria?.includes('Transporte')) return 'directions_car';
+  if (categoria?.includes('Salud')) return 'local_pharmacy';
+  if (categoria?.includes('Entretenimiento')) return 'sports_esports';
+  if (categoria?.includes('Servicios')) return 'electric_bolt';
+  if (categoria?.includes('Ropa')) return 'checkroom';
+  if (categoria?.includes('Vivienda')) return 'home';
+  if (categoria?.includes('Educación')) return 'school';
+  if (categoria?.includes('Cuidado Personal')) return 'spa';
+  if (categoria?.includes('Tecnología')) return 'devices';
+  if (categoria?.includes('Regalos')) return 'redeem';
+  if (categoria?.includes('Viajes')) return 'flight';
+  if (categoria?.includes('Mascotas')) return 'pets';
+  return 'receipt_long';
+};
+
 export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, goals = [], realEstateInvestments = [], onEditTransaction, onDeleteTransaction }) => {
   const { theme, currentTheme } = useTheme();
   const textColors = getTextColor(currentTheme);
@@ -628,10 +655,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               paginatedTransactions.map((t: any, idx) => (
                 <div key={idx} className={`${theme.colors.bgCard} p-4 rounded-2xl flex items-center justify-between border ${theme.colors.border}`}>
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg
-                      ${t.tipo === 'Ingresos' ? 'bg-yn-primary-500/10' :
-                        t.isCredit ? `${theme.colors.primaryLight}` : 'bg-yn-error-500/10'}`}>
-                      {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center
+                      ${t.tipo === 'Ingresos' ? 'bg-yn-primary-500/10 text-yn-primary-500' :
+                        t.isCredit ? `${theme.colors.primaryLight} ${textColors.primary}` : 'bg-yn-error-500/10 text-yn-error-500'}`}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '24px' }}>{getCategoryIcon(t.categoria, t.tipo)}</span>
                     </div>
                     <div>
                       <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>{t.descripcion}</p>
@@ -1259,10 +1286,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                 return (
                                 <div key={idx} className={`group p-4 flex items-center justify-between hover:${theme.colors.bgCardHover} transition-colors`}>
                                     <div className="flex items-center gap-3">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center
                                             ${t.tipo === 'Ingresos' ? 'bg-yn-primary-500/10 text-yn-primary-500' :
                                               t.isCredit ? `${theme.colors.primaryLight} ${textColors.primary}` : 'bg-yn-error-500/10 text-yn-error-500'}`}>
-                                            {t.tipo === 'Ingresos' ? '💰' : t.isCredit ? '💳' : '💸'}
+                                            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>{getCategoryIcon(t.categoria, t.tipo)}</span>
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
