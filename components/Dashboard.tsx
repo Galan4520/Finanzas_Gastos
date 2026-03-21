@@ -553,14 +553,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {/* ==================== MOBILE: Tab Resumen ==================== */}
       {/* Balance Total Card - Mobile Version */}
       <div className={`md:hidden ${mobileTab !== 'resumen' ? 'hidden' : ''}`}>
-        <section className="relative overflow-hidden bg-gradient-to-br from-yn-primary-600 to-yn-primary-500 rounded-[2rem] p-8 text-white shadow-xl">
+        <section className="relative overflow-hidden rounded-[2rem] p-8 text-white shadow-xl" style={{ background: 'linear-gradient(135deg, #006b3d, #00874e)' }}>
           <div className="relative z-10">
             <p className="text-white/80 text-sm font-medium mb-1 uppercase tracking-widest">Balance Total</p>
             <h2 className="text-4xl font-extrabold mb-8 tracking-tight">
               {formatCurrency(currentStats.balanceTotal)}
             </h2>
             <div className="flex gap-4">
-              <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3">
+              <div className="flex-1 bg-white/15 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                   <ArrowDownRight size={18} className="text-white" />
                 </div>
@@ -569,8 +569,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                   <p className="text-sm font-bold">{formatCompact(currentStats.ingresosMes)}</p>
                 </div>
               </div>
-              <div className="flex-1 bg-white/10 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-yn-error-500/30 flex items-center justify-center">
+              <div className="flex-1 bg-white/15 backdrop-blur-md rounded-2xl p-4 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-red-500/30 flex items-center justify-center">
                   <ArrowUpRight size={18} className="text-white" />
                 </div>
                 <div>
