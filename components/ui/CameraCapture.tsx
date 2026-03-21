@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Camera, X, RefreshCw, Upload } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
+import imageCompression from 'browser-image-compression';
 
 interface CameraCaptureProps {
   isOpen: boolean;
@@ -63,44 +64,90 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   }, [isOpen, mode]);
 
   // Manejar archivo subido desde galería
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64Image = event.target?.result as string;
+    setIsCapturing(true);
+    setError(null);
+
+    try {
+      console.log(`📂 [handleFileUpload] Archivo original: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
+
+      // Comprimir la imagen
+      const options = {
+        maxSizeMB: 0.5, // Máximo 500KB
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+        fileType: 'image/jpeg' as const,
+        initialQuality: 0.7
+      };
+
+      const compressedFile = await imageCompression(file, options);
+      console.log(`✅ [handleFileUpload] Archivo comprimido: ${(compressedFile.size / 1024).toFixed(2)}KB`);
+
+      // Convertir a Base64
+      const base64Image = await imageCompression.getDataUrlFromFile(compressedFile);
       setImagePreview(base64Image);
       setMode('upload');
-    };
-    reader.readAsDataURL(file);
+    } catch (error) {
+      console.error('❌ [handleFileUpload] Error al comprimir:', error);
+      setError('Error al procesar la imagen');
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     setIsCapturing(true);
 
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
+    try {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext('2d');
 
-    if (!context) return;
+      if (!context) return;
 
-    // Configurar el canvas al tamaño del video
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+      // Configurar el canvas al tamaño del video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
 
-    // Dibujar el frame actual en el canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Dibujar el frame actual en el canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Obtener la imagen en Base64 (comprimida)
-    const base64Image = canvas.toDataURL('image/jpeg', 0.7);
-    setImagePreview(base64Image);
+      // Convertir canvas a Blob
+      const blob = await new Promise<Blob>((resolve) => {
+        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8);
+      });
 
-    // Detener la cámara mientras el usuario confirma
-    stopCamera();
-    setIsCapturing(false);
+      console.log(`📸 [capturePhoto] Imagen original: ${(blob.size / 1024).toFixed(2)}KB`);
+
+      // Comprimir la imagen usando browser-image-compression
+      const options = {
+        maxSizeMB: 0.5, // Máximo 500KB
+        maxWidthOrHeight: 1200, // Máximo 1200px
+        useWebWorker: true,
+        fileType: 'image/jpeg' as const,
+        initialQuality: 0.7
+      };
+
+      const compressedFile = await imageCompression(blob as File, options);
+      console.log(`✅ [capturePhoto] Imagen comprimida: ${(compressedFile.size / 1024).toFixed(2)}KB`);
+
+      // Convertir a Base64
+      const base64Image = await imageCompression.getDataUrlFromFile(compressedFile);
+      setImagePreview(base64Image);
+
+      // Detener la cámara mientras el usuario confirma
+      stopCamera();
+    } catch (error) {
+      console.error('❌ [capturePhoto] Error al comprimir:', error);
+      setError('Error al capturar la foto');
+    } finally {
+      setIsCapturing(false);
+    }
   };
 
   const confirmCapture = () => {
