@@ -69,6 +69,53 @@ const formatTimeLabel = (dateStr: string): string => {
   return `${hours}:${minutes}`;
 };
 
+// Map goal name/icon to Material Symbols icon names
+const getGoalIcon = (nombre: string, icono?: string): { icon: string; color: string; bg: string } => {
+  // First check explicit icon key (set by user in GoalsView)
+  const iconMap: Record<string, { icon: string; color: string; bg: string }> = {
+    car:    { icon: 'directions_car',   color: 'text-yn-sec1-500',    bg: 'bg-yn-sec1-500/15' },
+    moto:   { icon: 'two_wheeler',      color: 'text-yn-warning-400', bg: 'bg-yn-warning-400/15' },
+    plane:  { icon: 'flight',           color: 'text-yn-sec1-400',    bg: 'bg-yn-sec1-400/15' },
+    beach:  { icon: 'beach_access',     color: 'text-yn-sec2-500',    bg: 'bg-yn-sec2-500/15' },
+    house:  { icon: 'apartment',        color: 'text-yn-primary-500', bg: 'bg-yn-primary-500/15' },
+    edu:    { icon: 'school',           color: 'text-yn-sec1-800',    bg: 'bg-yn-sec1-800/15' },
+    shield: { icon: 'shield',           color: 'text-yn-error-500',   bg: 'bg-yn-error-500/15' },
+    work:   { icon: 'work',             color: 'text-yn-warning-600', bg: 'bg-yn-warning-500/15' },
+    laptop: { icon: 'laptop_mac',       color: 'text-yn-neutral-500', bg: 'bg-yn-neutral-500/15' },
+    ring:   { icon: 'diamond',          color: 'text-yn-error-400',   bg: 'bg-yn-error-400/15' },
+    baby:   { icon: 'child_care',       color: 'text-yn-sec1-700',    bg: 'bg-yn-sec1-700/15' },
+    health: { icon: 'favorite',         color: 'text-yn-error-500',   bg: 'bg-yn-error-500/15' },
+    pet:    { icon: 'pets',             color: 'text-yn-warning-600', bg: 'bg-yn-warning-400/15' },
+    game:   { icon: 'sports_esports',   color: 'text-yn-sec1-600',    bg: 'bg-yn-sec1-600/15' },
+    food:   { icon: 'restaurant',       color: 'text-yn-warning-300', bg: 'bg-yn-warning-300/15' },
+  };
+  if (icono && iconMap[icono]) return iconMap[icono];
+
+  // Auto-detect from name
+  const n = (nombre || '').toLowerCase();
+  if (n.includes('carro') || n.includes('auto') || n.includes('coche') || n.includes('vehiculo'))
+    return iconMap.car;
+  if (n.includes('moto') || n.includes('scooter')) return iconMap.moto;
+  if (n.includes('viaje') || n.includes('vacacion') || n.includes('vuelo')) return iconMap.plane;
+  if (n.includes('playa') || n.includes('verano')) return iconMap.beach;
+  if (n.includes('casa') || n.includes('depto') || n.includes('hogar') || n.includes('departamento') || n.includes('piso'))
+    return iconMap.house;
+  if (n.includes('educacion') || n.includes('estudio') || n.includes('maestria') || n.includes('universidad') || n.includes('curso') || n.includes('carrera') || n.includes('pade'))
+    return iconMap.edu;
+  if (n.includes('emergencia') || n.includes('fondo') || n.includes('reserva') || n.includes('seguro'))
+    return iconMap.shield;
+  if (n.includes('negocio') || n.includes('empresa') || n.includes('emprendimiento'))
+    return iconMap.work;
+  if (n.includes('laptop') || n.includes('comput') || n.includes('celular') || n.includes('tech'))
+    return iconMap.laptop;
+  if (n.includes('boda') || n.includes('matri') || n.includes('anillo')) return iconMap.ring;
+  if (n.includes('beb') || n.includes('hijo') || n.includes('niñ')) return iconMap.baby;
+  if (n.includes('salud') || n.includes('médic') || n.includes('cirugía')) return iconMap.health;
+  if (n.includes('mascota') || n.includes('perro') || n.includes('gato')) return iconMap.pet;
+  if (n.includes('gaming') || n.includes('consola') || n.includes('play')) return iconMap.game;
+  return { icon: 'savings', color: 'text-yn-primary-500', bg: 'bg-yn-primary-500/15' };
+};
+
 // Map categories to Material Symbols icon names
 const getCategoryIcon = (categoria: string, tipo: string): string => {
   if (tipo === 'Ingresos') {
@@ -623,10 +670,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             <div className="flex gap-4 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-2">
               {goals.filter(g => g.estado === 'activa').slice(0, 6).map(goal => {
                 const pct = goal.monto_objetivo > 0 ? (goal.monto_ahorrado / goal.monto_objetivo) * 100 : 0;
+                const goalMeta = getGoalIcon(goal.nombre, goal.icono);
                 return (
                   <div key={goal.id} className={`min-w-[160px] ${theme.colors.bgCard} p-5 rounded-2xl shadow-sm flex flex-col items-center text-center border ${theme.colors.border}`}>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${pct >= 100 ? 'bg-yn-primary-500/15' : 'bg-yn-sec1-500/15'}`}>
-                      <Target size={22} className={pct >= 100 ? 'text-yn-primary-500' : 'text-yn-sec1-500'} />
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${goalMeta.bg}`}>
+                      <span className={`material-symbols-outlined ${goalMeta.color}`} style={{ fontSize: '24px' }}>{goalMeta.icon}</span>
                     </div>
                     <p className={`text-sm font-bold mb-1 ${theme.colors.textPrimary}`}>{goal.nombre}</p>
                     <div className={`w-full h-1.5 ${theme.colors.bgSecondary} rounded-full overflow-hidden mb-2`}>
