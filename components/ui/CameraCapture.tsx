@@ -76,11 +76,11 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
       // Comprimir la imagen
       const options = {
-        maxSizeMB: 0.5, // Máximo 500KB
-        maxWidthOrHeight: 1200,
+        maxSizeMB: 0.3, // Máximo 300KB (reducido para evitar error 413)
+        maxWidthOrHeight: 800, // Máximo 800px (reducido para mejor compresión)
         useWebWorker: true,
         fileType: 'image/jpeg' as const,
-        initialQuality: 0.7
+        initialQuality: 0.6
       };
 
       const compressedFile = await imageCompression(file, options);
@@ -126,11 +126,11 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
       // Comprimir la imagen usando browser-image-compression
       const options = {
-        maxSizeMB: 0.5, // Máximo 500KB
-        maxWidthOrHeight: 1200, // Máximo 1200px
+        maxSizeMB: 0.3, // Máximo 300KB (reducido para evitar error 413)
+        maxWidthOrHeight: 800, // Máximo 800px (reducido para mejor compresión)
         useWebWorker: true,
         fileType: 'image/jpeg' as const,
-        initialQuality: 0.7
+        initialQuality: 0.6
       };
 
       const compressedFile = await imageCompression(blob as File, options);
