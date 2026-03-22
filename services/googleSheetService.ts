@@ -818,3 +818,90 @@ export const saveGeminiApiKey = async (
     throw error;
   }
 };
+
+// ─── Yunai AI Advice ─────────────────────────────────────────
+
+export interface YunaiContext {
+  semana: {
+    gastoEstaSemana: number;
+    gastoSemanaAnterior: number;
+    diferencia: number;
+    porcentajeCambio: number;
+  };
+  mes: {
+    ingresosMes: number;
+    gastosMes: number;
+    balanceTotal: number;
+    deudaTotal: number;
+    usoCredito: number;
+    limiteTotal: number;
+  };
+  categoriasTop: { nombre: string; monto: number }[];
+  cuentas: {
+    billetera: number;
+    tarjetasDebito: { alias: string; balance: number }[];
+    tarjetasCredito: { alias: string; deuda: number; disponible: number }[];
+  };
+  pagos: {
+    esteMes: number;
+    proximoMes: number;
+  };
+  nombreUsuario: string;
+}
+
+export interface YunaiAdviceResult {
+  consejo: string;
+  estado: 'bien' | 'alerta' | 'mal';
+  categoriaDestacada: string;
+  tipAhorro: string;
+}
+
+const getISOWeekKey = (): string => {
+  const now = new Date();
+  const yearStart = new Date(now.getFullYear(), 0, 1);
+  const dayOfYear = Math.floor((now.getTime() - yearStart.getTime()) / 86400000) + 1;
+  const weekNum = Math.ceil((dayOfYear + yearStart.getDay()) / 7);
+  return `${now.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+};
+
+export const getYunaiAdviceCacheKey = (): string => {
+  return `yunai_advice_${getISOWeekKey()}`;
+};
+
+export const getYunaiAdvice = async (
+  contexto: YunaiContext
+): Promise<YunaiAdviceResult> => {
+  // 1. Check weekly cache
+  const cacheKey = getYunaiAdviceCacheKey();
+  const cached = localStorage.getItem(cacheKey);
+  if (cached) {
+    console.log('📦 [YunaiAdvice] Usando consejo cacheado de esta semana');
+    return JSON.parse(cached);
+  }
+
+  // 2. Call Vercel serverless function
+  console.log('🦫 [YunaiAdvice] Pidiendo consejo a Yunai...');
+  const response = await fetch('/api/yunai-advice', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contexto })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data.success || !data.data) {
+    throw new Error(data.error || 'Respuesta inválida de Yunai');
+  }
+
+  const result: YunaiAdviceResult = data.data;
+
+  // 3. Cache for this week
+  localStorage.setItem(cacheKey, JSON.stringify(result));
+  console.log('✅ [YunaiAdvice] Consejo recibido y cacheado');
+
+  return result;
+};

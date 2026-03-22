@@ -82,7 +82,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
   // Only show full-screen loading if NO cached data exists
-  const hasCachedData = !!(localStorage.getItem('yn_history') || localStorage.getItem('cards'));
+  const hasCachedData = !!(localStorage.getItem('yn_history') || localStorage.getItem('yn_cards') || localStorage.getItem('yn_pendingExpenses'));
   const [isInitialLoading, setIsInitialLoading] = useState(!hasCachedData);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(() => {
     const ts = localStorage.getItem('yn_lastSyncTime');
@@ -93,8 +93,8 @@ function App() {
   useEffect(() => { lastSyncTimeRef.current = lastSyncTime; }, [lastSyncTime]);
 
   // Data — load from cache instantly, then refresh from Google Sheets in background
-  const [cards, setCards] = useState<CreditCard[]>(() => loadCached('cards', []));
-  const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>(() => loadCached('pendingExpenses', []));
+  const [cards, setCards] = useState<CreditCard[]>(() => loadCached('yn_cards', []));
+  const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>(() => loadCached('yn_pendingExpenses', []));
   const [history, setHistory] = useState<Transaction[]>(() => loadCached('yn_history', []));
   const [goals, setGoals] = useState<Goal[]>(() => loadCached('yn_goals', []));
   const [realEstateInvestments, setRealEstateInvestments] = useState<RealEstateInvestment[]>([]);
@@ -292,8 +292,8 @@ function App() {
         setLastSyncTime(syncTime);
 
         // Cache ALL data for instant load next time (Stale-While-Revalidate)
-        localStorage.setItem('cards', JSON.stringify(data.cards || []));
-        localStorage.setItem('pendingExpenses', JSON.stringify(normalizedExpenses));
+        localStorage.setItem('yn_cards', JSON.stringify(data.cards || []));
+        localStorage.setItem('yn_pendingExpenses', JSON.stringify(normalizedExpenses));
         localStorage.setItem('yn_history', JSON.stringify(data.history || []));
         localStorage.setItem('yn_goals', JSON.stringify(data.goals || []));
         localStorage.setItem('yn_lastSyncTime', syncTime.toISOString());
@@ -676,6 +676,7 @@ function App() {
             cards={cards}
             history={history}
             goals={goals}
+            profile={profile}
             onEditTransaction={(t) => setEditingTransaction(t)}
             onDeleteTransaction={(t) => setDeleteTarget({ type: 'transaction', item: t })}
           />
@@ -696,6 +697,9 @@ function App() {
             onAddPending={(newExpense) => setPendingExpenses(prev => [...prev, newExpense])}
             onSuccess={() => {
               showToast('Movimiento registrado correctamente', 'success');
+              // Invalidate Yunai advice cache so it regenerates with new data
+              const keys = Object.keys(localStorage).filter(k => k.startsWith('yunai_advice_'));
+              keys.forEach(k => localStorage.removeItem(k));
               setTimeout(() => handleSync(true), 1500);
             }}
             notify={showToast}

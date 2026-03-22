@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { CreditCard, PendingExpense, Transaction, Goal, RealEstateInvestment, getCardType } from '../types';
+import React, { useMemo, useState, useEffect } from 'react';
+import { CreditCard, PendingExpense, Transaction, Goal, RealEstateInvestment, UserProfile, getCardType } from '../types';
 import { formatCurrency, formatCompact } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home, Pencil, Trash2, Calendar } from 'lucide-react';
@@ -8,6 +8,8 @@ import { faWallet, faCreditCard, faMoneyBillWave, faLandmark } from '@fortawesom
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { CHART_COLORS, CHART_INCOME, CHART_EXPENSE, CHART_SAVINGS } from '../utils/yunaiColors';
+import YunaiAdvice from './ui/YunaiAdvice';
+import { YunaiContext, getYunaiAdvice } from '../services/googleSheetService';
 
 type DateFilterType = 'thisMonth' | 'quarter' | 'year' | 'custom';
 
@@ -18,6 +20,7 @@ interface DashboardProps {
   history: Transaction[];
   goals?: Goal[];
   realEstateInvestments?: RealEstateInvestment[];
+  profile?: UserProfile;
   onEditTransaction?: (transaction: Transaction) => void;
   onDeleteTransaction?: (transaction: Transaction) => void;
 }
@@ -143,15 +146,18 @@ const getCategoryIcon = (categoria: string, tipo: string): string => {
   return 'receipt_long';
 };
 
-export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, goals = [], realEstateInvestments = [], onEditTransaction, onDeleteTransaction }) => {
-  const { theme, currentTheme } = useTheme();
-  const textColors = getTextColor(currentTheme);
+export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, history, goals = [], realEstateInvestments = [], profile, onEditTransaction, onDeleteTransaction }) => {
+  const { theme, themeName } = useTheme();
+  const textColors = getTextColor(themeName);
   const [distributionFilter, setDistributionFilter] = React.useState<'thisMonth' | 'total'>('total');
   const [categoryPeriod, setCategoryPeriod] = React.useState<'week' | 'month' | 'year'>('month');
   const [dateFilter, setDateFilter] = useState<DateFilterType>('thisMonth');
   const [customRange, setCustomRange] = useState({ from: '', to: '' });
   const [visibleTransactions, setVisibleTransactions] = useState(10);
   const [mobileTab, setMobileTab] = useState<'resumen' | 'cuentas' | 'analisis'>('resumen');
+  // Yunai Advice State
+  const [yunaiAdvice, setYunaiAdvice] = useState<any>(null);
+  const [isAdviceLoading, setIsAdviceLoading] = useState(false);
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -510,6 +516,74 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
     return { billeteraBalance, debitAccounts, creditAccounts };
   }, [history, cards, pendingExpenses]);
+
+  // Yunai Context — all financial data for AI analysis
+  const yunaiContext: YunaiContext = useMemo(() => {
+    // Top categories (gastos del mes actual)
+    const now = new Date();
+    const monthGastos = history.filter(t => {
+      if (t.tipo !== 'Gastos') return false;
+      const d = new Date(t.timestamp || t.fecha);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    const catMap = monthGastos.reduce((acc, t) => {
+      const cat = t.categoria || 'Sin categoría';
+      acc[cat] = (acc[cat] || 0) + Number(t.monto);
+      return acc;
+    }, {} as Record<string, number>);
+    const categoriasTop = Object.entries(catMap)
+      .map(([nombre, monto]) => ({ nombre, monto }))
+      .sort((a, b) => b.monto - a.monto)
+      .slice(0, 5);
+
+    return {
+      semana: {
+        gastoEstaSemana: weeklyComparison.thisWeek,
+        gastoSemanaAnterior: weeklyComparison.lastWeek,
+        diferencia: weeklyComparison.difference,
+        porcentajeCambio: weeklyComparison.percentChange,
+      },
+      mes: {
+        ingresosMes: currentStats.ingresosMes,
+        gastosMes: currentStats.gastosMes,
+        balanceTotal: currentStats.balanceTotal,
+        deudaTotal: currentStats.deudaTotal,
+        usoCredito: currentStats.usoCredito,
+        limiteTotal: currentStats.limiteTotal,
+      },
+      categoriasTop,
+      cuentas: {
+        billetera: accountBreakdown.billeteraBalance,
+        tarjetasDebito: accountBreakdown.debitAccounts.map(a => ({ alias: a.alias, balance: a.balance })),
+        tarjetasCredito: accountBreakdown.creditAccounts.map(a => ({ alias: a.alias, deuda: a.deuda, disponible: a.disponible })),
+      },
+      pagos: {
+        esteMes: cardPayments.thisMonth.total,
+        proximoMes: cardPayments.nextMonth.total,
+      },
+      nombreUsuario: profile?.nombre || 'amigo',
+    };
+  }, [weeklyComparison, currentStats, accountBreakdown, cardPayments, history, profile]);
+
+  const fetchYunaiAdvice = React.useCallback(async () => {
+    if (isAdviceLoading) return;
+    setIsAdviceLoading(true);
+    try {
+      const result = await getYunaiAdvice(yunaiContext);
+      setYunaiAdvice(result);
+    } catch (error) {
+      console.error('Error fetching Yunai advice:', error);
+    } finally {
+      setIsAdviceLoading(false);
+    }
+  }, [yunaiContext]);
+
+  // Fetch advice on mount or when context changes significantly
+  useEffect(() => {
+    if (history.length > 0 && !yunaiAdvice) {
+      fetchYunaiAdvice();
+    }
+  }, [history.length, yunaiAdvice, fetchYunaiAdvice]);
 
   // Chart Data
   const barData = [
@@ -1114,6 +1188,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               )}
             </div>
           </div>
+
+          {/* Yunai Advice Component */}
+          <YunaiAdvice 
+            advice={yunaiAdvice?.consejo} 
+            isLoading={isAdviceLoading} 
+            onRefresh={fetchYunaiAdvice}
+            userName={profile?.nombre}
+          />
         </div>
 
         {/* This Month Payment Card */}
