@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, MessageCircle, RefreshCw, X } from 'lucide-react';
+import { Sparkles, MessageCircle, RefreshCw, ChevronRight } from 'lucide-react';
 
 interface YunaiAdviceProps {
   advice?: string;
@@ -77,10 +77,14 @@ const YunaiAdvice: React.FC<YunaiAdviceProps> = ({
             )}
             
             {!isLoading && (
-              <div className="mt-2 flex justify-end">
+              <div className="mt-3 flex items-center justify-between">
+                <button className="flex items-center gap-1 text-xs font-semibold text-yn-primary-600 dark:text-yn-primary-400 hover:text-yn-primary-700 dark:hover:text-yn-primary-300 transition-colors">
+                  Más detalle
+                  <ChevronRight size={14} />
+                </button>
                 <div className="text-[10px] text-yn-neutral-400 flex items-center gap-1">
                   <MessageCircle size={10} />
-                  Perspectiva de IA basada en tus datos
+                  IA basada en tus datos
                 </div>
               </div>
             )}

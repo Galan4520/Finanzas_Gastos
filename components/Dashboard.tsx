@@ -762,6 +762,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </section>
       </div>
 
+      {/* Yunai Advice — visible in Resumen (mobile) and always on desktop */}
+      <div className={`${mobileTab !== 'resumen' ? 'hidden md:block' : ''}`}>
+        <YunaiAdvice
+          advice={yunaiAdvice?.consejo}
+          isLoading={isAdviceLoading}
+          onRefresh={refreshYunaiAdvice}
+          userName={profile?.nombre}
+        />
+      </div>
+
       {/* Metas de Ahorro - Mobile Carousel */}
       {goals.length > 0 && (
         <div className={`md:hidden ${mobileTab !== 'resumen' ? 'hidden' : ''}`}>
@@ -1162,16 +1172,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           </div>
         </div>
       )}
-
-      {/* Yunai Advice — visible in Resumen (mobile) and always on desktop */}
-      <div className={`${mobileTab !== 'resumen' ? 'hidden md:block' : ''}`}>
-        <YunaiAdvice
-          advice={yunaiAdvice?.consejo}
-          isLoading={isAdviceLoading}
-          onRefresh={refreshYunaiAdvice}
-          userName={profile?.nombre}
-        />
-      </div>
 
       {/* NEW FEATURES ROW */}
       <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${mobileTab !== 'analisis' ? 'hidden md:grid' : ''}`}>
