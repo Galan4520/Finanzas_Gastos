@@ -572,7 +572,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       const result = await getYunaiAdvice(yunaiContext);
       setYunaiAdvice(result);
     } catch (error) {
-      console.error('Error fetching Yunai advice:', error);
+      console.error('❌ [YunaiAdvice] Error:', error);
+      // Fallback: show a generic tip so the component is still visible
+      const fallbackTips = [
+        'Revisa tus suscripciones mensuales — a veces pagamos por apps que ya no usamos. ¡Cada sol cuenta, causa!',
+        'Llevar almuerzo al trabajo puede ahorrarte hasta S/300 al mes. ¡Chévere dato!',
+        'La regla 50/30/20: 50% necesidades, 30% gustos, 20% ahorro. ¡Vamos con todo!',
+        'Antes de comprar algo, espera 24 horas. Si mañana aún lo quieres, dale nomás.',
+        'Los gastos hormiga (café, snacks) pueden sumar más de S/200 al mes. ¡Ponte pilas!',
+      ];
+      const tip = fallbackTips[Math.floor(Math.random() * fallbackTips.length)];
+      setYunaiAdvice({ consejo: tip, estado: 'bien' as const, categoriaDestacada: '', tipAhorro: '' });
     } finally {
       setIsAdviceLoading(false);
     }
@@ -1135,6 +1145,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </div>
       )}
 
+      {/* Yunai Advice — visible in Resumen (mobile) and always on desktop */}
+      <div className={`${mobileTab !== 'resumen' ? 'hidden md:block' : ''}`}>
+        <YunaiAdvice
+          advice={yunaiAdvice?.consejo}
+          isLoading={isAdviceLoading}
+          onRefresh={fetchYunaiAdvice}
+          userName={profile?.nombre}
+        />
+      </div>
+
       {/* NEW FEATURES ROW */}
       <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${mobileTab !== 'analisis' ? 'hidden md:grid' : ''}`}>
 
@@ -1189,13 +1209,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </div>
           </div>
 
-          {/* Yunai Advice Component */}
-          <YunaiAdvice 
-            advice={yunaiAdvice?.consejo} 
-            isLoading={isAdviceLoading} 
-            onRefresh={fetchYunaiAdvice}
-            userName={profile?.nombre}
-          />
         </div>
 
         {/* This Month Payment Card */}
