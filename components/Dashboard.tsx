@@ -205,9 +205,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // Get start of this week (Sunday)
+    // Get start of this week (Monday) — Peru uses Monday as first day
     const thisWeekStart = new Date(todayStart);
-    thisWeekStart.setDate(todayStart.getDate() - todayStart.getDay());
+    const dayOfWeek = todayStart.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    thisWeekStart.setDate(todayStart.getDate() - ((dayOfWeek + 6) % 7));
 
     // Get start of last week
     const lastWeekStart = new Date(thisWeekStart);
@@ -1561,7 +1562,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           if (t.tipo !== 'Gastos') return false;
           const d = new Date(t.timestamp || t.fecha);
           if (categoryPeriod === 'week') {
-            const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+            const dow = now.getDay(); // 0=Sun..6=Sat
+            const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((dow + 6) % 7));
             return d >= weekStart;
           } else if (categoryPeriod === 'month') {
             return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
