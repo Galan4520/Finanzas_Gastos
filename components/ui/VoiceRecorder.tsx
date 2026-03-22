@@ -125,24 +125,24 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         reader.readAsDataURL(blob);
       });
 
-      // Build cuentas list
-      const cuentas = ['Billetera'];
-      userCards.forEach(card => {
-        if (getCardType(card) === 'debito') {
-          cuentas.push(card.alias);
-        }
-      });
-      const cuentasCredito = userCards
-        .filter(card => getCardType(card) === 'credito')
-        .map(card => card.alias);
+      // Build detailed cuentas list with bank info and type
+      const cuentasDetalladas = [
+        { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo' },
+        ...userCards.map(card => ({
+          alias: card.alias,
+          banco: card.banco,
+          tipo: getCardType(card), // 'credito' | 'debito'
+          tipo_tarjeta: card.tipo_tarjeta,
+        })),
+      ];
 
       const response = await fetch('/api/yunai-voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           audio: base64,
-          mimeType: mimeType.split(';')[0], // clean codec suffix
-          cuentas: [...cuentas, ...cuentasCredito],
+          mimeType: mimeType.split(';')[0],
+          cuentas: cuentasDetalladas,
         }),
       });
 

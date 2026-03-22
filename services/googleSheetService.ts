@@ -742,7 +742,8 @@ const retryWithBackoff = async <T>(
 export const analyzeReceiptWithAI = async (
   _scriptUrl: string, // Kept for interface compatibility
   _pin: string,       // Kept for interface compatibility
-  base64Image: string
+  base64Image: string,
+  cuentas?: any[]     // Detailed account list for AI context
 ): Promise<{ success: boolean; data?: any; error?: string }> => {
   try {
     console.log('🤖 [analyzeReceiptWithAI] Enviando imagen a Vercel Serverless API...');
@@ -755,7 +756,7 @@ export const analyzeReceiptWithAI = async (
       const response = await fetch('/api/scan', {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: cleanBase64 })
+        body: JSON.stringify({ image: cleanBase64, cuentas })
       });
 
       if (!response.ok) {

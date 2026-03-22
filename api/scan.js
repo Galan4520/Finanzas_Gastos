@@ -31,15 +31,33 @@ export default async function handler(req, res) {
 
     const cleanBase64 = image.includes('base64,') ? image.split('base64,')[1] : image;
     const today = new Date().toISOString().split('T')[0];
-    const cuentasDisponibles = cuentas || ['Billetera'];
+
+    // Build detailed cuentas description (supports both legacy string array and new object array)
+    const cuentasList = cuentas || [{ alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo' }];
+    let cuentasDescription = '';
+    if (cuentasList.length > 0 && typeof cuentasList[0] === 'object') {
+      cuentasDescription = cuentasList.map(c => {
+        if (c.tipo === 'efectivo') return `- "${c.alias}" (Efectivo/Cash)`;
+        return `- "${c.alias}" → Banco: ${c.banco}, Tipo: ${c.tipo === 'credito' ? 'CRÉDITO' : 'DÉBITO'}`;
+      }).join('\n');
+    } else {
+      cuentasDescription = cuentasList.map(c => `- "${c}"`).join('\n');
+    }
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
     const promptText =
       "Eres Yunai, un asistente OCR financiero experto para tickets/boletas/recibos peruanos.\n\n" +
 
-      "CUENTAS/MÉTODOS DE PAGO del usuario:\n" +
-      cuentasDisponibles.map(c => `- ${c}`).join('\n') + "\n\n" +
+      "═══ CUENTAS Y TARJETAS DEL USUARIO ═══\n" +
+      cuentasDescription + "\n\n" +
+
+      "REGLAS PARA CUENTA:\n" +
+      "- Si ves nombre de banco en el voucher, busca la tarjeta que corresponda\n" +
+      "- Si es un ingreso/depósito → SOLO tarjetas de DÉBITO o Billetera\n" +
+      "- Si ves cuotas → SOLO tarjetas de CRÉDITO\n" +
+      "- El valor de 'cuenta' DEBE ser EXACTAMENTE el alias de la lista\n" +
+      "- Si no puedes inferir, cuenta = null y agregar a campos_inciertos\n\n" +
 
       "INSTRUCCIONES CRÍTICAS:\n\n" +
 

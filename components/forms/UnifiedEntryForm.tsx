@@ -321,7 +321,17 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       console.log(`📦 [handleCameraCapture] Base64 generado: ${(base64Clean.length / 1024).toFixed(2)}KB`);
       console.log('🤖 [handleCameraCapture] Enviando a IA...');
 
-      const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean);
+      // Build detailed cuentas for AI context
+      const cuentasDetalladas = [
+        { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo' },
+        ...cards.map(card => ({
+          alias: card.alias,
+          banco: card.banco,
+          tipo: getCardType(card),
+          tipo_tarjeta: card.tipo_tarjeta,
+        })),
+      ];
+      const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean, cuentasDetalladas);
       console.log('✅ [handleCameraCapture] Respuesta de IA recibida:', result);
 
       if (result.success && result.data) {
