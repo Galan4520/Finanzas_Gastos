@@ -161,20 +161,29 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
             theme={theme}
           />
 
-          {/* Cuenta — always show with options if unresolved */}
+          {/* Cuenta — use AI-filtered options from campos_inciertos first, fallback to all accounts */}
           {unresolvedFields.has('cuenta') ? (
             <div className={`p-3 rounded-xl border-2 border-yellow-400 dark:border-yellow-600 ${theme.colors.bgSecondary}`}>
               <span className={`text-sm font-medium ${theme.colors.textMuted} block mb-2`}>
-                Cuenta *
+                {uncertainMap.get('cuenta')?.pregunta || 'Cuenta *'}
               </span>
               <div className="flex flex-wrap gap-2">
-                {availableAccounts.map(acc => (
+                {/* Use AI-filtered options if available, otherwise fallback to all accounts */}
+                {(uncertainMap.get('cuenta')?.opciones?.length
+                  ? uncertainMap.get('cuenta')!.opciones
+                  : availableAccounts
+                ).map(acc => (
                   <button
                     key={acc}
                     onClick={() => resolveField('cuenta', acc)}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium bg-yn-primary-500/10 text-yn-primary-700 dark:text-yn-primary-300 hover:bg-yn-primary-500/20 transition-colors border border-yn-primary-500/20"
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
+                      acc === uncertainMap.get('cuenta')?.valor_sugerido
+                        ? 'bg-yn-primary-500/20 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/40'
+                        : 'bg-yn-primary-500/10 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/20'
+                    } hover:bg-yn-primary-500/20`}
                   >
                     {acc}
+                    {acc === uncertainMap.get('cuenta')?.valor_sugerido && ' (sugerido)'}
                   </button>
                 ))}
               </div>
