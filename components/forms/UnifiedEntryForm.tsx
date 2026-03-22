@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType } from '../../types';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
-import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Sparkles, Edit as EditIcon } from 'lucide-react';
+import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Sparkles, Edit as EditIcon, Mic, Camera } from 'lucide-react';
 import { CategoryPicker } from '../ui/CategoryPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
@@ -11,6 +11,9 @@ import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { analyzeReceiptWithAI, sendToSheet } from '../../services/googleSheetService';
 import { ScanResultSummary } from '../ui/ScanResultSummary';
 import { CameraCapture } from '../ui/CameraCapture';
+import VoiceRecorder from '../ui/VoiceRecorder';
+import YunaiConfirmation from '../ui/YunaiConfirmation';
+import { YunaiExtractionResult } from '../../types';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
@@ -45,11 +48,14 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   const [selectedCuenta, setSelectedCuenta] = useState('Billetera');
   const [isScanning, setIsScanning] = useState(false);
 
-  // Method selection for Gasto: manual or AI
-  const [selectedMethod, setSelectedMethod] = useState<'manual' | 'ai' | null>(null);
+  // Method selection for Gasto: manual, AI scan, or voice
+  const [selectedMethod, setSelectedMethod] = useState<'manual' | 'ai' | 'voice' | null>(null);
   const [scanResult, setScanResult] = useState<any | null>(null);
   const [showScanSummary, setShowScanSummary] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
+  const [showYunaiConfirmation, setShowYunaiConfirmation] = useState(false);
+  const [yunaiExtraction, setYunaiExtraction] = useState<YunaiExtractionResult | null>(null);
 
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
@@ -319,9 +325,15 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       console.log('✅ [handleCameraCapture] Respuesta de IA recibida:', result);
 
       if (result.success && result.data) {
-        console.log('✅ [handleCameraCapture] Mostrando resumen...');
-        setScanResult(result.data);
-        setShowScanSummary(true);
+        console.log('✅ [handleCameraCapture] Mostrando confirmación Yunai...');
+        // If the new API returns campos_inciertos, use YunaiConfirmation
+        if (result.data.campos_inciertos !== undefined) {
+          handleYunaiResult(result.data);
+        } else {
+          // Fallback to legacy ScanResultSummary
+          setScanResult(result.data);
+          setShowScanSummary(true);
+        }
       } else {
         console.error('❌ [handleCameraCapture] Error en respuesta IA:', result.error);
         notify?.(result.error || 'No se pudo analizar el ticket', 'error');
@@ -371,6 +383,75 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
     setShowScanSummary(false);
     setSelectedMethod('manual');
+  };
+
+  // Handler for voice/scan AI extraction result
+  const handleYunaiResult = (data: YunaiExtractionResult) => {
+    setShowVoiceRecorder(false);
+    setYunaiExtraction(data);
+    setShowYunaiConfirmation(true);
+  };
+
+  // Handler for scan result that now goes through YunaiConfirmation
+  const handleScanYunaiResult = () => {
+    if (!scanResult) return;
+    // Convert legacy scan result to YunaiExtractionResult
+    const extraction: YunaiExtractionResult = {
+      tipo: scanResult.tipo || 'gasto',
+      monto: scanResult.monto || 0,
+      descripcion: scanResult.descripcion || '',
+      categoria: scanResult.categoria || '',
+      cuenta: scanResult.cuenta || null,
+      fecha: scanResult.fecha || today,
+      notas: scanResult.notas || '',
+      num_cuotas: scanResult.num_cuotas || 1,
+      meta_id: '',
+      tipo_gasto: scanResult.tipo_gasto || 'deuda',
+      confianza: scanResult.confianza || 0.8,
+      campos_inciertos: scanResult.campos_inciertos || [],
+      pregunta_seguimiento: null,
+    };
+    setYunaiExtraction(extraction);
+    setShowScanSummary(false);
+    setShowYunaiConfirmation(true);
+  };
+
+  // When user confirms in YunaiConfirmation
+  const handleYunaiConfirm = (finalData: YunaiExtractionResult) => {
+    // Switch entry type if needed
+    if (finalData.tipo !== entryType) {
+      setEntryType(finalData.tipo);
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      monto: finalData.monto ? String(finalData.monto) : '',
+      fecha: finalData.fecha || today,
+      descripcion: finalData.descripcion || '',
+      categoria: finalData.categoria || '',
+      notas: finalData.notas || '',
+    }));
+
+    if (finalData.cuenta) {
+      setSelectedCuenta(finalData.cuenta);
+    }
+
+    if (finalData.num_cuotas > 1) {
+      setUseInstallments(true);
+    }
+
+    if (finalData.tipo === 'tarjeta') {
+      setExpenseType(finalData.tipo_gasto || 'deuda');
+    }
+
+    setShowYunaiConfirmation(false);
+    setSelectedMethod('manual'); // Switch to manual to let user review/submit
+    notify?.('Yunai cargó los datos. Revisa y confirma', 'success');
+  };
+
+  // When user chooses "Edit manual" from YunaiConfirmation
+  const handleYunaiEdit = (prefillData: YunaiExtractionResult) => {
+    handleYunaiConfirm(prefillData); // Same logic, fills the form
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -454,16 +535,16 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           {/* Method Selection for Gasto (Manual vs AI) */}
           {entryType === 'gasto' && selectedMethod === null && (
             <>
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-3 gap-3 mb-4">
                 <button
                   type="button"
                   onClick={() => setSelectedMethod('manual')}
-                  className={`flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500 hover:bg-yn-primary-500/10`}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500 hover:bg-yn-primary-500/10`}
                 >
-                  <EditIcon size={32} className="text-yn-primary-500" />
+                  <EditIcon size={28} className="text-yn-primary-500" />
                   <div className="text-center">
-                    <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>MANUAL</p>
-                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Ingresa datos manualmente</p>
+                    <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>Manual</p>
+                    <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>Escribe los datos</p>
                   </div>
                 </button>
 
@@ -473,27 +554,38 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                     setSelectedMethod('ai');
                     setShowCamera(true);
                   }}
-                  className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-primary-500/10 to-yn-sec1-500/10 border-yn-primary-500 hover:border-yn-primary-400"
+                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-primary-500/10 to-yn-sec1-500/10 border-yn-primary-500/50 hover:border-yn-primary-400"
                 >
-                  <Sparkles size={32} className="text-yn-primary-500" />
+                  <Camera size={28} className="text-yn-primary-500" />
                   <div className="text-center">
-                    <p className={`font-bold text-lg ${theme.colors.textPrimary}`}>CON IA</p>
-                    <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Escanea con cámara</p>
+                    <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>Escanear</p>
+                    <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>Foto de boleta</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedMethod('voice');
+                    setShowVoiceRecorder(true);
+                  }}
+                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-sec1-500/10 to-yn-primary-500/10 border-yn-sec1-500/50 hover:border-yn-sec1-400"
+                >
+                  <Mic size={28} className="text-yn-sec1-600" />
+                  <div className="text-center">
+                    <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>Hablar</p>
+                    <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>Díselo a Yunai</p>
                   </div>
                 </button>
               </div>
 
-              {/* Ayuda para escanear con IA */}
+              {/* Ayuda */}
               <div className={`bg-yn-primary-500/10 border border-yn-primary-500/30 rounded-lg p-3 mb-6 flex items-start gap-2`}>
                 <Sparkles size={18} className="text-yn-primary-500 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className={`text-xs font-bold ${theme.colors.textPrimary}`}>
-                    ✨ Escaneo con IA:
-                  </p>
-                  <p className={`text-xs ${theme.colors.textMuted} mt-1.5 leading-relaxed`}>
-                    <strong className={theme.colors.textPrimary}>1.</strong> Click "CON IA" para abrir cámara<br/>
-                    <strong className={theme.colors.textPrimary}>2.</strong> Apunta al ticket y captura<br/>
-                    <strong className={theme.colors.textPrimary}>3.</strong> La IA detectará monto, fecha y categoría automáticamente
+                  <p className={`text-xs ${theme.colors.textMuted} leading-relaxed`}>
+                    <strong className={theme.colors.textPrimary}>Escanear:</strong> Toma foto de tu boleta y Yunai extrae los datos<br/>
+                    <strong className={theme.colors.textPrimary}>Hablar:</strong> Di "Gasté 45 soles en pizza" y Yunai lo registra
                   </p>
                 </div>
               </div>
@@ -511,17 +603,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 }}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
               >
-                {selectedMethod === 'manual' ? (
-                  <>
-                    <Sparkles size={16} />
-                    Cambiar a IA
-                  </>
-                ) : (
-                  <>
-                    <EditIcon size={16} />
-                    Cambiar a Manual
-                  </>
-                )}
+                <Sparkles size={16} />
+                Cambiar método
               </button>
             </div>
           )}
@@ -912,7 +995,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           onClose={() => setShowCamera(false)}
         />
 
-        {/* Scan Result Summary Modal */}
+        {/* Scan Result Summary Modal (legacy fallback) */}
         <ScanResultSummary
           isOpen={showScanSummary}
           result={scanResult || { monto: 0, fecha: today, categoria: '', descripcion: '' }}
@@ -924,6 +1007,37 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           onEdit={handleEditScan}
           onClose={() => setShowScanSummary(false)}
         />
+
+        {/* Voice Recorder Modal */}
+        <VoiceRecorder
+          isOpen={showVoiceRecorder}
+          onResult={handleYunaiResult}
+          onClose={() => {
+            setShowVoiceRecorder(false);
+            if (!yunaiExtraction) setSelectedMethod(null);
+          }}
+          userCards={cards}
+          accountBalances={accountBalances}
+        />
+
+        {/* Yunai Confirmation Modal (for voice & scan results) */}
+        {yunaiExtraction && (
+          <YunaiConfirmation
+            isOpen={showYunaiConfirmation}
+            data={yunaiExtraction}
+            availableAccounts={[
+              'Billetera',
+              ...debitCards.map(c => c.alias),
+              ...creditCards.map(c => c.alias),
+            ]}
+            onConfirm={handleYunaiConfirm}
+            onEdit={handleYunaiEdit}
+            onClose={() => {
+              setShowYunaiConfirmation(false);
+              setSelectedMethod(null);
+            }}
+          />
+        )}
       </div>
     </>
   );

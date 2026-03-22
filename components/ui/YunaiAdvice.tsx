@@ -5,14 +5,16 @@ interface YunaiAdviceProps {
   advice?: string;
   isLoading: boolean;
   onRefresh: () => void;
+  onDetailOpen?: () => void;
   userName?: string;
 }
 
-const YunaiAdvice: React.FC<YunaiAdviceProps> = ({ 
-  advice, 
-  isLoading, 
-  onRefresh, 
-  userName = 'Amigo' 
+const YunaiAdvice: React.FC<YunaiAdviceProps> = ({
+  advice,
+  isLoading,
+  onRefresh,
+  onDetailOpen,
+  userName = 'Amigo'
 }) => {
   const [showAnimation, setShowAnimation] = useState(false);
 
@@ -78,7 +80,10 @@ const YunaiAdvice: React.FC<YunaiAdviceProps> = ({
             
             {!isLoading && (
               <div className="mt-3 flex items-center justify-between">
-                <button className="flex items-center gap-1 text-xs font-semibold text-yn-primary-600 dark:text-yn-primary-400 hover:text-yn-primary-700 dark:hover:text-yn-primary-300 transition-colors">
+                <button
+                  onClick={onDetailOpen}
+                  className="flex items-center gap-1 text-xs font-semibold text-yn-primary-600 dark:text-yn-primary-400 hover:text-yn-primary-700 dark:hover:text-yn-primary-300 transition-colors"
+                >
                   Más detalle
                   <ChevronRight size={14} />
                 </button>

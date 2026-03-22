@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
   );
-  
+
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -24,69 +24,84 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'La plataforma no tiene la clave de IA configurada. (GEMINI_API_KEY faltante en Vercel)' });
     }
 
-    const { image } = req.body;
+    const { image, cuentas } = req.body;
     if (!image) {
       return res.status(400).json({ error: 'No se recibió ninguna imagen para analizar.' });
     }
 
     const cleanBase64 = image.includes('base64,') ? image.split('base64,')[1] : image;
+    const today = new Date().toISOString().split('T')[0];
+    const cuentasDisponibles = cuentas || ['Billetera'];
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-    
+
     const promptText =
-      "Eres un asistente OCR experto para extraer datos de tickets/boletas de compra peruanos.\n\n" +
+      "Eres Yunai, un asistente OCR financiero experto para tickets/boletas/recibos peruanos.\n\n" +
+
+      "CUENTAS/MÉTODOS DE PAGO del usuario:\n" +
+      cuentasDisponibles.map(c => `- ${c}`).join('\n') + "\n\n" +
 
       "INSTRUCCIONES CRÍTICAS:\n\n" +
 
-      "1. MONTO (campo 'monto'):\n" +
-      "   - Busca las palabras: 'TOTAL', 'IMPORTE TOTAL', 'TOTAL A PAGAR', 'MONTO TOTAL'\n" +
+      "1. TIPO (campo 'tipo'):\n" +
+      "   - 'gasto' — Compras, pagos, servicios (la mayoría de boletas)\n" +
+      "   - 'ingreso' — Depósitos, transferencias recibidas, vouchers de abono\n" +
+      "   - 'tarjeta' — Si ves cuotas, crédito, o estado de cuenta de tarjeta\n" +
+      "   - Si no estás seguro, usa 'gasto' y agrégalo a campos_inciertos\n\n" +
+
+      "2. MONTO (campo 'monto'):\n" +
+      "   - Busca: 'TOTAL', 'IMPORTE TOTAL', 'TOTAL A PAGAR', 'MONTO TOTAL'\n" +
       "   - Es el ÚLTIMO monto grande del ticket (después de impuestos/IGV)\n" +
       "   - Formato: número decimal con punto (ej: 45.50)\n" +
-      "   - NO usar comas ni símbolos de moneda\n" +
       "   - Si no encuentras el total, usa null\n\n" +
 
-      "2. FECHA (campo 'fecha'):\n" +
-      "   - Busca las palabras: 'FECHA', 'DATE', 'FECHA DE EMISIÓN'\n" +
-      "   - Formato OBLIGATORIO: YYYY-MM-DD (ej: 2026-03-20)\n" +
-      "   - Si NO encuentras la fecha en el ticket, usa la fecha de HOY: " + new Date().toISOString().split('T')[0] + "\n" +
-      "   - Si ves solo día/mes, usa el año actual: 2026\n\n" +
+      "3. FECHA (campo 'fecha'):\n" +
+      "   - Busca: 'FECHA', 'DATE', 'FECHA DE EMISIÓN'\n" +
+      "   - Formato OBLIGATORIO: YYYY-MM-DD\n" +
+      "   - Si NO encuentras la fecha, usa hoy: " + today + "\n\n" +
 
-      "3. CATEGORIA (campo 'categoria'):\n" +
+      "4. CATEGORIA (campo 'categoria'):\n" +
       "   - Lee el NOMBRE del establecimiento para determinar la categoría\n" +
-      "   - DEBE ser EXACTAMENTE una de estas (copia exacta con emoji):\n" +
-      "     * '🍕 Alimentación' - Supermercados, bodegas, mercados, panaderías, restaurantes, pollerías, chifas, cafeterías\n" +
-      "     * '🚗 Transporte' - Taxis, buses, gasolina, peajes, Uber, InDriver, transporte público\n" +
-      "     * '💊 Salud' - Farmacias, clínicas, laboratorios, consultas médicas\n" +
-      "     * '🎮 Entretenimiento' - Cines, juegos, conciertos, streaming, Netflix, Spotify\n" +
-      "     * '💡 Servicios' - Luz, agua, internet, teléfono, cable\n" +
-      "     * '👕 Ropa' - Tiendas de ropa, zapatos, accesorios\n" +
-      "     * '🏠 Vivienda' - Alquiler, mantenimiento del hogar, muebles\n" +
-      "     * '📚 Educación' - Cursos, libros, material educativo\n" +
-      "     * '💅 Cuidado Personal' - Peluquería, barbería, spa, cosméticos\n" +
-      "     * '📱 Tecnología' - Celulares, laptops, accesorios tech\n" +
-      "     * '🎁 Regalos' - Obsequios, flores, detalles\n" +
-      "     * '✈️ Viajes' - Pasajes, hoteles, turismo\n" +
-      "     * '🐕 Mascotas' - Veterinaria, alimento de mascotas\n" +
-      "     * '💳 Otros' - Todo lo demás\n" +
+      "   - DEBE ser EXACTAMENTE una de estas (con emoji):\n" +
+      "     '🍕 Alimentación', '🚗 Transporte', '💊 Salud', '🎮 Entretenimiento',\n" +
+      "     '💡 Servicios', '👕 Ropa', '🏠 Vivienda', '📚 Educación',\n" +
+      "     '💅 Cuidado Personal', '📱 Tecnología', '🎁 Regalos', '✈️ Viajes',\n" +
+      "     '🐕 Mascotas', '💳 Otros'\n" +
       "   - Si no estás seguro, usa '💳 Otros'\n\n" +
 
-      "4. DESCRIPCION (campo 'descripcion'):\n" +
+      "5. DESCRIPCION (campo 'descripcion'):\n" +
       "   - Formato: 'NOMBRE_TIENDA - productos'\n" +
-      "   - Lee los 3-5 productos PRINCIPALES del ticket\n" +
-      "   - Máximo 60 caracteres total\n" +
-      "   - Ejemplos reales:\n" +
-      "     * 'Plaza Vea - Manzanas, pan, leche, huevos'\n" +
-      "     * 'Pollería Norky - 1/4 pollo + papas + gaseosa'\n" +
-      "     * 'Farmacia Universal - Paracetamol 500mg'\n" +
-      "   - Si no hay productos legibles, solo pon el nombre de la tienda\n\n" +
+      "   - Máximo 60 caracteres\n\n" +
 
-      "FORMATO DE SALIDA:\n" +
-      "- SOLO el objeto JSON, sin explicaciones\n" +
-      "- NO usar markdown ni bloques de código\n" +
-      "- La categoría DEBE incluir el emoji exacto\n" +
-      "- Estructura exacta:\n" +
-      '{"monto": 45.50, "fecha": "2026-03-20", "categoria": "🍕 Alimentación", "descripcion": "Plaza Vea - Manzanas, pan, leche"}\n\n' +
+      "6. CUENTA (campo 'cuenta'):\n" +
+      "   - Si ves nombre de banco/tarjeta en el voucher, asócialo con las cuentas del usuario\n" +
+      "   - Si no puedes inferir, usa null y agrégalo a campos_inciertos\n\n" +
 
+      "7. CUOTAS (campo 'num_cuotas'):\n" +
+      "   - Si ves 'CUOTAS', 'NRO CUOTAS', extraer el número\n" +
+      "   - Si no hay cuotas, usar 1\n\n" +
+
+      "8. CAMPOS_INCIERTOS:\n" +
+      "   - Si NO estás seguro de algún campo, agrégalo al array\n" +
+      "   - Cada campo incierto debe tener: campo, valor_sugerido, opciones[], pregunta\n" +
+      "   - La pregunta debe ser en tono peruano amigable (usa 'causa', 'pata', etc.)\n\n" +
+
+      "FORMATO DE SALIDA (solo JSON, sin markdown):\n" +
+      '{\n' +
+      '  "tipo": "gasto",\n' +
+      '  "monto": 45.50,\n' +
+      '  "descripcion": "Plaza Vea - Manzanas, pan, leche",\n' +
+      '  "categoria": "🍕 Alimentación",\n' +
+      '  "cuenta": null,\n' +
+      '  "fecha": "' + today + '",\n' +
+      '  "notas": "",\n' +
+      '  "num_cuotas": 1,\n' +
+      '  "tipo_gasto": "deuda",\n' +
+      '  "confianza": 0.85,\n' +
+      '  "campos_inciertos": [\n' +
+      '    { "campo": "cuenta", "valor_sugerido": null, "opciones": ["Billetera", "Visa BCP"], "pregunta": "¿De qué cuenta salieron estos S/45.50, causa?" }\n' +
+      '  ]\n' +
+      '}\n\n' +
       "RESPONDE AHORA CON EL JSON:";
 
     const payload = {
@@ -117,7 +132,7 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    
+
     if (!aiText) {
       throw new Error("La Inteligencia Artificial devolvió una respuesta vacía.");
     }
@@ -130,14 +145,20 @@ export default async function handler(req, res) {
     }
 
     const parsedData = JSON.parse(aiText);
-    
+
+    // Ensure campos_inciertos is always an array
+    if (!Array.isArray(parsedData.campos_inciertos)) {
+      parsedData.campos_inciertos = [];
+    }
+
+    // Backward compat: also include legacy fields for ScanResultSummary
     return res.status(200).json({
       success: true,
       data: parsedData
     });
 
   } catch (error) {
-    console.error("Scan API API Error:", error);
+    console.error("Scan API Error:", error);
     return res.status(500).json({
       success: false,
       error: error.message || 'Error procesando la IA'

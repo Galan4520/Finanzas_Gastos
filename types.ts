@@ -203,3 +203,37 @@ export interface NotificationConfig {
   notificacionesActivas: boolean;
   lastEmailSent?: string; // ISO timestamp of last successfully sent email
 }
+
+// ═══════════════════════════════════════════════════════════════
+// YUNAI IA — Extracción por voz y foto
+// ═══════════════════════════════════════════════════════════════
+
+export interface CampoIncierto {
+  campo: string;
+  valor_sugerido: string | null;
+  opciones: string[];
+  pregunta: string;
+}
+
+export interface YunaiExtractionResult {
+  tipo: 'gasto' | 'ingreso' | 'tarjeta';
+  monto: number;
+  descripcion: string;
+  categoria: string;
+  cuenta: string | null;
+  fecha: string;
+  notas: string;
+  num_cuotas: number;
+  meta_id: string;
+  tipo_gasto: 'deuda' | 'suscripcion';
+  confianza: number;
+  campos_inciertos: CampoIncierto[];
+  pregunta_seguimiento: string | null;
+}
+
+export interface YunaiAdviceResult {
+  consejo: string;
+  estado: 'bien' | 'alerta' | 'mal';
+  categoriaDestacada: string;
+  tipAhorro: string;
+}

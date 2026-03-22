@@ -9,6 +9,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
 import { CHART_COLORS, CHART_INCOME, CHART_EXPENSE, CHART_SAVINGS } from '../utils/yunaiColors';
 import YunaiAdvice from './ui/YunaiAdvice';
+import YunaiDetailView from './ui/YunaiDetailView';
 import { YunaiContext, getYunaiAdvice } from '../services/googleSheetService';
 
 type DateFilterType = 'thisMonth' | 'quarter' | 'year' | 'custom';
@@ -158,6 +159,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   // Yunai Advice State
   const [yunaiAdvice, setYunaiAdvice] = useState<any>(null);
   const [isAdviceLoading, setIsAdviceLoading] = useState(false);
+  const [showYunaiDetail, setShowYunaiDetail] = useState(false);
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -768,6 +770,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           advice={yunaiAdvice?.consejo}
           isLoading={isAdviceLoading}
           onRefresh={refreshYunaiAdvice}
+          onDetailOpen={() => setShowYunaiDetail(true)}
           userName={profile?.nombre}
         />
       </div>
@@ -1855,6 +1858,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           </div>
         );
       })()}
+
+      {/* Yunai Detail View Modal */}
+      <YunaiDetailView
+        isOpen={showYunaiDetail}
+        onClose={() => setShowYunaiDetail(false)}
+        adviceData={yunaiAdvice}
+        yunaiContext={yunaiContext}
+        onStartVoice={() => {
+          setShowYunaiDetail(false);
+          // Voice is handled in UnifiedEntryForm via tab switch
+        }}
+        onStartScan={() => {
+          setShowYunaiDetail(false);
+          // Scan is handled in UnifiedEntryForm via tab switch
+        }}
+        onRefreshAdvice={() => {
+          refreshYunaiAdvice();
+        }}
+      />
 
     </div>
   );
