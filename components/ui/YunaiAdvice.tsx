@@ -33,7 +33,7 @@ const YunaiAdvice: React.FC<YunaiAdviceProps> = ({
         {/* Yunai Avatar Circle */}
         <div className="relative flex-shrink-0 mt-2">
           <div className={`w-14 h-14 rounded-full bg-gradient-to-br from-yn-primary-500 to-yn-primary-700 flex items-center justify-center border-2 border-white/20 shadow-lg ${showAnimation ? 'animate-bounce' : ''}`}>
-            <span className="text-2xl" role="img" aria-label="carpincho">🐹</span>
+            <img src="/logos/Mascota_Yunai.svg" alt="Yunai" className="w-10 h-10 object-contain" />
           </div>
           {isLoading && (
             <div className="absolute -top-1 -right-1">
