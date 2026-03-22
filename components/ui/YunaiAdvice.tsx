@@ -32,8 +32,8 @@ const YunaiAdvice: React.FC<YunaiAdviceProps> = ({
       <div className="flex items-start gap-4">
         {/* Yunai Avatar Circle */}
         <div className="relative flex-shrink-0 mt-2">
-          <div className={`w-14 h-14 rounded-full bg-gradient-to-br from-yn-primary-500 to-yn-primary-700 flex items-center justify-center border-2 border-white/20 shadow-lg ${showAnimation ? 'animate-bounce' : ''}`}>
-            <img src="/logos/Mascota_Yunai.svg" alt="Yunai" className="w-10 h-10 object-contain" />
+          <div className={`w-14 h-14 rounded-full overflow-hidden border-2 border-yn-primary-500/30 shadow-lg ${showAnimation ? 'animate-bounce' : ''}`}>
+            <img src="/logos/Mascota_Yunai.svg" alt="Yunai" className="w-full h-full object-cover object-top" />
           </div>
           {isLoading && (
             <div className="absolute -top-1 -right-1">
