@@ -36,6 +36,14 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
   const [resolvedData, setResolvedData] = useState<YunaiExtractionResult>(data);
   const [unresolvedFields, setUnresolvedFields] = useState<Set<string>>(new Set());
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (data) {
       setResolvedData({ ...data });

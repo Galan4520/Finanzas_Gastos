@@ -486,7 +486,85 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       />
       <div className="max-w-2xl mx-auto space-y-6">
 
-        {/* Type Selector Tabs */}
+        {/* AI-First Landing (no method selected yet) */}
+        {selectedMethod === null && (
+          <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 md:p-8 rounded-3xl border ${theme.colors.border} shadow-xl animate-in fade-in slide-in-from-bottom-4`}>
+            {/* Title */}
+            <div className="text-center mb-6">
+              <h2 className={`text-2xl font-bold ${theme.colors.textPrimary}`}>Registrar Movimiento</h2>
+              <p className={`text-sm ${theme.colors.textMuted} mt-2`}>
+                Habla o escanea un comprobante. La IA detectará automáticamente si es un gasto o un ingreso, la categoría y la tarjeta.
+              </p>
+            </div>
+
+            {/* Voice & Scan buttons */}
+            <div className="flex gap-4 justify-center mb-8">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMethod('voice');
+                  setShowVoiceRecorder(true);
+                }}
+                className="flex flex-col items-center justify-center gap-3 w-40 h-32 rounded-2xl bg-yn-primary-500 hover:bg-yn-primary-600 text-white shadow-lg shadow-yn-primary-500/30 transition-all active:scale-95"
+              >
+                <Mic size={40} />
+                <span className="font-bold text-sm uppercase tracking-wider">Usar Voz</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedMethod('ai');
+                  setShowCamera(true);
+                }}
+                className={`flex flex-col items-center justify-center gap-3 w-40 h-32 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 transition-all active:scale-95`}
+              >
+                <Camera size={40} className={theme.colors.textMuted} />
+                <span className={`font-bold text-sm uppercase tracking-wider ${theme.colors.textSecondary}`}>Escanear</span>
+              </button>
+            </div>
+
+            {/* Separator */}
+            <div className="flex items-center gap-4 mb-6">
+              <div className={`flex-1 h-px ${theme.colors.border} border-t`} />
+              <span className={`text-xs font-semibold uppercase tracking-widest ${theme.colors.textMuted}`}>O ingresa manualmente</span>
+              <div className={`flex-1 h-px ${theme.colors.border} border-t`} />
+            </div>
+
+            {/* Manual entry type buttons */}
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => { setEntryType('gasto'); setSelectedMethod('manual'); }}
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 hover:bg-yn-primary-500/5 transition-all`}
+              >
+                <Wallet size={24} className={theme.colors.textMuted} />
+                <span className={`text-sm font-semibold ${theme.colors.textSecondary}`}>Gasto</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEntryType('ingreso'); setSelectedMethod('manual'); }}
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 hover:bg-yn-primary-500/5 transition-all`}
+              >
+                <TrendingUp size={24} className={theme.colors.textMuted} />
+                <span className={`text-sm font-semibold ${theme.colors.textSecondary}`}>Ingreso</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEntryType('tarjeta'); setSelectedMethod('manual'); }}
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 hover:bg-yn-primary-500/5 transition-all`}
+              >
+                <CreditIcon size={24} className={theme.colors.textMuted} />
+                <span className={`text-sm font-semibold ${theme.colors.textSecondary}`}>Tarjeta</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Manual Form (shown after method is selected) */}
+        {selectedMethod !== null && (
+        <>
+        {/* Type Selector Tabs (only in manual mode) */}
         <div className={`${theme.colors.bgCard} p-1 rounded-2xl flex relative overflow-hidden border ${theme.colors.border}`}>
           <div
             className={`absolute top-1 bottom-1 ${theme.colors.primary} rounded-xl transition-all duration-300 ease-out shadow-lg`}
@@ -508,106 +586,20 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
         <form onSubmit={handleSubmit} className={`${theme.colors.bgCard} backdrop-blur-md p-6 md:p-8 rounded-3xl border ${theme.colors.border} shadow-xl space-y-6 animate-in fade-in slide-in-from-bottom-4`}>
 
-          {/* Header Dynamic */}
-          <div className="text-center mb-2">
-            <h2 className={`text-2xl font-bold ${theme.colors.textPrimary} flex items-center justify-center gap-2`}>
-              {entryType === 'gasto' && (
-                <>
-                  <Banknote size={28} />
-                  Gasto en Efectivo
-                </>
-              )}
-              {entryType === 'ingreso' && (
-                <>
-                  <DollarSign size={28} />
-                  Registrar Ingreso
-                </>
-              )}
-              {entryType === 'tarjeta' && (
-                <>
-                  <CreditIcon size={28} />
-                  Gasto con Tarjeta
-                </>
-              )}
-            </h2>
+          {/* Back to AI methods button */}
+          <div className="flex justify-center mb-2">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMethod(null);
+                setFormData(prev => ({ ...prev, monto: '', descripcion: '', categoria: '' }));
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
+            >
+              <Sparkles size={16} />
+              Usar IA en vez
+            </button>
           </div>
-
-          {/* Method Selection for Gasto (Manual vs AI) */}
-          {entryType === 'gasto' && selectedMethod === null && (
-            <>
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <button
-                  type="button"
-                  onClick={() => setSelectedMethod('manual')}
-                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all ${theme.colors.bgSecondary} ${theme.colors.border} hover:border-yn-primary-500 hover:bg-yn-primary-500/10`}
-                >
-                  <EditIcon size={28} className="text-yn-primary-500" />
-                  <div className="text-center">
-                    <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>Manual</p>
-                    <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>Escribe los datos</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedMethod('ai');
-                    setShowCamera(true);
-                  }}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-primary-500/10 to-yn-sec1-500/10 border-yn-primary-500/50 hover:border-yn-primary-400"
-                >
-                  <Camera size={28} className="text-yn-primary-500" />
-                  <div className="text-center">
-                    <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>Escanear</p>
-                    <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>Foto de boleta</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedMethod('voice');
-                    setShowVoiceRecorder(true);
-                  }}
-                  className="flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 transition-all bg-gradient-to-br from-yn-sec1-500/10 to-yn-primary-500/10 border-yn-sec1-500/50 hover:border-yn-sec1-400"
-                >
-                  <Mic size={28} className="text-yn-sec1-600" />
-                  <div className="text-center">
-                    <p className={`font-bold text-sm ${theme.colors.textPrimary}`}>Hablar</p>
-                    <p className={`text-[10px] ${theme.colors.textMuted} mt-0.5`}>Díselo a Yunai</p>
-                  </div>
-                </button>
-              </div>
-
-              {/* Ayuda */}
-              <div className={`bg-yn-primary-500/10 border border-yn-primary-500/30 rounded-lg p-3 mb-6 flex items-start gap-2`}>
-                <Sparkles size={18} className="text-yn-primary-500 mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className={`text-xs ${theme.colors.textMuted} leading-relaxed`}>
-                    <strong className={theme.colors.textPrimary}>Escanear:</strong> Toma foto de tu boleta y Yunai extrae los datos<br/>
-                    <strong className={theme.colors.textPrimary}>Hablar:</strong> Di "Gasté 45 soles en pizza" y Yunai lo registra
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Change Method Button (when already selected) */}
-          {entryType === 'gasto' && selectedMethod !== null && (
-            <div className="flex justify-center mb-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedMethod(null);
-                  setFormData(prev => ({ ...prev, monto: '', descripcion: '', categoria: '' }));
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
-              >
-                <Sparkles size={16} />
-                Cambiar método
-              </button>
-            </div>
-          )}
 
           {/* Date & Amount - Only show if method selected or not gasto */}
           {(entryType !== 'gasto' || selectedMethod !== null) && (
@@ -987,6 +979,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           )}
 
         </form>
+        </>
+        )}
 
         {/* Camera Capture Modal */}
         <CameraCapture

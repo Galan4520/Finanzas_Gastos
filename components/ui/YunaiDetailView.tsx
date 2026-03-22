@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, TrendingUp, TrendingDown, Minus, Mic, Camera, RefreshCw, Shield, AlertTriangle, CheckCircle2, Lightbulb, BarChart3 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { YunaiContext, YunaiAdviceResult } from '../../services/googleSheetService';
@@ -23,6 +23,14 @@ const YunaiDetailView: React.FC<YunaiDetailViewProps> = ({
   onRefreshAdvice,
 }) => {
   const { theme } = useTheme();
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
