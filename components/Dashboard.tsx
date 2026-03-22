@@ -736,52 +736,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {/* ==================== DESKTOP + MOBILE TABS ==================== */}
 
       {/* ==================== MOBILE CUENTAS TAB ==================== */}
-      <div className={`md:hidden space-y-8 ${mobileTab !== 'cuentas' ? 'hidden' : ''}`}>
+      <div className={`md:hidden space-y-6 ${mobileTab !== 'cuentas' ? 'hidden' : ''}`}>
         {/* Patrimonio Total Header */}
         <section className="space-y-1">
-          <p className={`text-sm font-medium ${theme.colors.textMuted}`}>Patrimonio Total</p>
-          <h2 className="font-sans font-extrabold text-4xl text-yn-primary-500">
+          <p className={`text-xs font-medium ${theme.colors.textMuted}`}>Patrimonio Total</p>
+          <h2 className="font-sans font-extrabold text-2xl text-yn-primary-500">
             {formatCurrency(currentStats.balanceTotal)}
           </h2>
         </section>
 
         {/* Efectivo y Débito */}
-        <section className="space-y-4">
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>Efectivo y Débito</h3>
-            <span className="text-xs font-bold text-yn-primary-700 bg-yn-primary-300/20 px-3 py-1 rounded-full">Liquidez</span>
+            <h3 className={`font-bold text-sm ${theme.colors.textPrimary}`}>Efectivo y Débito</h3>
+            <span className="text-[10px] font-bold text-yn-primary-700 bg-yn-primary-300/20 px-2.5 py-0.5 rounded-full">Liquidez</span>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {/* Billetera Física */}
-            <div className={`${theme.colors.bgCard} p-5 rounded-xl flex items-center justify-between border ${theme.colors.border} shadow-sm`}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-yn-primary-500/10 flex items-center justify-center">
-                  <span className="material-symbols-outlined text-yn-primary-500" style={{ fontVariationSettings: "'FILL' 1", fontSize: '24px' }}>account_balance_wallet</span>
+            <div className={`${theme.colors.bgCard} p-4 rounded-xl flex items-center justify-between border ${theme.colors.border} shadow-sm`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-yn-primary-500/10 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-yn-primary-500" style={{ fontVariationSettings: "'FILL' 1", fontSize: '20px' }}>account_balance_wallet</span>
                 </div>
                 <div>
-                  <p className={`font-bold ${theme.colors.textPrimary}`}>Billetera Física</p>
-                  <p className={`text-xs ${theme.colors.textMuted}`}>Efectivo</p>
+                  <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>Billetera Física</p>
+                  <p className={`text-[10px] ${theme.colors.textMuted}`}>Efectivo</p>
                 </div>
               </div>
-              <p className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(accountBreakdown.billeteraBalance)}</p>
+              <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{formatCurrency(accountBreakdown.billeteraBalance)}</p>
             </div>
             {/* Debit Cards */}
             {accountBreakdown.debitAccounts.map(acc => (
-              <div key={acc.alias} className={`${theme.colors.bgCard} p-5 rounded-xl flex items-center justify-between border ${theme.colors.border} shadow-sm`}>
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-xl ${theme.colors.bgSecondary} flex items-center justify-center overflow-hidden`}>
+              <div key={acc.alias} className={`${theme.colors.bgCard} p-4 rounded-xl flex items-center justify-between border ${theme.colors.border} shadow-sm`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl ${theme.colors.bgSecondary} flex items-center justify-center overflow-hidden`}>
                     {acc.url_imagen ? (
-                      <img src={acc.url_imagen} alt={acc.banco} className="w-8 h-8 rounded-md object-contain" />
+                      <img src={acc.url_imagen} alt={acc.banco} className="w-7 h-7 rounded-md object-contain" />
                     ) : (
-                      <span className="material-symbols-outlined text-yn-sec1-500" style={{ fontSize: '24px' }}>account_balance</span>
+                      <span className="material-symbols-outlined text-yn-sec1-500" style={{ fontSize: '20px' }}>account_balance</span>
                     )}
                   </div>
                   <div>
-                    <p className={`font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
-                    <p className={`text-xs ${theme.colors.textMuted}`}>{acc.banco}</p>
+                    <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
+                    <p className={`text-[10px] ${theme.colors.textMuted}`}>{acc.banco}</p>
                   </div>
                 </div>
-                <p className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(acc.balance)}</p>
+                <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{formatCurrency(acc.balance)}</p>
               </div>
             ))}
           </div>
@@ -789,33 +789,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
         {/* Crédito Disponible */}
         {accountBreakdown.creditAccounts.length > 0 && (
-          <section className="space-y-4">
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>Crédito Disponible</h3>
-              <span className="text-xs font-bold text-yn-error-500 bg-yn-error-500/10 px-3 py-1 rounded-full">Líneas de crédito</span>
+              <h3 className={`font-bold text-sm ${theme.colors.textPrimary}`}>Crédito Disponible</h3>
+              <span className="text-[10px] font-bold text-yn-error-500 bg-yn-error-500/10 px-2.5 py-0.5 rounded-full">Líneas de crédito</span>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {accountBreakdown.creditAccounts.map((acc, index) => {
                 const usoPct = acc.limite > 0 ? ((acc.deuda / acc.limite) * 100) : 0;
                 // First card gets the green gradient style
                 if (index === 0) {
                   return (
-                    <div key={acc.alias} className="p-5 rounded-xl space-y-4 shadow-lg text-white"
+                    <div key={acc.alias} className="p-4 rounded-xl space-y-3 shadow-lg text-white"
                       style={{ background: 'linear-gradient(135deg, #006b3d, #00874e)' }}>
                       <div className="flex justify-between items-start">
-                        <span className="material-symbols-outlined text-white/70">credit_card</span>
-                        <p className="text-xs font-bold text-white/50">{acc.banco.toUpperCase()}</p>
+                        <span className="material-symbols-outlined text-white/70" style={{ fontSize: '20px' }}>credit_card</span>
+                        <p className="text-[10px] font-bold text-white/50">{acc.banco.toUpperCase()}</p>
                       </div>
                       <div>
-                        <p className="font-bold">{acc.alias}</p>
-                        <p className="text-2xl font-extrabold mt-1">{formatCurrency(acc.disponible)}</p>
+                        <p className="text-sm font-bold">{acc.alias}</p>
+                        <p className="text-xl font-extrabold mt-1">{formatCurrency(acc.disponible)}</p>
                       </div>
                       {acc.deuda > 0 && (
                         <>
-                          <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+                          <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
                             <div className="bg-white h-full rounded-full" style={{ width: `${usoPct}%` }} />
                           </div>
-                          <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-white/70">
+                          <div className="flex justify-between text-[9px] uppercase tracking-wider font-bold text-white/70">
                             <span>Deuda: {formatCurrency(acc.deuda)}</span>
                             <span>Límite: {formatCurrency(acc.limite)}</span>
                           </div>
@@ -826,29 +826,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                 }
                 // Other cards get neutral card style
                 return (
-                  <div key={acc.alias} className={`${theme.colors.bgCard} p-5 rounded-xl space-y-4 border ${theme.colors.border}`}>
+                  <div key={acc.alias} className={`${theme.colors.bgCard} p-4 rounded-xl space-y-3 border ${theme.colors.border}`}>
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl ${theme.colors.bgSecondary} flex items-center justify-center overflow-hidden`}>
+                        <div className={`w-10 h-10 rounded-xl ${theme.colors.bgSecondary} flex items-center justify-center overflow-hidden`}>
                           {acc.url_imagen ? (
-                            <img src={acc.url_imagen} alt={acc.banco} className="w-8 h-8 rounded-md object-contain" />
+                            <img src={acc.url_imagen} alt={acc.banco} className="w-7 h-7 rounded-md object-contain" />
                           ) : (
-                            <span className="material-symbols-outlined text-yn-sec1-700" style={{ fontSize: '24px' }}>credit_card</span>
+                            <span className="material-symbols-outlined text-yn-sec1-700" style={{ fontSize: '20px' }}>credit_card</span>
                           )}
                         </div>
                         <div>
-                          <p className={`font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
-                          <p className={`text-xs ${theme.colors.textMuted}`}>{acc.banco}</p>
+                          <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
+                          <p className={`text-[10px] ${theme.colors.textMuted}`}>{acc.banco}</p>
                         </div>
                       </div>
-                      <p className={`text-xl font-extrabold ${theme.colors.textPrimary}`}>{formatCurrency(acc.disponible)}</p>
+                      <p className={`text-base font-extrabold ${theme.colors.textPrimary}`}>{formatCurrency(acc.disponible)}</p>
                     </div>
                     {acc.deuda > 0 && (
                       <>
-                        <div className={`w-full h-2 rounded-full overflow-hidden ${theme.colors.bgSecondary}`}>
+                        <div className={`w-full h-1.5 rounded-full overflow-hidden ${theme.colors.bgSecondary}`}>
                           <div className="bg-yn-primary-500 h-full rounded-full" style={{ width: `${usoPct}%` }} />
                         </div>
-                        <div className={`flex justify-between text-[10px] uppercase tracking-wider font-bold ${theme.colors.textMuted}`}>
+                        <div className={`flex justify-between text-[9px] uppercase tracking-wider font-bold ${theme.colors.textMuted}`}>
                           <span>Deuda: {formatCurrency(acc.deuda)}</span>
                           <span>Disponible: {formatCurrency(acc.disponible)}</span>
                         </div>
@@ -866,26 +866,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           const totalDist = cardDistribution.reduce((sum, c) => sum + c.value, 0);
           if (totalDist === 0) return null;
           return (
-            <section className="space-y-4">
-              <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
-              <div className="space-y-3">
+            <section className="space-y-3">
+              <h3 className={`font-bold text-sm ${theme.colors.textPrimary}`}>Distribución por Tarjetas</h3>
+              <div className="space-y-2.5">
                 {cardDistribution.map((card, idx) => {
                   const pct = (card.value / totalDist) * 100;
                   return (
-                    <div key={card.name} className={`${theme.colors.bgCard} p-4 rounded-xl border ${theme.colors.border}`}>
+                    <div key={card.name} className={`${theme.colors.bgCard} p-3 rounded-xl border ${theme.colors.border}`}>
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}20` }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '20px', color: CHART_COLORS[idx % CHART_COLORS.length] }}>credit_card</span>
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}20` }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: '16px', color: CHART_COLORS[idx % CHART_COLORS.length] }}>credit_card</span>
                           </div>
                           <div>
-                            <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{card.name}</p>
-                            <p className={`text-xs ${theme.colors.textMuted}`}>{pct.toFixed(1)}%</p>
+                            <p className={`font-semibold text-xs ${theme.colors.textPrimary}`}>{card.name}</p>
+                            <p className={`text-[10px] ${theme.colors.textMuted}`}>{pct.toFixed(1)}%</p>
                           </div>
                         </div>
-                        <p className={`font-bold text-base ${theme.colors.textPrimary}`}>{formatCurrency(card.value)}</p>
+                        <p className={`font-bold text-xs ${theme.colors.textPrimary}`}>{formatCurrency(card.value)}</p>
                       </div>
-                      <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}15` }}>
+                      <div className="w-full h-1 rounded-full overflow-hidden" style={{ backgroundColor: `${CHART_COLORS[idx % CHART_COLORS.length]}15` }}>
                         <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
                       </div>
                     </div>
