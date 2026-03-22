@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Layout } from './components/Layout';
 import { Dashboard } from './components/Dashboard';
 import { WelcomeScreen } from './components/WelcomeScreen';
@@ -61,6 +61,16 @@ const MOCK_PROPERTIES: RealEstateProperty[] = [
 function App() {
    const { theme, themeName, setTheme } = useTheme();
 
+  // ─── Stale-While-Revalidate helpers ───
+  const SYNC_FRESHNESS_MS = 10 * 60 * 1000; // 10 minutes
+
+  const loadCached = <T,>(key: string, fallback: T): T => {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch { return fallback; }
+  };
+
   // State
   const [scriptUrl, setScriptUrl] = useState<string>(localStorage.getItem('scriptUrl') || '');
   const [pin, setPin] = useState<string>(localStorage.getItem('pin') || '');
@@ -71,14 +81,22 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  // Only show full-screen loading if NO cached data exists
+  const hasCachedData = !!(localStorage.getItem('yn_history') || localStorage.getItem('cards'));
+  const [isInitialLoading, setIsInitialLoading] = useState(!hasCachedData);
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(() => {
+    const ts = localStorage.getItem('yn_lastSyncTime');
+    return ts ? new Date(ts) : null;
+  });
+  // Ref for freshness check inside useCallback (avoids stale closure)
+  const lastSyncTimeRef = useRef(lastSyncTime);
+  useEffect(() => { lastSyncTimeRef.current = lastSyncTime; }, [lastSyncTime]);
 
-  // Data
-  const [cards, setCards] = useState<CreditCard[]>([]);
-  const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>([]);
-  const [history, setHistory] = useState<Transaction[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
+  // Data — load from cache instantly, then refresh from Google Sheets in background
+  const [cards, setCards] = useState<CreditCard[]>(() => loadCached('cards', []));
+  const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>(() => loadCached('pendingExpenses', []));
+  const [history, setHistory] = useState<Transaction[]>(() => loadCached('yn_history', []));
+  const [goals, setGoals] = useState<Goal[]>(() => loadCached('yn_goals', []));
   const [realEstateInvestments, setRealEstateInvestments] = useState<RealEstateInvestment[]>([]);
   const [availableProperties] = useState<RealEstateProperty[]>(MOCK_PROPERTIES);
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfig | null>(null);
@@ -143,9 +161,19 @@ function App() {
     setPin(newPin);
   };
 
-  // Sync Logic
-  const handleSync = useCallback(async () => {
+  // Sync Logic (Stale-While-Revalidate)
+  const handleSync = useCallback(async (force = false) => {
     if (!scriptUrl || !pin) return;
+
+    // Smart sync: skip if data is fresh (< 10 min) unless forced
+    if (!force && lastSyncTimeRef.current) {
+      const age = Date.now() - lastSyncTimeRef.current.getTime();
+      if (age < SYNC_FRESHNESS_MS) {
+        console.log(`⏭️ [SmartSync] Data is fresh (${Math.round(age / 1000)}s old), skipping sync`);
+        setIsInitialLoading(false);
+        return;
+      }
+    }
 
     setIsSyncing(true);
     try {
@@ -260,11 +288,15 @@ function App() {
           setShowOnboarding(true);
         }
 
-        setLastSyncTime(new Date());
+        const syncTime = new Date();
+        setLastSyncTime(syncTime);
 
-        // Cache data (optional but good for offline)
-        localStorage.setItem('cards', JSON.stringify(data.cards));
+        // Cache ALL data for instant load next time (Stale-While-Revalidate)
+        localStorage.setItem('cards', JSON.stringify(data.cards || []));
         localStorage.setItem('pendingExpenses', JSON.stringify(normalizedExpenses));
+        localStorage.setItem('yn_history', JSON.stringify(data.history || []));
+        localStorage.setItem('yn_goals', JSON.stringify(data.goals || []));
+        localStorage.setItem('yn_lastSyncTime', syncTime.toISOString());
       }
     } catch (error) {
       console.error('Sync error:', error);
@@ -273,12 +305,12 @@ function App() {
       setIsSyncing(false);
       setIsInitialLoading(false);
     }
-  }, [scriptUrl, pin, isNewVersion]);
+  }, [scriptUrl, pin, isNewVersion]); // NOTE: lastSyncTime intentionally excluded to avoid re-render loops
 
-  // Initial Sync
+  // Initial Sync — always attempts but respects freshness rule
   useEffect(() => {
     if (scriptUrl && pin) {
-      handleSync();
+      handleSync(); // Will skip if data is fresh (< 10 min)
     } else {
       setIsInitialLoading(false);
     }
@@ -308,7 +340,7 @@ function App() {
     }, updated.tipo)
       .then(() => {
         // Sync silencioso para verificar consistencia
-        setTimeout(() => handleSync(), 1500);
+        setTimeout(() => handleSync(true), 1500);
       })
       .catch((error) => {
         console.error('Error editando transacción:', error);
@@ -325,7 +357,7 @@ function App() {
     // 2. Backend call in background (no await)
     googleSheetService.deleteFromSheet(scriptUrl, pin, transaction.timestamp, transaction.tipo)
       .then(() => {
-        setTimeout(() => handleSync(), 1500);
+        setTimeout(() => handleSync(true), 1500);
       })
       .catch((error) => {
         console.error('Error eliminando transacción:', error);
@@ -422,7 +454,7 @@ function App() {
     showToast('Meta creada', 'success');
     // Persist to Google Sheets
     googleSheetService.createGoal(scriptUrl, pin, goal)
-      .then(() => setTimeout(() => handleSync(), 1500))
+      .then(() => setTimeout(() => handleSync(true), 1500))
       .catch(() => showToast('Error al guardar meta en la nube', 'error'));
   };
 
@@ -430,7 +462,7 @@ function App() {
     setGoals(prev => prev.map(g => g.id === goal.id ? goal : g));
     showToast('Meta actualizada', 'success');
     googleSheetService.updateGoal(scriptUrl, pin, goal)
-      .then(() => setTimeout(() => handleSync(), 1500))
+      .then(() => setTimeout(() => handleSync(true), 1500))
       .catch(() => showToast('Error al actualizar meta en la nube', 'error'));
   };
 
@@ -438,7 +470,7 @@ function App() {
     setGoals(prev => prev.filter(g => g.id !== goalId));
     showToast('Meta eliminada', 'success');
     googleSheetService.deleteGoal(scriptUrl, pin, goalId)
-      .then(() => setTimeout(() => handleSync(), 1500))
+      .then(() => setTimeout(() => handleSync(true), 1500))
       .catch(() => showToast('Error al eliminar meta en la nube', 'error'));
   };
 
@@ -471,7 +503,7 @@ function App() {
 
     showToast('Aporte registrado', 'success');
     googleSheetService.contributeToGoal(scriptUrl, pin, metaId, monto, cuenta, goal?.nombre)
-      .then(() => setTimeout(() => handleSync(), 1500))
+      .then(() => setTimeout(() => handleSync(true), 1500))
       .catch(() => showToast('Error al registrar aporte en la nube', 'error'));
   };
 
@@ -503,7 +535,7 @@ function App() {
 
     showToast('Fondos liberados de la meta', 'success');
     googleSheetService.romperMeta(scriptUrl, pin, metaId, monto, cuenta, goal?.nombre)
-      .then(() => setTimeout(() => handleSync(), 1500))
+      .then(() => setTimeout(() => handleSync(true), 1500))
       .catch(() => showToast('Error al liberar fondos de la meta', 'error'));
   };
 
@@ -664,7 +696,7 @@ function App() {
             onAddPending={(newExpense) => setPendingExpenses(prev => [...prev, newExpense])}
             onSuccess={() => {
               showToast('Movimiento registrado correctamente', 'success');
-              setTimeout(() => handleSync(), 1500);
+              setTimeout(() => handleSync(true), 1500);
             }}
             notify={showToast}
             onRomperMeta={romperMeta}
@@ -825,7 +857,7 @@ function App() {
             onEditCard={handleEditCard}
             onDeleteCard={(card) => setDeleteTarget({ type: 'card', item: card })}
             onSetTheme={setTheme}
-            onSync={handleSync}
+            onSync={() => handleSync(true)}
             onSaveNotificationConfig={handleSaveNotificationConfig}
             onSendTestEmail={handleSendTestEmail}
             onSendNotifications={handleSendNotifications}
@@ -875,7 +907,7 @@ function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         connected={!!scriptUrl}
-        onSync={handleSync}
+        onSync={() => handleSync(true)}
         isSyncing={isSyncing}
         lastSyncTime={lastSyncTime}
         profile={profile}
