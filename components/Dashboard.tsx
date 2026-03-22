@@ -565,14 +565,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     };
   }, [weeklyComparison, currentStats, accountBreakdown, cardPayments, history, profile]);
 
+  // Ref to store yunaiContext for the callback (avoids recreating callback on every context change)
+  const yunaiContextRef = React.useRef(yunaiContext);
+  useEffect(() => { yunaiContextRef.current = yunaiContext; }, [yunaiContext]);
+
+  // Track if we already attempted fetching (prevents infinite retry loops)
+  const adviceFetchedRef = React.useRef(false);
+
   const fetchYunaiAdvice = React.useCallback(async () => {
     if (isAdviceLoading) return;
     setIsAdviceLoading(true);
     try {
-      const result = await getYunaiAdvice(yunaiContext);
+      const result = await getYunaiAdvice(yunaiContextRef.current);
       setYunaiAdvice(result);
+      adviceFetchedRef.current = true;
     } catch (error) {
       console.error('❌ [YunaiAdvice] Error:', error);
+      adviceFetchedRef.current = true; // Don't retry automatically
       // Fallback: show a generic tip so the component is still visible
       const fallbackTips = [
         'Revisa tus suscripciones mensuales — a veces pagamos por apps que ya no usamos. ¡Cada sol cuenta, causa!',
@@ -586,14 +595,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     } finally {
       setIsAdviceLoading(false);
     }
-  }, [yunaiContext]);
+  }, []); // stable callback — reads context from ref
 
-  // Fetch advice on mount or when context changes significantly
+  // Manual refresh: clear cache so API is called again
+  const refreshYunaiAdvice = React.useCallback(() => {
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('yunai_advice_'));
+    keys.forEach(k => localStorage.removeItem(k));
+    adviceFetchedRef.current = false;
+    setYunaiAdvice(null);
+    fetchYunaiAdvice();
+  }, [fetchYunaiAdvice]);
+
+  // Fetch advice once on mount when history is available
   useEffect(() => {
-    if (history.length > 0 && !yunaiAdvice) {
+    if (history.length > 0 && !adviceFetchedRef.current) {
       fetchYunaiAdvice();
     }
-  }, [history.length, yunaiAdvice, fetchYunaiAdvice]);
+  }, [history.length, fetchYunaiAdvice]);
 
   // Chart Data
   const barData = [
@@ -1150,7 +1168,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         <YunaiAdvice
           advice={yunaiAdvice?.consejo}
           isLoading={isAdviceLoading}
-          onRefresh={fetchYunaiAdvice}
+          onRefresh={refreshYunaiAdvice}
           userName={profile?.nombre}
         />
       </div>
