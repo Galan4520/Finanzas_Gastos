@@ -47,8 +47,6 @@ export default async function handler(req, res) {
       cuentasDescription = cuentasList.map(c => `- "${c}"`).join('\n');
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
     const promptText =
       "Eres Yunai, un asistente OCR financiero experto para tickets/boletas/recibos peruanos.\n\n" +
 
@@ -148,35 +146,55 @@ export default async function handler(req, res) {
       }]
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    // Model fallback chain: try best OCR model first, fallback on 429
+    const models = [
+      { name: 'gemini-2.5-flash', config: { generationConfig: { thinkingConfig: { thinkingBudget: 0 } } } },
+      { name: 'gemini-2.0-flash', config: {} },
+    ];
 
-    if (!response.ok) {
+    let response = null;
+    let usedModel = null;
+
+    for (const model of models) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model.name}:generateContent?key=${apiKey}`;
+      const fullPayload = { ...payload, ...model.config };
+
+      console.log(`[scan] Trying model: ${model.name}`);
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fullPayload)
+      });
+
+      if (response.ok) {
+        usedModel = model.name;
+        console.log(`[scan] Success with model: ${model.name}`);
+        break;
+      }
+
+      if (response.status === 429) {
+        console.log(`[scan] Rate limited on ${model.name}, trying next model...`);
+        continue;
+      }
+
+      // Other errors: don't fallback, just fail
       const errorText = await response.text();
-      console.error("Gemini API Error Response:", errorText);
+      console.error(`[scan] ${model.name} error (${response.status}):`, errorText);
       throw new Error(`Error desde Google Gemini (${response.status})`);
+    }
+
+    if (!response || !response.ok) {
+      throw new Error('Todos los modelos de IA están saturados. Intenta en unos minutos.');
     }
 
     const data = await response.json();
 
-    // === DETAILED DEBUG LOGGING ===
+    // Extract the actual text response (not thinking parts)
     const parts = data.candidates?.[0]?.content?.parts || [];
     const finishReason = data.candidates?.[0]?.finishReason;
-    const partsDebug = parts.map((p, i) => ({
-      index: i,
-      hasText: !!p.text,
-      textLength: p.text?.length || 0,
-      thought: !!p.thought,
-      preview: p.text ? p.text.substring(0, 200) : '(no text)'
-    }));
 
-    console.log(`[scan] Gemini response: ${parts.length} parts, finishReason=${finishReason}`);
-    console.log(`[scan] Parts detail:`, JSON.stringify(partsDebug));
+    console.log(`[scan] ${usedModel}: ${parts.length} parts, finishReason=${finishReason}`);
 
-    // Extract the actual text response (not thinking parts)
     let aiText = null;
     // Find the last non-thought part (the actual output)
     for (let i = parts.length - 1; i >= 0; i--) {
@@ -195,7 +213,7 @@ export default async function handler(req, res) {
       throw new Error("La Inteligencia Artificial devolvió una respuesta vacía.");
     }
 
-    console.log("[scan] Selected text (first 500):", aiText.substring(0, 500));
+    console.log("[scan] AI text (first 500):", aiText.substring(0, 500));
 
     // Clean generic Markdown/JSON wrappers
     aiText = aiText.replace(/```json/gi, "").replace(/```/gi, "").trim();
@@ -223,18 +241,12 @@ export default async function handler(req, res) {
       campos_inciertos: Array.isArray(mov.campos_inciertos) ? mov.campos_inciertos : []
     }));
 
-    console.log("[scan] Parsed data:", JSON.stringify(parsedData).substring(0, 500));
+    console.log("[scan] Parsed OK:", JSON.stringify(parsedData).substring(0, 300));
 
     return res.status(200).json({
       success: true,
       data: parsedData,
-      // Include debug info in response so we can see it in browser console
-      _debug: {
-        partsCount: parts.length,
-        finishReason,
-        partsInfo: partsDebug,
-        rawTextPreview: aiText.substring(0, 300)
-      }
+      _debug: { model: usedModel, finishReason }
     });
 
   } catch (error) {
