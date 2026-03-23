@@ -225,23 +225,64 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         <div className="p-6">
           {/* Yunai Avatar — animated based on state */}
           <div className="flex justify-center mb-4">
-            <div className={`relative w-20 h-20 rounded-full overflow-hidden border-3 bg-white transition-all ${
-              isRecording
-                ? 'border-red-400 shadow-lg shadow-red-500/30 animate-pulse'
-                : isProcessing
-                ? 'border-yn-primary-400 shadow-lg shadow-yn-primary-500/20'
-                : 'border-yn-primary-500/30'
+            <div className={`relative yunai-container ${
+              isRecording ? 'yunai-listening' : isProcessing ? 'yunai-thinking' : 'yunai-idle'
             }`}>
-              <img
-                src="/logos/Mascota_Yunai.svg"
-                alt="Yunai"
-                className={`w-full h-full object-cover object-top transition-transform ${
-                  isProcessing ? 'animate-bounce' : ''
-                }`}
-              />
-              {/* Recording pulse ring */}
+              {/* Glow ring behind avatar */}
+              <div className={`absolute inset-[-6px] rounded-full transition-all duration-500 ${
+                isRecording
+                  ? 'bg-red-400/20 yunai-pulse-ring'
+                  : isProcessing
+                  ? 'bg-yn-primary-400/20 yunai-think-ring'
+                  : 'bg-yn-primary-500/0'
+              }`} />
+
+              {/* Avatar circle */}
+              <div className={`relative w-24 h-24 rounded-full overflow-hidden border-3 bg-white transition-all duration-300 ${
+                isRecording
+                  ? 'border-red-400 shadow-xl shadow-red-500/30'
+                  : isProcessing
+                  ? 'border-yn-primary-400 shadow-xl shadow-yn-primary-500/30'
+                  : 'border-yn-primary-500/30 shadow-md'
+              }`}>
+                <img
+                  src="/logos/Mascota_Yunai.svg"
+                  alt="Yunai"
+                  className="w-full h-full object-cover object-top"
+                />
+              </div>
+
+              {/* Recording: floating sound dots */}
               {isRecording && (
-                <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping" />
+                <>
+                  <div className="absolute -left-2 top-1/2 yunai-sound-dot" style={{ animationDelay: '0s' }}>
+                    <div className="w-2 h-2 rounded-full bg-red-400/60" />
+                  </div>
+                  <div className="absolute -left-1 top-1/3 yunai-sound-dot" style={{ animationDelay: '0.3s' }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-400/40" />
+                  </div>
+                  <div className="absolute -right-2 top-1/2 yunai-sound-dot-r" style={{ animationDelay: '0.15s' }}>
+                    <div className="w-2 h-2 rounded-full bg-red-400/60" />
+                  </div>
+                  <div className="absolute -right-1 top-1/3 yunai-sound-dot-r" style={{ animationDelay: '0.45s' }}>
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-400/40" />
+                  </div>
+                </>
+              )}
+
+              {/* Processing: orbiting sparkles */}
+              {isProcessing && (
+                <>
+                  <div className="absolute yunai-orbit" style={{ animationDelay: '0s' }}>
+                    <span className="text-sm">✨</span>
+                  </div>
+                  <div className="absolute yunai-orbit" style={{ animationDelay: '-0.8s' }}>
+                    <span className="text-xs">💡</span>
+                  </div>
+                  <div className="absolute yunai-orbit" style={{ animationDelay: '-1.6s' }}>
+                    <span className="text-sm">✨</span>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -356,11 +397,111 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         </div>
       </div>
 
-      {/* CSS for sound wave animation */}
+      {/* CSS for Yunai animations */}
       <style>{`
+        /* Sound wave bars */
         @keyframes soundwave {
           0% { height: 4px; }
           100% { height: 28px; }
+        }
+
+        /* ═══ IDLE: gentle floating sway ═══ */
+        .yunai-idle {
+          animation: yunaiFloat 3s ease-in-out infinite;
+        }
+        @keyframes yunaiFloat {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          25% { transform: translateY(-4px) rotate(1.5deg); }
+          75% { transform: translateY(-2px) rotate(-1.5deg); }
+        }
+
+        /* ═══ LISTENING: lean forward + vibrate ═══ */
+        .yunai-listening {
+          animation: yunaiListen 0.8s ease-in-out infinite;
+        }
+        @keyframes yunaiListen {
+          0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+          15% { transform: translateY(-2px) rotate(-2deg) scale(1.02); }
+          30% { transform: translateY(0) rotate(1.5deg) scale(1); }
+          50% { transform: translateY(-3px) rotate(0deg) scale(1.03); }
+          70% { transform: translateY(-1px) rotate(-1deg) scale(1.01); }
+          85% { transform: translateY(0) rotate(2deg) scale(1); }
+        }
+
+        /* Pulse ring for recording */
+        .yunai-pulse-ring {
+          animation: yunaiPulseRing 1.5s ease-in-out infinite;
+        }
+        @keyframes yunaiPulseRing {
+          0%, 100% { transform: scale(1); opacity: 0.3; }
+          50% { transform: scale(1.15); opacity: 0.1; }
+        }
+
+        /* Sound dots floating in from sides */
+        .yunai-sound-dot {
+          animation: yunaiSoundL 1.2s ease-in-out infinite;
+        }
+        @keyframes yunaiSoundL {
+          0%, 100% { transform: translateX(0) scale(0.5); opacity: 0; }
+          30% { transform: translateX(-6px) scale(1); opacity: 1; }
+          70% { transform: translateX(-12px) scale(0.8); opacity: 0.5; }
+          100% { transform: translateX(-16px) scale(0.3); opacity: 0; }
+        }
+        .yunai-sound-dot-r {
+          animation: yunaiSoundR 1.2s ease-in-out infinite;
+        }
+        @keyframes yunaiSoundR {
+          0%, 100% { transform: translateX(0) scale(0.5); opacity: 0; }
+          30% { transform: translateX(6px) scale(1); opacity: 1; }
+          70% { transform: translateX(12px) scale(0.8); opacity: 0.5; }
+          100% { transform: translateX(16px) scale(0.3); opacity: 0; }
+        }
+
+        /* ═══ THINKING: wiggle + nod ═══ */
+        .yunai-thinking {
+          animation: yunaiThink 1.5s ease-in-out infinite;
+        }
+        @keyframes yunaiThink {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          20% { transform: translateY(-5px) rotate(-3deg); }
+          40% { transform: translateY(-2px) rotate(3deg); }
+          60% { transform: translateY(-6px) rotate(-2deg); }
+          80% { transform: translateY(-1px) rotate(2deg); }
+        }
+
+        /* Think ring glow pulse */
+        .yunai-think-ring {
+          animation: yunaiThinkRing 2s ease-in-out infinite;
+        }
+        @keyframes yunaiThinkRing {
+          0%, 100% { transform: scale(1); opacity: 0.2; }
+          50% { transform: scale(1.1); opacity: 0.4; }
+        }
+
+        /* Orbiting sparkles around avatar */
+        .yunai-orbit {
+          width: 20px;
+          height: 20px;
+          top: 50%;
+          left: 50%;
+          margin-top: -10px;
+          margin-left: -10px;
+          animation: yunaiOrbit 2.4s linear infinite;
+        }
+        @keyframes yunaiOrbit {
+          0% { transform: rotate(0deg) translateX(52px) rotate(0deg) scale(0.8); opacity: 0.4; }
+          25% { opacity: 1; transform: rotate(90deg) translateX(52px) rotate(-90deg) scale(1); }
+          50% { opacity: 0.6; transform: rotate(180deg) translateX(52px) rotate(-180deg) scale(0.9); }
+          75% { opacity: 1; transform: rotate(270deg) translateX(52px) rotate(-270deg) scale(1.1); }
+          100% { transform: rotate(360deg) translateX(52px) rotate(-360deg) scale(0.8); opacity: 0.4; }
+        }
+
+        /* Container needs relative positioning */
+        .yunai-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
       `}</style>
     </div>
