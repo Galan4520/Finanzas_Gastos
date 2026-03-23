@@ -45,7 +45,7 @@ export default async function handler(req, res) {
       cuentasDescription = cuentasList.map(c => `- "${c}"`).join('\n');
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const promptText =
       "Eres Yunai, un asistente OCR financiero experto para tickets/boletas/recibos peruanos.\n\n" +

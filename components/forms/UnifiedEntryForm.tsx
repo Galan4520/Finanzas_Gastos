@@ -400,6 +400,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   // Handler for voice/scan AI extraction result (accepts single or array)
   const handleYunaiResult = (data: YunaiExtractionResult | YunaiExtractionResult[]) => {
     setShowVoiceRecorder(false);
+    setShowCamera(false);
     // Normalize to array
     const items = Array.isArray(data) ? data : [data];
     setYunaiExtraction(items);
@@ -1062,7 +1063,10 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         <CameraCapture
           isOpen={showCamera}
           onCapture={handleCameraCapture}
-          onClose={() => setShowCamera(false)}
+          onClose={() => {
+            setShowCamera(false);
+            if (!yunaiExtraction) setSelectedMethod(null);
+          }}
         />
 
         {/* Scan Result Summary Modal (legacy fallback) */}
