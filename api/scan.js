@@ -146,11 +146,10 @@ export default async function handler(req, res) {
           }
         ]
       }],
-      // Disable thinking — OCR doesn't need reasoning, and thinking tokens
-      // end up in parts[0] which breaks our JSON extraction from the response
+      // Allow thinking (improves OCR quality) — our parser handles thought parts correctly
       generationConfig: {
         thinkingConfig: {
-          thinkingBudget: 0
+          thinkingBudget: 1024
         }
       }
     };
