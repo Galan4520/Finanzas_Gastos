@@ -32,6 +32,8 @@ export default async function handler(req, res) {
     const cleanBase64 = image.includes('base64,') ? image.split('base64,')[1] : image;
     const today = new Date().toISOString().split('T')[0];
 
+    console.log(`[scan] Image received: ${(cleanBase64.length / 1024).toFixed(0)}KB base64, cuentas: ${(cuentas || []).length}`);
+
     // Build detailed cuentas description (supports both legacy string array and new object array)
     const cuentasList = cuentas || [{ alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo' }];
     let cuentasDescription = '';
@@ -167,9 +169,21 @@ export default async function handler(req, res) {
 
     const data = await response.json();
 
-    // Extract the actual text response (not thinking parts)
-    // Gemini 2.5 Flash returns thinking in parts[0] and output in later parts
+    // === DETAILED DEBUG LOGGING ===
     const parts = data.candidates?.[0]?.content?.parts || [];
+    const finishReason = data.candidates?.[0]?.finishReason;
+    const partsDebug = parts.map((p, i) => ({
+      index: i,
+      hasText: !!p.text,
+      textLength: p.text?.length || 0,
+      thought: !!p.thought,
+      preview: p.text ? p.text.substring(0, 200) : '(no text)'
+    }));
+
+    console.log(`[scan] Gemini response: ${parts.length} parts, finishReason=${finishReason}`);
+    console.log(`[scan] Parts detail:`, JSON.stringify(partsDebug));
+
+    // Extract the actual text response (not thinking parts)
     let aiText = null;
     // Find the last non-thought part (the actual output)
     for (let i = parts.length - 1; i >= 0; i--) {
@@ -184,11 +198,11 @@ export default async function handler(req, res) {
     }
 
     if (!aiText) {
-      console.error("Gemini response structure:", JSON.stringify(data.candidates?.[0]?.content, null, 2));
+      console.error("[scan] Empty response! Full structure:", JSON.stringify(data, null, 2).substring(0, 2000));
       throw new Error("La Inteligencia Artificial devolvió una respuesta vacía.");
     }
 
-    console.log("Gemini raw output (first 500 chars):", aiText.substring(0, 500));
+    console.log("[scan] Selected text (first 500):", aiText.substring(0, 500));
 
     // Clean generic Markdown/JSON wrappers
     aiText = aiText.replace(/```json/gi, "").replace(/```/gi, "").trim();
@@ -216,9 +230,18 @@ export default async function handler(req, res) {
       campos_inciertos: Array.isArray(mov.campos_inciertos) ? mov.campos_inciertos : []
     }));
 
+    console.log("[scan] Parsed data:", JSON.stringify(parsedData).substring(0, 500));
+
     return res.status(200).json({
       success: true,
-      data: parsedData
+      data: parsedData,
+      // Include debug info in response so we can see it in browser console
+      _debug: {
+        partsCount: parts.length,
+        finishReason,
+        partsInfo: partsDebug,
+        rawTextPreview: aiText.substring(0, 300)
+      }
     });
 
   } catch (error) {

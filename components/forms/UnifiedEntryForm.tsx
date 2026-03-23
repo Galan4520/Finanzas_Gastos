@@ -333,10 +333,13 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         })),
       ];
       const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean, cuentasDetalladas);
-      console.log('✅ [handleCameraCapture] Respuesta de IA recibida:', result);
+      console.log('✅ [handleCameraCapture] Respuesta COMPLETA de IA:', JSON.stringify(result, null, 2));
+      if (result._debug) {
+        console.log('🔍 [handleCameraCapture] DEBUG info:', JSON.stringify(result._debug, null, 2));
+      }
 
       if (result.success && result.data) {
-        console.log('✅ [handleCameraCapture] Mostrando confirmación Yunai...');
+        console.log('✅ [handleCameraCapture] Data items:', JSON.stringify(result.data));
         // API now returns array — use YunaiConfirmation
         const items = Array.isArray(result.data) ? result.data : [result.data];
         if (items.length > 0 && items[0].campos_inciertos !== undefined) {
