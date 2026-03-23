@@ -48,44 +48,73 @@ export default async function handler(req, res) {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const promptText =
-      "TAREA: Analiza esta imagen de ticket/boleta/recibo y extrae los datos financieros.\n\n" +
+      "Eres Yunai, un asistente OCR financiero experto para tickets/boletas/recibos peruanos.\n\n" +
 
-      "PASO 1 — LEE TODO EL TEXTO DE LA IMAGEN:\n" +
-      "Primero, lee cuidadosamente TODA la imagen. Busca:\n" +
-      "- Nombre del establecimiento/tienda (arriba del ticket)\n" +
-      "- RUC (número de 11 dígitos)\n" +
-      "- Fecha (formato DD/MM/YYYY o similar)\n" +
-      "- Lista de productos/items comprados\n" +
-      "- Subtotal, IGV/impuestos\n" +
-      "- TOTAL o IMPORTE TOTAL (el monto final más grande)\n" +
-      "- Método de pago (efectivo, tarjeta, Yape, Plin)\n" +
-      "- Número de cuotas si aplica\n\n" +
+      "═══ CUENTAS Y TARJETAS DEL USUARIO ═══\n" +
+      cuentasDescription + "\n\n" +
 
-      "PASO 2 — EXTRAE LOS CAMPOS:\n\n" +
-
-      "tipo: 'gasto' (compras/pagos), 'ingreso' (depósitos/abonos), o 'tarjeta' (crédito/cuotas). Default: 'gasto'\n" +
-      "monto: El TOTAL final (después de IGV). Número con punto decimal (ej: 45.50). Si no lo encuentras: null\n" +
-      "fecha: Formato YYYY-MM-DD. Si no encuentras fecha, usa: " + today + "\n" +
-      "descripcion: 'NOMBRE_TIENDA - productos principales' (máx 60 chars)\n" +
-      "categoria: EXACTAMENTE una de: '🍕 Alimentación', '🚗 Transporte', '💊 Salud', '🎮 Entretenimiento', '💡 Servicios', '👕 Ropa', '🏠 Vivienda', '📚 Educación', '💅 Cuidado Personal', '📱 Tecnología', '🎁 Regalos', '✈️ Viajes', '🐕 Mascotas', '💳 Otros'\n" +
-      "num_cuotas: Número de cuotas (default: 1)\n" +
-      "notas: Detalles extra o vacío\n" +
-      "tipo_gasto: 'deuda' (default)\n\n" +
-
-      "PASO 3 — ASIGNA CUENTA:\n" +
-      "Cuentas del usuario:\n" + cuentasDescription + "\n\n" +
-      "- Si el voucher muestra un banco, busca la tarjeta correspondiente\n" +
+      "REGLAS PARA CUENTA:\n" +
+      "- Si ves nombre de banco en el voucher, busca la tarjeta que corresponda\n" +
+      "- Si es un ingreso/depósito → SOLO tarjetas de DÉBITO o Billetera\n" +
+      "- Si ves cuotas → SOLO tarjetas de CRÉDITO\n" +
       "- Si dice Yape/Plin → busca la tarjeta del banco de Yape/Plin del usuario\n" +
-      "- Si ves cuotas → solo tarjetas de CRÉDITO\n" +
-      "- El valor DEBE ser exactamente un alias de la lista. Si no puedes inferir: null\n" +
-      "- Si es gasto y monto > saldo de la cuenta → agregar a campos_inciertos\n\n" +
+      "- El valor de 'cuenta' DEBE ser EXACTAMENTE el alias de la lista\n" +
+      "- Si no puedes inferir, cuenta = null y agregar a campos_inciertos\n\n" +
 
-      "PASO 4 — CAMPOS INCIERTOS:\n" +
-      "Si no estás seguro de un campo, agrega un objeto a campos_inciertos con:\n" +
-      "{ campo, valor_sugerido, opciones: [...], pregunta: '...' }\n" +
-      "Pregunta en tono peruano amigable (usa 'causa', 'pata')\n\n" +
+      "VALIDACIÓN DE SALDO:\n" +
+      "- Cada cuenta tiene un SALDO mostrado arriba. REVÍSALO.\n" +
+      "- Si es un GASTO y el monto > saldo de la cuenta inferida:\n" +
+      "  → Agrega 'cuenta' a campos_inciertos\n" +
+      "  → En 'pregunta': 'Causa, tu [cuenta] solo tiene S/X.XX, ¿seguro pagaste de ahí?'\n" +
+      "  → En 'opciones': la cuenta inferida + cuentas con saldo suficiente\n" +
+      "- Si es ingreso, no validar saldo\n\n" +
 
-      "RESPONDE CON ESTE JSON:\n" +
+      "INSTRUCCIONES CRÍTICAS:\n\n" +
+
+      "1. TIPO (campo 'tipo'):\n" +
+      "   - 'gasto' — Compras, pagos, servicios (la mayoría de boletas)\n" +
+      "   - 'ingreso' — Depósitos, transferencias recibidas, vouchers de abono\n" +
+      "   - 'tarjeta' — Si ves cuotas, crédito, o estado de cuenta de tarjeta\n" +
+      "   - Si no estás seguro, usa 'gasto' y agrégalo a campos_inciertos\n\n" +
+
+      "2. MONTO (campo 'monto'):\n" +
+      "   - Busca: 'TOTAL', 'IMPORTE TOTAL', 'TOTAL A PAGAR', 'MONTO TOTAL'\n" +
+      "   - Es el ÚLTIMO monto grande del ticket (después de impuestos/IGV)\n" +
+      "   - Formato: número decimal con punto (ej: 45.50)\n" +
+      "   - Si no encuentras el total, usa null\n\n" +
+
+      "3. FECHA (campo 'fecha'):\n" +
+      "   - Busca: 'FECHA', 'DATE', 'FECHA DE EMISIÓN'\n" +
+      "   - Formato OBLIGATORIO: YYYY-MM-DD\n" +
+      "   - Si NO encuentras la fecha, usa hoy: " + today + "\n\n" +
+
+      "4. CATEGORIA (campo 'categoria'):\n" +
+      "   - Lee el NOMBRE del establecimiento para determinar la categoría\n" +
+      "   - DEBE ser EXACTAMENTE una de estas (con emoji):\n" +
+      "     '🍕 Alimentación', '🚗 Transporte', '💊 Salud', '🎮 Entretenimiento',\n" +
+      "     '💡 Servicios', '👕 Ropa', '🏠 Vivienda', '📚 Educación',\n" +
+      "     '💅 Cuidado Personal', '📱 Tecnología', '🎁 Regalos', '✈️ Viajes',\n" +
+      "     '🐕 Mascotas', '💳 Otros'\n" +
+      "   - Si no estás seguro, usa '💳 Otros'\n\n" +
+
+      "5. DESCRIPCION (campo 'descripcion'):\n" +
+      "   - Formato: 'NOMBRE_TIENDA - productos'\n" +
+      "   - Máximo 60 caracteres\n\n" +
+
+      "6. CUENTA (campo 'cuenta'):\n" +
+      "   - Si ves nombre de banco/tarjeta en el voucher, asócialo con las cuentas del usuario\n" +
+      "   - Si no puedes inferir, usa null y agrégalo a campos_inciertos\n\n" +
+
+      "7. CUOTAS (campo 'num_cuotas'):\n" +
+      "   - Si ves 'CUOTAS', 'NRO CUOTAS', extraer el número\n" +
+      "   - Si no hay cuotas, usar 1\n\n" +
+
+      "8. CAMPOS_INCIERTOS:\n" +
+      "   - Si NO estás seguro de algún campo, agrégalo al array\n" +
+      "   - Cada campo incierto debe tener: campo, valor_sugerido, opciones[], pregunta\n" +
+      "   - La pregunta debe ser en tono peruano amigable (usa 'causa', 'pata', etc.)\n\n" +
+
+      "FORMATO DE SALIDA (solo JSON, sin markdown):\n" +
       '{\n' +
       '  "tipo": "gasto",\n' +
       '  "monto": 45.50,\n' +
@@ -97,8 +126,11 @@ export default async function handler(req, res) {
       '  "num_cuotas": 1,\n' +
       '  "tipo_gasto": "deuda",\n' +
       '  "confianza": 0.85,\n' +
-      '  "campos_inciertos": []\n' +
-      '}';
+      '  "campos_inciertos": [\n' +
+      '    { "campo": "cuenta", "valor_sugerido": null, "opciones": ["Billetera", "Visa BCP"], "pregunta": "¿De qué cuenta salieron estos S/45.50, causa?" }\n' +
+      '  ]\n' +
+      '}\n\n' +
+      "RESPONDE AHORA CON EL JSON:";
 
     const payload = {
       contents: [{
@@ -111,12 +143,7 @@ export default async function handler(req, res) {
             }
           }
         ]
-      }],
-      generationConfig: {
-        temperature: 0.1,
-        topP: 0.8,
-        responseMimeType: "application/json"
-      }
+      }]
     };
 
     const response = await fetch(url, {
