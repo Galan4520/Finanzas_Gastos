@@ -157,19 +157,30 @@ export default async function handler(req, res) {
 
     // Clean generic Markdown/JSON wrappers
     aiText = aiText.replace(/```json/gi, "").replace(/```/gi, "").trim();
+
+    // Try array first (multi-movement), then single object
+    const arrayMatch = aiText.match(/\[[\s\S]*\]/);
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
+
+    if (arrayMatch) {
+      aiText = arrayMatch[0];
+    } else if (jsonMatch) {
       aiText = jsonMatch[0];
     }
 
-    const parsedData = JSON.parse(aiText);
+    let parsedData = JSON.parse(aiText);
 
-    // Ensure campos_inciertos is always an array
-    if (!Array.isArray(parsedData.campos_inciertos)) {
-      parsedData.campos_inciertos = [];
+    // Normalize: always return an array
+    if (!Array.isArray(parsedData)) {
+      parsedData = [parsedData];
     }
 
-    // Backward compat: also include legacy fields for ScanResultSummary
+    // Ensure each movement has campos_inciertos as array
+    parsedData = parsedData.map(mov => ({
+      ...mov,
+      campos_inciertos: Array.isArray(mov.campos_inciertos) ? mov.campos_inciertos : []
+    }));
+
     return res.status(200).json({
       success: true,
       data: parsedData

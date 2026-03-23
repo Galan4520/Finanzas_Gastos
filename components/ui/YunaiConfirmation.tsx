@@ -1,28 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Edit3, X, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Check, Edit3, X, AlertTriangle, ChevronDown, ChevronUp, Wallet, TrendingUp, CreditCard } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { YunaiExtractionResult, CampoIncierto } from '../../types';
 
 interface YunaiConfirmationProps {
   isOpen: boolean;
-  data: YunaiExtractionResult;
+  data: YunaiExtractionResult[];
   availableAccounts: string[];
-  onConfirm: (finalData: YunaiExtractionResult) => void;
+  onConfirm: (selectedItems: YunaiExtractionResult[]) => void;
   onEdit: (prefillData: YunaiExtractionResult) => void;
   onClose: () => void;
 }
-
-const FIELD_LABELS: Record<string, string> = {
-  tipo: 'Tipo',
-  monto: 'Monto',
-  descripcion: 'Descripción',
-  categoria: 'Categoría',
-  cuenta: 'Cuenta',
-  fecha: 'Fecha',
-  notas: 'Notas',
-  num_cuotas: 'Cuotas',
-  tipo_gasto: 'Tipo de gasto',
-};
 
 const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
   isOpen,
@@ -33,8 +21,14 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
   onClose,
 }) => {
   const { theme } = useTheme();
-  const [resolvedData, setResolvedData] = useState<YunaiExtractionResult>(data);
-  const [unresolvedFields, setUnresolvedFields] = useState<Set<string>>(new Set());
+  // Track selected items (checked) by index
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Track resolved data per item (for resolving uncertain fields)
+  const [resolvedItems, setResolvedItems] = useState<YunaiExtractionResult[]>([]);
+  // Track unresolved fields per item
+  const [unresolvedByItem, setUnresolvedByItem] = useState<Set<string>[]>([]);
+  // Track expanded item for detail/resolution
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -44,47 +38,73 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
     }
   }, [isOpen]);
 
+  // Initialize state when data changes
   useEffect(() => {
-    if (data) {
-      setResolvedData({ ...data });
-      const unresolved = new Set<string>();
-      (data.campos_inciertos || []).forEach(ci => unresolved.add(ci.campo));
-      // Also mark cuenta as unresolved if null
-      if (!data.cuenta) unresolved.add('cuenta');
-      setUnresolvedFields(unresolved);
+    if (data && data.length > 0) {
+      // Select all by default
+      setSelected(new Set(data.map((_, i) => i)));
+      setResolvedItems(data.map(d => ({ ...d })));
+
+      const unresolvedSets = data.map(d => {
+        const unresolved = new Set<string>();
+        (d.campos_inciertos || []).forEach(ci => unresolved.add(ci.campo));
+        if (!d.cuenta) unresolved.add('cuenta');
+        return unresolved;
+      });
+      setUnresolvedByItem(unresolvedSets);
+
+      // Auto-expand the first item with unresolved fields, or none
+      const firstUnresolved = unresolvedSets.findIndex(s => s.size > 0);
+      setExpandedIdx(firstUnresolved >= 0 ? firstUnresolved : null);
     }
   }, [data]);
 
-  const resolveField = (campo: string, value: string | number) => {
-    setResolvedData(prev => ({ ...prev, [campo]: value }));
-    setUnresolvedFields(prev => {
+  const toggleSelect = (idx: number) => {
+    setSelected(prev => {
       const next = new Set(prev);
-      next.delete(campo);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
       return next;
     });
   };
 
-  const allResolved = unresolvedFields.size === 0;
-
-  const getConfidenceColor = (confianza: number) => {
-    if (confianza >= 0.8) return 'text-green-600 bg-green-50 dark:bg-green-900/20';
-    if (confianza >= 0.5) return 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20';
-    return 'text-red-600 bg-red-50 dark:bg-red-900/20';
+  const resolveField = (itemIdx: number, campo: string, value: string | number) => {
+    setResolvedItems(prev => {
+      const next = [...prev];
+      next[itemIdx] = { ...next[itemIdx], [campo]: value };
+      return next;
+    });
+    setUnresolvedByItem(prev => {
+      const next = [...prev];
+      const s = new Set(next[itemIdx]);
+      s.delete(campo);
+      next[itemIdx] = s;
+      return next;
+    });
   };
 
-  const getTipoLabel = (tipo: string) => {
+  // Check if all selected items have resolved fields
+  const allSelectedResolved = [...selected].every(idx =>
+    !unresolvedByItem[idx] || unresolvedByItem[idx].size === 0
+  );
+
+  const selectedCount = selected.size;
+
+  const getTipoConfig = (tipo: string) => {
     switch (tipo) {
-      case 'gasto': return 'Gasto';
-      case 'ingreso': return 'Ingreso';
-      case 'tarjeta': return 'Tarjeta (Crédito)';
-      default: return tipo;
+      case 'gasto': return { label: 'Gasto', icon: Wallet, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' };
+      case 'ingreso': return { label: 'Ingreso', icon: TrendingUp, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' };
+      case 'tarjeta': return { label: 'Tarjeta', icon: CreditCard, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' };
+      default: return { label: tipo, icon: Wallet, color: 'text-gray-600', bg: 'bg-gray-50' };
     }
   };
 
-  if (!isOpen || !data) return null;
+  const handleConfirm = () => {
+    const selectedItems = [...selected].map(idx => resolvedItems[idx]);
+    onConfirm(selectedItems);
+  };
 
-  const uncertainMap = new Map<string, CampoIncierto>();
-  (data.campos_inciertos || []).forEach(ci => uncertainMap.set(ci.campo, ci));
+  if (!isOpen || !data || data.length === 0) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -101,10 +121,12 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                 <img src="/logos/Mascota_Yunai.svg" alt="Yunai" className="w-full h-full object-cover object-top" />
               </div>
               <div>
-                <h3 className="text-white font-bold text-base">Yunai entendió esto</h3>
-                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${getConfidenceColor(resolvedData.confianza)}`}>
-                  {Math.round(resolvedData.confianza * 100)}% seguro
-                </div>
+                <h3 className="text-white font-bold text-base">
+                  {data.length === 1 ? 'Yunai detectó 1 movimiento' : `Yunai detectó ${data.length} movimientos`}
+                </h3>
+                <p className="text-white/70 text-xs">
+                  {data.length > 1 ? 'Marca los que quieras registrar' : 'Revisa y confirma'}
+                </p>
               </div>
             </div>
             <button onClick={onClose} className="text-white/70 hover:text-white">
@@ -113,182 +135,218 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
           </div>
         </div>
 
-        {/* Yunai question if uncertain */}
-        {data.campos_inciertos.length > 0 && unresolvedFields.size > 0 && (
-          <div className="mx-4 mt-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-3 flex items-start gap-2">
-            <AlertTriangle size={16} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              {data.campos_inciertos.find(ci => unresolvedFields.has(ci.campo))?.pregunta ||
-                'Hay campos que necesito que confirmes'}
-            </p>
-          </div>
-        )}
-
-        {/* Fields */}
+        {/* Movement List */}
         <div className="p-4 space-y-3">
-          {/* Tipo */}
-          <FieldRow
-            label="Tipo"
-            value={getTipoLabel(resolvedData.tipo)}
-            uncertain={uncertainMap.get('tipo')}
-            isUnresolved={unresolvedFields.has('tipo')}
-            onResolve={(val) => resolveField('tipo', val)}
-            theme={theme}
-          />
+          {resolvedItems.map((item, idx) => {
+            const tipoConfig = getTipoConfig(item.tipo);
+            const TipoIcon = tipoConfig.icon;
+            const isSelected = selected.has(idx);
+            const isExpanded = expandedIdx === idx;
+            const hasUnresolved = unresolvedByItem[idx]?.size > 0;
+            const uncertainMap = new Map<string, CampoIncierto>();
+            (data[idx]?.campos_inciertos || []).forEach(ci => uncertainMap.set(ci.campo, ci));
 
-          {/* Monto */}
-          <div className={`flex items-center justify-between p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-            <span className={`text-sm font-medium ${theme.colors.textMuted}`}>Monto</span>
-            <span className={`text-lg font-bold ${theme.colors.textPrimary}`}>
-              S/ {resolvedData.monto?.toFixed(2) || '0.00'}
-            </span>
-          </div>
-
-          {/* Descripcion */}
-          <FieldRow
-            label="Descripción"
-            value={resolvedData.descripcion}
-            theme={theme}
-          />
-
-          {/* Categoria */}
-          <FieldRow
-            label="Categoría"
-            value={resolvedData.categoria}
-            uncertain={uncertainMap.get('categoria')}
-            isUnresolved={unresolvedFields.has('categoria')}
-            onResolve={(val) => resolveField('categoria', val)}
-            theme={theme}
-          />
-
-          {/* Cuenta — use AI-filtered options from campos_inciertos first, fallback to all accounts */}
-          {unresolvedFields.has('cuenta') ? (
-            <div className={`p-3 rounded-xl border-2 border-yellow-400 dark:border-yellow-600 ${theme.colors.bgSecondary}`}>
-              <span className={`text-sm font-medium ${theme.colors.textMuted} block mb-2`}>
-                {uncertainMap.get('cuenta')?.pregunta || 'Cuenta *'}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {/* Use AI-filtered options if available, otherwise fallback to all accounts */}
-                {(uncertainMap.get('cuenta')?.opciones?.length
-                  ? uncertainMap.get('cuenta')!.opciones
-                  : availableAccounts
-                ).map(acc => (
+            return (
+              <div
+                key={idx}
+                className={`rounded-2xl border-2 transition-all ${
+                  isSelected
+                    ? hasUnresolved
+                      ? 'border-yellow-400 dark:border-yellow-600'
+                      : 'border-yn-primary-500 dark:border-yn-primary-400'
+                    : `${theme.colors.border} opacity-50`
+                }`}
+              >
+                {/* Compact Row */}
+                <div
+                  className={`flex items-center gap-3 p-3 cursor-pointer ${theme.colors.bgSecondary} rounded-t-2xl ${!isExpanded ? 'rounded-b-2xl' : ''}`}
+                  onClick={() => setExpandedIdx(isExpanded ? null : idx)}
+                >
+                  {/* Checkbox */}
                   <button
-                    key={acc}
-                    onClick={() => resolveField('cuenta', acc)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                      acc === uncertainMap.get('cuenta')?.valor_sugerido
-                        ? 'bg-yn-primary-500/20 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/40'
-                        : 'bg-yn-primary-500/10 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/20'
-                    } hover:bg-yn-primary-500/20`}
+                    onClick={(e) => { e.stopPropagation(); toggleSelect(idx); }}
+                    className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                      isSelected
+                        ? 'bg-yn-primary-500 border-yn-primary-500 text-white'
+                        : `${theme.colors.border} border-yn-neutral-300 dark:border-yn-neutral-600`
+                    }`}
                   >
-                    {acc}
-                    {acc === uncertainMap.get('cuenta')?.valor_sugerido && ' (sugerido)'}
+                    {isSelected && <Check size={14} />}
                   </button>
-                ))}
+
+                  {/* Type icon */}
+                  <div className={`w-8 h-8 rounded-lg ${tipoConfig.bg} flex items-center justify-center flex-shrink-0`}>
+                    <TipoIcon size={16} className={tipoConfig.color} />
+                  </div>
+
+                  {/* Description + category */}
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold ${theme.colors.textPrimary} truncate`}>
+                      {item.descripcion || 'Sin descripción'}
+                    </p>
+                    <p className={`text-xs ${theme.colors.textMuted} truncate`}>
+                      {item.categoria} {item.cuenta ? `· ${item.cuenta}` : ''}
+                    </p>
+                  </div>
+
+                  {/* Amount + expand */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`text-base font-bold ${
+                      item.tipo === 'ingreso' ? 'text-green-600 dark:text-green-400' : theme.colors.textPrimary
+                    }`}>
+                      {item.tipo === 'ingreso' ? '+' : '-'}S/{item.monto?.toFixed(2)}
+                    </span>
+                    {hasUnresolved && (
+                      <AlertTriangle size={14} className="text-yellow-500 flex-shrink-0" />
+                    )}
+                    {isExpanded ? <ChevronUp size={16} className={theme.colors.textMuted} /> : <ChevronDown size={16} className={theme.colors.textMuted} />}
+                  </div>
+                </div>
+
+                {/* Expanded Detail */}
+                {isExpanded && (
+                  <div className={`px-4 pb-4 pt-2 space-y-2 border-t ${theme.colors.border}`}>
+                    {/* Unresolved fields alert */}
+                    {hasUnresolved && (
+                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-2.5 flex items-start gap-2">
+                        <AlertTriangle size={14} className="text-yellow-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                          {data[idx]?.campos_inciertos?.find(ci => unresolvedByItem[idx]?.has(ci.campo))?.pregunta ||
+                            'Hay campos que necesitan tu confirmación'}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Detail fields */}
+                    <DetailField label="Tipo" value={tipoConfig.label} theme={theme} />
+                    <DetailField label="Monto" value={`S/ ${item.monto?.toFixed(2)}`} theme={theme} bold />
+                    <DetailField label="Fecha" value={item.fecha} theme={theme} />
+
+                    {/* Cuenta — with resolution if needed */}
+                    {unresolvedByItem[idx]?.has('cuenta') ? (
+                      <div className="space-y-1.5">
+                        <span className={`text-xs font-medium ${theme.colors.textMuted}`}>
+                          {uncertainMap.get('cuenta')?.pregunta || 'Cuenta *'}
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(uncertainMap.get('cuenta')?.opciones?.length
+                            ? uncertainMap.get('cuenta')!.opciones
+                            : availableAccounts
+                          ).map(acc => (
+                            <button
+                              key={acc}
+                              onClick={() => resolveField(idx, 'cuenta', acc)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+                                acc === uncertainMap.get('cuenta')?.valor_sugerido
+                                  ? 'bg-yn-primary-500/20 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/40'
+                                  : 'bg-yn-neutral-100 dark:bg-yn-neutral-700 text-yn-neutral-600 dark:text-yn-neutral-300 border-yn-neutral-200 dark:border-yn-neutral-600'
+                              } hover:bg-yn-primary-500/20`}
+                            >
+                              {acc}
+                              {acc === uncertainMap.get('cuenta')?.valor_sugerido && ' *'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <DetailField label="Cuenta" value={item.cuenta || 'Sin asignar'} theme={theme} />
+                    )}
+
+                    {/* Other uncertain fields */}
+                    {[...uncertainMap.entries()]
+                      .filter(([campo]) => campo !== 'cuenta' && unresolvedByItem[idx]?.has(campo))
+                      .map(([campo, ci]) => (
+                        <div key={campo} className="space-y-1.5">
+                          <span className={`text-xs font-medium ${theme.colors.textMuted}`}>{ci.pregunta || campo}</span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {ci.opciones.map(opt => (
+                              <button
+                                key={opt}
+                                onClick={() => resolveField(idx, campo, campo === 'num_cuotas' ? Number(opt) : opt)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+                                  opt === ci.valor_sugerido
+                                    ? 'bg-yn-primary-500/20 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/40'
+                                    : 'bg-yn-neutral-100 dark:bg-yn-neutral-700 text-yn-neutral-600 dark:text-yn-neutral-300 border-yn-neutral-200 dark:border-yn-neutral-600'
+                                } hover:bg-yn-primary-500/20`}
+                              >
+                                {opt}
+                                {opt === ci.valor_sugerido && ' *'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))
+                    }
+
+                    {(item.num_cuotas > 1) && (
+                      <DetailField label="Cuotas" value={`${item.num_cuotas} cuotas`} theme={theme} />
+                    )}
+
+                    {item.notas && <DetailField label="Notas" value={item.notas} theme={theme} />}
+
+                    {/* Edit single item */}
+                    <button
+                      onClick={() => onEdit(resolvedItems[idx])}
+                      className={`w-full mt-2 py-2 rounded-xl text-xs font-semibold ${theme.colors.bgSecondary} ${theme.colors.textSecondary} flex items-center justify-center gap-1.5`}
+                    >
+                      <Edit3 size={12} />
+                      Editar este manualmente
+                    </button>
+                  </div>
+                )}
               </div>
+            );
+          })}
+        </div>
+
+        {/* Summary + Actions */}
+        <div className={`sticky bottom-0 p-4 border-t ${theme.colors.border} bg-inherit`}>
+          {/* Summary */}
+          {selectedCount > 0 && (
+            <div className={`flex items-center justify-between mb-3 text-sm ${theme.colors.textMuted}`}>
+              <span>{selectedCount} de {data.length} seleccionado{selectedCount !== 1 ? 's' : ''}</span>
+              <span className={`font-bold ${theme.colors.textPrimary}`}>
+                Total: S/ {[...selected].reduce((sum, idx) => {
+                  const item = resolvedItems[idx];
+                  return sum + (item.tipo === 'ingreso' ? item.monto : -item.monto);
+                }, 0).toFixed(2)}
+              </span>
             </div>
-          ) : (
-            <FieldRow
-              label="Cuenta"
-              value={resolvedData.cuenta || 'Sin asignar'}
-              theme={theme}
-            />
           )}
 
-          {/* Fecha */}
-          <FieldRow label="Fecha" value={resolvedData.fecha} theme={theme} />
-
-          {/* Cuotas (only if > 1 or tipo is tarjeta) */}
-          {(resolvedData.num_cuotas > 1 || resolvedData.tipo === 'tarjeta') && (
-            <FieldRow
-              label="Cuotas"
-              value={resolvedData.num_cuotas > 1 ? `${resolvedData.num_cuotas} cuotas` : 'Sin cuotas'}
-              uncertain={uncertainMap.get('num_cuotas')}
-              isUnresolved={unresolvedFields.has('num_cuotas')}
-              onResolve={(val) => resolveField('num_cuotas', Number(val))}
-              theme={theme}
-            />
-          )}
-
-          {/* Notas (if any) */}
-          {resolvedData.notas && (
-            <FieldRow label="Notas" value={resolvedData.notas} theme={theme} />
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="sticky bottom-0 p-4 border-t border-yn-neutral-100 dark:border-yn-neutral-700 bg-inherit">
-          <div className="flex gap-3">
-            <button
-              onClick={() => onEdit(resolvedData)}
-              className={`flex-1 py-3 rounded-xl font-semibold text-sm ${theme.colors.bgSecondary} ${theme.colors.textSecondary} flex items-center justify-center gap-2`}
-            >
-              <Edit3 size={16} />
-              Editar manual
-            </button>
-            <button
-              onClick={() => allResolved && onConfirm(resolvedData)}
-              disabled={!allResolved}
-              className={`flex-1 py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${
-                allResolved
-                  ? 'bg-yn-primary-500 text-white hover:bg-yn-primary-600 shadow-md'
-                  : 'bg-yn-neutral-200 dark:bg-yn-neutral-700 text-yn-neutral-400 cursor-not-allowed'
-              }`}
-            >
-              <Check size={16} />
-              Confirmar
-            </button>
-          </div>
+          <button
+            onClick={handleConfirm}
+            disabled={selectedCount === 0 || !allSelectedResolved}
+            className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all ${
+              selectedCount > 0 && allSelectedResolved
+                ? 'bg-yn-primary-500 text-white hover:bg-yn-primary-600 shadow-md'
+                : 'bg-yn-neutral-200 dark:bg-yn-neutral-700 text-yn-neutral-400 cursor-not-allowed'
+            }`}
+          >
+            <Check size={16} />
+            {selectedCount === 0
+              ? 'Selecciona al menos uno'
+              : !allSelectedResolved
+              ? 'Resuelve los campos pendientes'
+              : selectedCount === 1
+              ? 'Confirmar movimiento'
+              : `Confirmar ${selectedCount} movimientos`
+            }
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-// Sub-component for each field row
-interface FieldRowProps {
-  label: string;
-  value: string | number;
-  uncertain?: CampoIncierto;
-  isUnresolved?: boolean;
-  onResolve?: (value: string) => void;
-  theme: any;
-}
-
-const FieldRow: React.FC<FieldRowProps> = ({ label, value, uncertain, isUnresolved, onResolve, theme }) => {
-  if (isUnresolved && uncertain && onResolve) {
-    return (
-      <div className={`p-3 rounded-xl border-2 border-yellow-400 dark:border-yellow-600 ${theme.colors.bgSecondary}`}>
-        <span className={`text-sm font-medium ${theme.colors.textMuted} block mb-2`}>{label} *</span>
-        <div className="flex flex-wrap gap-2">
-          {uncertain.opciones.map(opt => (
-            <button
-              key={opt}
-              onClick={() => onResolve(opt)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors border ${
-                opt === uncertain.valor_sugerido
-                  ? 'bg-yn-primary-500/20 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/40'
-                  : 'bg-yn-neutral-100 dark:bg-yn-neutral-700 text-yn-neutral-600 dark:text-yn-neutral-300 border-yn-neutral-200 dark:border-yn-neutral-600'
-              } hover:bg-yn-primary-500/20`}
-            >
-              {opt}
-              {opt === uncertain.valor_sugerido && ' (sugerido)'}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={`flex items-center justify-between p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-      <span className={`text-sm font-medium ${theme.colors.textMuted}`}>{label}</span>
-      <span className={`text-sm font-semibold ${theme.colors.textPrimary} text-right max-w-[60%] truncate`}>
-        {value}
-      </span>
-    </div>
-  );
-};
+// Simple detail field
+const DetailField: React.FC<{ label: string; value: string; theme: any; bold?: boolean }> = ({ label, value, theme, bold }) => (
+  <div className="flex items-center justify-between">
+    <span className={`text-xs ${theme.colors.textMuted}`}>{label}</span>
+    <span className={`text-xs ${bold ? 'font-bold' : 'font-medium'} ${theme.colors.textPrimary} text-right max-w-[65%] truncate`}>
+      {value}
+    </span>
+  </div>
+);
 
 export default YunaiConfirmation;

@@ -55,7 +55,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   const [showCamera, setShowCamera] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showYunaiConfirmation, setShowYunaiConfirmation] = useState(false);
-  const [yunaiExtraction, setYunaiExtraction] = useState<YunaiExtractionResult | null>(null);
+  const [yunaiExtraction, setYunaiExtraction] = useState<YunaiExtractionResult[] | null>(null);
 
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
@@ -336,12 +336,13 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
       if (result.success && result.data) {
         console.log('✅ [handleCameraCapture] Mostrando confirmación Yunai...');
-        // If the new API returns campos_inciertos, use YunaiConfirmation
-        if (result.data.campos_inciertos !== undefined) {
-          handleYunaiResult(result.data);
+        // API now returns array — use YunaiConfirmation
+        const items = Array.isArray(result.data) ? result.data : [result.data];
+        if (items.length > 0 && items[0].campos_inciertos !== undefined) {
+          handleYunaiResult(items);
         } else {
           // Fallback to legacy ScanResultSummary
-          setScanResult(result.data);
+          setScanResult(items[0] || result.data);
           setShowScanSummary(true);
         }
       } else {
@@ -395,17 +396,19 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
     setSelectedMethod('manual');
   };
 
-  // Handler for voice/scan AI extraction result
-  const handleYunaiResult = (data: YunaiExtractionResult) => {
+  // Handler for voice/scan AI extraction result (accepts single or array)
+  const handleYunaiResult = (data: YunaiExtractionResult | YunaiExtractionResult[]) => {
     setShowVoiceRecorder(false);
-    setYunaiExtraction(data);
+    // Normalize to array
+    const items = Array.isArray(data) ? data : [data];
+    setYunaiExtraction(items);
     setShowYunaiConfirmation(true);
   };
 
   // Handler for scan result that now goes through YunaiConfirmation
   const handleScanYunaiResult = () => {
     if (!scanResult) return;
-    // Convert legacy scan result to YunaiExtractionResult
+    // Convert legacy scan result to YunaiExtractionResult array
     const extraction: YunaiExtractionResult = {
       tipo: scanResult.tipo || 'gasto',
       monto: scanResult.monto || 0,
@@ -421,47 +424,109 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       campos_inciertos: scanResult.campos_inciertos || [],
       pregunta_seguimiento: null,
     };
-    setYunaiExtraction(extraction);
+    setYunaiExtraction([extraction]);
     setShowScanSummary(false);
     setShowYunaiConfirmation(true);
   };
 
-  // When user confirms in YunaiConfirmation
-  const handleYunaiConfirm = (finalData: YunaiExtractionResult) => {
-    // Switch entry type if needed
-    if (finalData.tipo !== entryType) {
-      setEntryType(finalData.tipo);
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      monto: finalData.monto ? String(finalData.monto) : '',
-      fecha: finalData.fecha || today,
-      descripcion: finalData.descripcion || '',
-      categoria: finalData.categoria || '',
-      notas: finalData.notas || '',
-    }));
-
-    if (finalData.cuenta) {
-      setSelectedCuenta(finalData.cuenta);
-    }
-
-    if (finalData.num_cuotas > 1) {
-      setUseInstallments(true);
-    }
-
-    if (finalData.tipo === 'tarjeta') {
-      setExpenseType(finalData.tipo_gasto || 'deuda');
-    }
+  // When user confirms in YunaiConfirmation (batch submit)
+  const handleYunaiConfirm = async (selectedItems: YunaiExtractionResult[]) => {
+    if (!scriptUrl || selectedItems.length === 0) return;
 
     setShowYunaiConfirmation(false);
-    setSelectedMethod('manual'); // Switch to manual to let user review/submit
-    notify?.('Yunai cargó los datos. Revisa y confirma', 'success');
+    setLoading(true);
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const item of selectedItems) {
+        try {
+          if (item.tipo === 'tarjeta') {
+            // Credit card expense → Gastos_Pendientes
+            const selectedCard = creditCards.find(c => c.alias === item.cuenta);
+            const newExpense: PendingExpense = {
+              id: generateId(),
+              fecha_gasto: item.fecha || today,
+              tarjeta: item.cuenta || '',
+              categoria: item.categoria,
+              descripcion: item.descripcion,
+              monto: item.monto,
+              fecha_cierre: '',
+              fecha_pago: '',
+              estado: 'Pendiente',
+              num_cuotas: item.num_cuotas || 1,
+              cuotas_pagadas: 0,
+              monto_pagado_total: 0,
+              tipo: item.tipo_gasto || 'deuda',
+              notas: item.notas || '',
+              timestamp: getLocalISOString()
+            };
+            onAddPending(newExpense);
+            const sheetData = { ...newExpense, tipo_gasto: item.tipo_gasto || 'deuda' };
+            await sendToSheet(scriptUrl, pin, sheetData, 'Gastos_Pendientes');
+          } else {
+            // Gasto or Ingreso
+            const payload: Record<string, any> = {
+              fecha: item.fecha || today,
+              categoria: item.categoria,
+              descripcion: item.descripcion,
+              monto: item.monto,
+              notas: item.notas || '',
+              cuenta: item.cuenta || 'Billetera',
+              timestamp: getLocalISOString()
+            };
+            if (item.tipo === 'ingreso' && item.meta_id) {
+              payload.meta_id = item.meta_id;
+            }
+            await sendToSheet(scriptUrl, pin, payload, item.tipo === 'gasto' ? 'Gastos' : 'Ingresos');
+          }
+          successCount++;
+        } catch {
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        const msg = selectedItems.length === 1
+          ? 'Movimiento registrado'
+          : `${successCount} movimiento${successCount > 1 ? 's' : ''} registrado${successCount > 1 ? 's' : ''}`;
+        notify?.(errorCount > 0 ? `${msg} (${errorCount} fallaron)` : msg, errorCount > 0 ? 'error' : 'success');
+        onSuccess();
+      } else {
+        notify?.('Error al registrar los movimientos', 'error');
+      }
+
+      setSelectedMethod(null);
+      setYunaiExtraction(null);
+    } catch {
+      notify?.('Error al procesar', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // When user chooses "Edit manual" from YunaiConfirmation
+  // When user chooses "Edit manual" from YunaiConfirmation (single item)
   const handleYunaiEdit = (prefillData: YunaiExtractionResult) => {
-    handleYunaiConfirm(prefillData); // Same logic, fills the form
+    // Fill the manual form with this single item
+    if (prefillData.tipo !== entryType) {
+      setEntryType(prefillData.tipo);
+    }
+    setFormData(prev => ({
+      ...prev,
+      monto: prefillData.monto ? String(prefillData.monto) : '',
+      fecha: prefillData.fecha || today,
+      descripcion: prefillData.descripcion || '',
+      categoria: prefillData.categoria || '',
+      notas: prefillData.notas || '',
+    }));
+    if (prefillData.cuenta) setSelectedCuenta(prefillData.cuenta);
+    if (prefillData.num_cuotas > 1) setUseInstallments(true);
+    if (prefillData.tipo === 'tarjeta') setExpenseType(prefillData.tipo_gasto || 'deuda');
+
+    setShowYunaiConfirmation(false);
+    setSelectedMethod('manual');
+    notify?.('Yunai cargó los datos. Revisa y confirma', 'success');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -1024,8 +1089,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           accountBalances={accountBalances}
         />
 
-        {/* Yunai Confirmation Modal (for voice & scan results) */}
-        {yunaiExtraction && (
+        {/* Yunai Confirmation Modal (for voice & scan results — supports multi-movement) */}
+        {yunaiExtraction && yunaiExtraction.length > 0 && (
           <YunaiConfirmation
             isOpen={showYunaiConfirmation}
             data={yunaiExtraction}

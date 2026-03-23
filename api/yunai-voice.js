@@ -51,7 +51,14 @@ export default async function handler(req, res) {
     }
 
     const promptText =
-      "Eres Yunai, un asistente financiero peruano inteligente. El usuario está dictando un movimiento financiero en español.\n\n" +
+      "Eres Yunai, un asistente financiero peruano inteligente. El usuario está dictando movimientos financieros en español.\n\n" +
+
+      "═══ REGLA PRINCIPAL: MÚLTIPLES MOVIMIENTOS ═══\n" +
+      "El usuario puede mencionar VARIOS movimientos en un solo audio.\n" +
+      "Ejemplo: 'Gasté 50 en pizza y me pagaron 3000 de sueldo'\n" +
+      "→ Eso son 2 movimientos separados. Devuelve CADA UNO como un objeto en el array.\n" +
+      "Si solo hay 1 movimiento, devuelve un array con 1 elemento.\n" +
+      "SIEMPRE devuelve un array JSON, nunca un objeto suelto.\n\n" +
 
       "═══ CUENTAS Y TARJETAS DEL USUARIO ═══\n" +
       cuentasDescription + "\n\n" +
@@ -77,7 +84,7 @@ export default async function handler(req, res) {
       "═══ CATEGORÍAS DE INGRESOS (usar EXACTAMENTE con emoji) ═══\n" +
       categoriasIngresos.map(c => `- ${c}`).join('\n') + "\n\n" +
 
-      "═══ CAMPOS A EXTRAER ═══\n" +
+      "═══ CAMPOS POR CADA MOVIMIENTO ═══\n" +
       "- tipo: 'gasto' (efectivo/débito), 'ingreso', o 'tarjeta' (crédito/cuotas)\n" +
       "- monto: número decimal (ej: 45.50)\n" +
       "- descripcion: qué se compró/recibió (máx 60 chars)\n" +
@@ -97,23 +104,36 @@ export default async function handler(req, res) {
       "- opciones: SOLO las opciones relevantes (ej: si dijo 'interbank', solo las tarjetas de Interbank)\n" +
       "- pregunta: pregunta en tono peruano amigable ('causa', 'pata')\n\n" +
 
-      "═══ FORMATO DE SALIDA (solo JSON, sin markdown) ═══\n" +
-      '{\n' +
-      '  "tipo": "ingreso",\n' +
-      '  "monto": 3000,\n' +
-      '  "descripcion": "Sueldo marzo",\n' +
-      '  "categoria": "💼 Salario",\n' +
-      '  "cuenta": "Débito Interbank",\n' +
-      '  "fecha": "' + today + '",\n' +
-      '  "notas": "",\n' +
-      '  "num_cuotas": 1,\n' +
-      '  "meta_id": "",\n' +
-      '  "tipo_gasto": "deuda",\n' +
-      '  "confianza": 0.95,\n' +
-      '  "campos_inciertos": [],\n' +
-      '  "pregunta_seguimiento": null\n' +
-      '}\n\n' +
-      "RESPONDE AHORA CON EL JSON:";
+      "═══ FORMATO DE SALIDA (SIEMPRE array JSON, sin markdown) ═══\n" +
+      '[\n' +
+      '  {\n' +
+      '    "tipo": "gasto",\n' +
+      '    "monto": 50,\n' +
+      '    "descripcion": "Pizza con amigos",\n' +
+      '    "categoria": "🍕 Alimentación",\n' +
+      '    "cuenta": "Billetera",\n' +
+      '    "fecha": "' + today + '",\n' +
+      '    "notas": "",\n' +
+      '    "num_cuotas": 1,\n' +
+      '    "tipo_gasto": "deuda",\n' +
+      '    "confianza": 0.95,\n' +
+      '    "campos_inciertos": []\n' +
+      '  },\n' +
+      '  {\n' +
+      '    "tipo": "ingreso",\n' +
+      '    "monto": 3000,\n' +
+      '    "descripcion": "Sueldo marzo",\n' +
+      '    "categoria": "💼 Salario",\n' +
+      '    "cuenta": "Débito Interbank",\n' +
+      '    "fecha": "' + today + '",\n' +
+      '    "notas": "",\n' +
+      '    "num_cuotas": 1,\n' +
+      '    "tipo_gasto": "deuda",\n' +
+      '    "confianza": 0.90,\n' +
+      '    "campos_inciertos": []\n' +
+      '  }\n' +
+      ']\n\n' +
+      "RESPONDE AHORA CON EL ARRAY JSON:";
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
@@ -151,15 +171,29 @@ export default async function handler(req, res) {
     }
 
     aiText = aiText.replace(/```json/gi, "").replace(/```/gi, "").trim();
-    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) aiText = jsonMatch[0];
 
-    const parsedData = JSON.parse(aiText);
+    // Try to match array first, then fall back to object
+    const arrayMatch = aiText.match(/\[[\s\S]*\]/);
+    const objectMatch = aiText.match(/\{[\s\S]*\}/);
 
-    // Ensure campos_inciertos is always an array
-    if (!Array.isArray(parsedData.campos_inciertos)) {
-      parsedData.campos_inciertos = [];
+    if (arrayMatch) {
+      aiText = arrayMatch[0];
+    } else if (objectMatch) {
+      aiText = objectMatch[0];
     }
+
+    let parsedData = JSON.parse(aiText);
+
+    // Normalize: always return an array of movements
+    if (!Array.isArray(parsedData)) {
+      parsedData = [parsedData];
+    }
+
+    // Ensure each movement has campos_inciertos as array
+    parsedData = parsedData.map(mov => ({
+      ...mov,
+      campos_inciertos: Array.isArray(mov.campos_inciertos) ? mov.campos_inciertos : []
+    }));
 
     return res.status(200).json({ success: true, data: parsedData });
 

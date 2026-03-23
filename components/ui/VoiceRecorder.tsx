@@ -5,7 +5,7 @@ import { CreditCard, getCardType, YunaiExtractionResult } from '../../types';
 
 interface VoiceRecorderProps {
   isOpen: boolean;
-  onResult: (data: YunaiExtractionResult) => void;
+  onResult: (data: YunaiExtractionResult | YunaiExtractionResult[]) => void;
   onClose: () => void;
   userCards: CreditCard[];
   accountBalances: Record<string, number>;
