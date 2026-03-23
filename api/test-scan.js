@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       const cleanBase64 = image.includes('base64,') ? image.split('base64,')[1] : image;
       const today = new Date().toISOString().split('T')[0];
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
       // Simplified prompt just to test OCR
       const promptText =
@@ -35,10 +35,7 @@ export default async function handler(req, res) {
             { text: promptText },
             { inline_data: { mime_type: "image/jpeg", data: cleanBase64 } }
           ]
-        }],
-        generationConfig: {
-          thinkingConfig: { thinkingBudget: 1024 }
-        }
+        }]
       };
 
       const response = await fetch(url, {
@@ -86,12 +83,9 @@ export default async function handler(req, res) {
 
   // Test: Simple OCR prompt with thinking enabled
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
     const payload = {
-      contents: [{ parts: [{ text: 'Responde solo JSON sin markdown: {"status": "ok", "timestamp": "now"}' }] }],
-      generationConfig: {
-        thinkingConfig: { thinkingBudget: 1024 }
-      }
+      contents: [{ parts: [{ text: 'Responde solo JSON sin markdown: {"status": "ok", "timestamp": "now"}' }] }]
     };
 
     const response = await fetch(url, {
@@ -121,7 +115,7 @@ export default async function handler(req, res) {
 
   return res.status(200).json({
     timestamp: new Date().toISOString(),
-    model: 'gemini-2.5-flash',
+    model: 'gemini-3-flash-preview',
     thinkingBudget: 1024,
     note: 'POST an image with {image: "base64..."} to test real OCR',
     results
