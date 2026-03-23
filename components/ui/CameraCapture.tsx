@@ -74,13 +74,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     try {
       console.log(`📂 [handleFileUpload] Archivo original: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
 
-      // Comprimir la imagen — calidad alta para OCR
+      // Comprimir imagen — balance entre calidad OCR y límite Vercel (4.5MB body)
       const options = {
-        maxSizeMB: 0.8, // 800KB max — necesario para que IA lea texto
-        maxWidthOrHeight: 1280, // 1280px para mantener legibilidad
+        maxSizeMB: 0.5, // 500KB — mejor que 300KB original, dentro de límite Vercel
+        maxWidthOrHeight: 1024, // 1024px — legible para OCR
         useWebWorker: true,
         fileType: 'image/jpeg' as const,
-        initialQuality: 0.8
+        initialQuality: 0.7
       };
 
       const compressedFile = await imageCompression(file, options);
@@ -124,13 +124,13 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
 
       console.log(`📸 [capturePhoto] Imagen original: ${(blob.size / 1024).toFixed(2)}KB`);
 
-      // Comprimir la imagen — calidad alta para OCR
+      // Comprimir imagen — balance entre calidad OCR y límite Vercel (4.5MB body)
       const options = {
-        maxSizeMB: 0.8, // 800KB max — necesario para que IA lea texto
-        maxWidthOrHeight: 1280, // 1280px para mantener legibilidad
+        maxSizeMB: 0.5, // 500KB — mejor que 300KB original, dentro de límite Vercel
+        maxWidthOrHeight: 1024, // 1024px — legible para OCR
         useWebWorker: true,
         fileType: 'image/jpeg' as const,
-        initialQuality: 0.8
+        initialQuality: 0.7
       };
 
       const compressedFile = await imageCompression(blob as File, options);
