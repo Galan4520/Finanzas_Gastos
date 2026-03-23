@@ -37,8 +37,9 @@ export default async function handler(req, res) {
     let cuentasDescription = '';
     if (cuentasList.length > 0 && typeof cuentasList[0] === 'object') {
       cuentasDescription = cuentasList.map(c => {
-        if (c.tipo === 'efectivo') return `- "${c.alias}" (Efectivo/Cash)`;
-        return `- "${c.alias}" → Banco: ${c.banco}, Tipo: ${c.tipo === 'credito' ? 'CRÉDITO' : 'DÉBITO'}`;
+        const saldo = c.saldo !== undefined ? ` | Saldo: S/${Number(c.saldo).toFixed(2)}` : '';
+        if (c.tipo === 'efectivo') return `- "${c.alias}" (Efectivo/Cash)${saldo}`;
+        return `- "${c.alias}" → Banco: ${c.banco}, Tipo: ${c.tipo === 'credito' ? 'CRÉDITO' : 'DÉBITO'}${saldo}`;
       }).join('\n');
     } else {
       cuentasDescription = cuentasList.map(c => `- "${c}"`).join('\n');
@@ -58,6 +59,14 @@ export default async function handler(req, res) {
       "- Si ves cuotas → SOLO tarjetas de CRÉDITO\n" +
       "- El valor de 'cuenta' DEBE ser EXACTAMENTE el alias de la lista\n" +
       "- Si no puedes inferir, cuenta = null y agregar a campos_inciertos\n\n" +
+
+      "VALIDACIÓN DE SALDO:\n" +
+      "- Cada cuenta tiene un SALDO mostrado arriba. REVÍSALO.\n" +
+      "- Si es un GASTO y el monto > saldo de la cuenta inferida:\n" +
+      "  → Agrega 'cuenta' a campos_inciertos\n" +
+      "  → En 'pregunta': 'Causa, tu [cuenta] solo tiene S/X.XX, ¿seguro pagaste de ahí?'\n" +
+      "  → En 'opciones': la cuenta inferida + cuentas con saldo suficiente\n" +
+      "- Si es ingreso, no validar saldo\n\n" +
 
       "INSTRUCCIONES CRÍTICAS:\n\n" +
 

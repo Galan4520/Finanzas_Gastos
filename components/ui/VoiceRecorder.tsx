@@ -125,14 +125,15 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         reader.readAsDataURL(blob);
       });
 
-      // Build detailed cuentas list with bank info and type
+      // Build detailed cuentas list with bank info, type AND balance
       const cuentasDetalladas = [
-        { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo' },
+        { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo', saldo: accountBalances['Billetera'] ?? 0 },
         ...userCards.map(card => ({
           alias: card.alias,
           banco: card.banco,
           tipo: getCardType(card), // 'credito' | 'debito'
           tipo_tarjeta: card.tipo_tarjeta,
+          saldo: accountBalances[card.alias] ?? 0,
         })),
       ];
 

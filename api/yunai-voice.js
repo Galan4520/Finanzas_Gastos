@@ -43,8 +43,9 @@ export default async function handler(req, res) {
 
     if (cuentasList.length > 0 && typeof cuentasList[0] === 'object') {
       cuentasDescription = cuentasList.map(c => {
-        if (c.tipo === 'efectivo') return `- "${c.alias}" (Efectivo/Cash)`;
-        return `- "${c.alias}" → Banco: ${c.banco}, Tipo: ${c.tipo === 'credito' ? 'CRÉDITO' : 'DÉBITO'}, Tarjeta: ${c.tipo_tarjeta || 'N/A'}`;
+        const saldo = c.saldo !== undefined ? ` | Saldo: S/${Number(c.saldo).toFixed(2)}` : '';
+        if (c.tipo === 'efectivo') return `- "${c.alias}" (Efectivo/Cash)${saldo}`;
+        return `- "${c.alias}" → Banco: ${c.banco}, Tipo: ${c.tipo === 'credito' ? 'CRÉDITO' : 'DÉBITO'}, Tarjeta: ${c.tipo_tarjeta || 'N/A'}${saldo}`;
       }).join('\n');
     } else {
       cuentasDescription = cuentasList.map(c => `- "${c}"`).join('\n');
@@ -77,6 +78,15 @@ export default async function handler(req, res) {
       "7. El valor de 'cuenta' DEBE ser EXACTAMENTE el alias de la lista (ej: 'Visa Signature', 'Débito Interbank'), NO el nombre del banco.\n" +
       "8. Si dice 'efectivo', 'cash', 'plata' → cuenta = 'Billetera'\n" +
       "9. Si no menciona banco ni cuenta → cuenta = null y agregar a campos_inciertos\n\n" +
+
+      "═══ VALIDACIÓN DE SALDO ═══\n" +
+      "- Cada cuenta tiene un SALDO mostrado arriba. REVÍSALO antes de asignar.\n" +
+      "- Si es un GASTO y el monto > saldo de la cuenta mencionada:\n" +
+      "  → Agrega 'cuenta' a campos_inciertos\n" +
+      "  → En 'pregunta' di algo como: 'Causa, tu [cuenta] solo tiene S/X.XX, ¿seguro que pagaste de ahí o usaste otra?'\n" +
+      "  → En 'opciones' pon la cuenta mencionada + otras cuentas que SÍ tengan saldo suficiente\n" +
+      "  → Si NINGUNA cuenta tiene saldo suficiente, igual pon las opciones y advierte en la pregunta\n" +
+      "- Si es un INGRESO, no validar saldo (siempre se puede recibir dinero)\n\n" +
 
       "═══ CATEGORÍAS DE GASTOS (usar EXACTAMENTE con emoji) ═══\n" +
       categoriasGastos.map(c => `- ${c}`).join('\n') + "\n\n" +
