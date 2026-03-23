@@ -145,7 +145,7 @@ export default async function handler(req, res) {
       ']\n\n' +
       "RESPONDE AHORA CON EL ARRAY JSON:";
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
 
     const payload = {
       contents: [{
