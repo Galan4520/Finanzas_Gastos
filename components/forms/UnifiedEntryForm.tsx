@@ -313,12 +313,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
     setIsScanning(true);
 
     try {
-      // Extraer solo los datos base64 (sin el prefijo data:image/jpeg;base64,)
-      const base64Clean = base64Image.includes('base64,')
-        ? base64Image.split('base64,')[1]
-        : base64Image;
-
-      console.log(`📦 [handleCameraCapture] Base64 generado: ${(base64Clean.length / 1024).toFixed(2)}KB`);
+      console.log(`📦 [handleCameraCapture] Base64 size: ${(base64Image.length / 1024).toFixed(2)}KB`);
       console.log('🤖 [handleCameraCapture] Enviando a IA...');
 
       // Build detailed cuentas for AI context (with balances)
@@ -332,7 +327,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           saldo: accountBalances[card.alias] ?? 0,
         })),
       ];
-      const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean, cuentasDetalladas);
+      // Pass full base64 (with prefix) — cleaning happens in scan.js
+      const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Image, cuentasDetalladas);
       console.log('✅ [handleCameraCapture] Respuesta de IA recibida:', result);
 
       if (result.success && result.data) {

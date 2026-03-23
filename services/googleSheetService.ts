@@ -748,15 +748,12 @@ export const analyzeReceiptWithAI = async (
   try {
     console.log('🤖 [analyzeReceiptWithAI] Enviando imagen a Vercel Serverless API...');
 
-    const cleanBase64 = base64Image.includes('base64,')
-      ? base64Image.split('base64,')[1]
-      : base64Image;
-
+    // Pass image as-is — scan.js handles base64 prefix cleanup
     const result = await retryWithBackoff(async () => {
       const response = await fetch('/api/scan', {
         method: "POST",
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: cleanBase64, cuentas })
+        body: JSON.stringify({ image: base64Image, cuentas })
       });
 
       if (!response.ok) {
