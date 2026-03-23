@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, X, Loader2 } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { Mic, MicOff, X, Loader2, Wallet, CreditCard as CreditCardIcon } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CreditCard, getCardType, YunaiExtractionResult } from '../../types';
 
@@ -51,6 +51,36 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       }
     };
   }, [isOpen]);
+
+  // Build accounts list for display
+  const accountsList = useMemo(() => {
+    const list: { alias: string; banco: string; tipo: string; saldo: number }[] = [
+      { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo', saldo: accountBalances['Billetera'] ?? 0 },
+    ];
+    userCards.forEach(card => {
+      list.push({
+        alias: card.alias,
+        banco: card.banco,
+        tipo: getCardType(card),
+        saldo: accountBalances[card.alias] ?? 0,
+      });
+    });
+    return list;
+  }, [userCards, accountBalances]);
+
+  // Build dynamic example using the user's first card name
+  const dynamicExamples = useMemo(() => {
+    const firstDebit = userCards.find(c => getCardType(c) === 'debito');
+    const firstCredit = userCards.find(c => getCardType(c) === 'credito');
+    const debitName = firstDebit?.alias || firstDebit?.banco || 'mi tarjeta';
+    const creditName = firstCredit?.alias || firstCredit?.banco || 'la visa';
+
+    return [
+      `"Gasté 45 soles en pizza con ${debitName}"`,
+      `"Me pagaron 3000 de sueldo en ${firstDebit ? debitName : 'Interbank'}"`,
+      `"Compré zapatillas a 3 cuotas por 280 con ${creditName}"`,
+    ];
+  }, [userCards]);
 
   const startRecording = async () => {
     setError(null);
@@ -131,7 +161,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         ...userCards.map(card => ({
           alias: card.alias,
           banco: card.banco,
-          tipo: getCardType(card), // 'credito' | 'debito'
+          tipo: getCardType(card),
           tipo_tarjeta: card.tipo_tarjeta,
           saldo: accountBalances[card.alias] ?? 0,
         })),
@@ -171,6 +201,8 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  const formatCurrency = (n: number) => `S/${n.toFixed(2)}`;
+
   if (!isOpen) return null;
 
   return (
@@ -182,94 +214,146 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       />
 
       {/* Modal */}
-      <div className={`relative ${theme.colors.bgCard} rounded-3xl shadow-2xl w-full max-w-sm p-6 border ${theme.colors.border} animate-in fade-in zoom-in-95`}>
+      <div className={`relative ${theme.colors.bgCard} rounded-3xl shadow-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto border ${theme.colors.border} animate-in fade-in zoom-in-95`}>
         {/* Close button */}
         {!isRecording && !isProcessing && (
-          <button onClick={onClose} className={`absolute top-4 right-4 ${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}>
+          <button onClick={onClose} className={`absolute top-4 right-4 z-10 ${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}>
             <X size={20} />
           </button>
         )}
 
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-yn-primary-500/30 mx-auto mb-3 bg-white">
-            <img src="/logos/Mascota_Yunai.svg" alt="Yunai" className="w-full h-full object-cover object-top" />
-          </div>
-          <h3 className={`text-lg font-bold ${theme.colors.textPrimary}`}>
-            {isProcessing ? 'Yunai está pensando...' : isRecording ? 'Te estoy escuchando...' : 'Háblale a Yunai'}
-          </h3>
-          <p className={`text-sm ${theme.colors.textMuted} mt-1`}>
-            {isProcessing
-              ? 'Analizando tu mensaje de voz'
-              : isRecording
-              ? `Grabando ${formatTime(recordingTime)}`
-              : 'Dime qué gastaste, cuánto y de dónde'}
-          </p>
-        </div>
-
-        {/* Mic Button */}
-        <div className="flex justify-center mb-6">
-          {isProcessing ? (
-            <div className="w-24 h-24 rounded-full bg-yn-primary-500/10 flex items-center justify-center">
-              <Loader2 size={40} className="text-yn-primary-600 animate-spin" />
-            </div>
-          ) : (
-            <button
-              onClick={isRecording ? stopRecording : startRecording}
-              className={`w-24 h-24 rounded-full flex items-center justify-center transition-all ${
-                isRecording
-                  ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30 animate-pulse'
-                  : 'bg-yn-primary-500 hover:bg-yn-primary-600 shadow-lg shadow-yn-primary-500/30'
-              }`}
-            >
-              {isRecording ? (
-                <MicOff size={36} className="text-white" />
-              ) : (
-                <Mic size={36} className="text-white" />
+        <div className="p-6">
+          {/* Yunai Avatar — animated based on state */}
+          <div className="flex justify-center mb-4">
+            <div className={`relative w-20 h-20 rounded-full overflow-hidden border-3 bg-white transition-all ${
+              isRecording
+                ? 'border-red-400 shadow-lg shadow-red-500/30 animate-pulse'
+                : isProcessing
+                ? 'border-yn-primary-400 shadow-lg shadow-yn-primary-500/20'
+                : 'border-yn-primary-500/30'
+            }`}>
+              <img
+                src="/logos/Mascota_Yunai.svg"
+                alt="Yunai"
+                className={`w-full h-full object-cover object-top transition-transform ${
+                  isProcessing ? 'animate-bounce' : ''
+                }`}
+              />
+              {/* Recording pulse ring */}
+              {isRecording && (
+                <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping" />
               )}
-            </button>
+            </div>
+          </div>
+
+          {/* State text */}
+          <div className="text-center mb-5">
+            <h3 className={`text-lg font-bold ${theme.colors.textPrimary}`}>
+              {isProcessing ? 'Yunai está pensando...' : isRecording ? 'Te estoy escuchando...' : 'Háblale a Yunai'}
+            </h3>
+            <p className={`text-sm ${theme.colors.textMuted} mt-1`}>
+              {isProcessing
+                ? 'Analizando tu mensaje de voz'
+                : isRecording
+                ? `Grabando ${formatTime(recordingTime)}`
+                : 'Dime qué gastaste, cuánto y de dónde'}
+            </p>
+          </div>
+
+          {/* Mic Button */}
+          <div className="flex justify-center mb-5">
+            {isProcessing ? (
+              <div className="w-20 h-20 rounded-full bg-yn-primary-500/10 flex items-center justify-center">
+                <Loader2 size={36} className="text-yn-primary-600 animate-spin" />
+              </div>
+            ) : (
+              <button
+                onClick={isRecording ? stopRecording : startRecording}
+                className={`w-20 h-20 rounded-full flex items-center justify-center transition-all ${
+                  isRecording
+                    ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30'
+                    : 'bg-yn-primary-500 hover:bg-yn-primary-600 shadow-lg shadow-yn-primary-500/30'
+                }`}
+              >
+                {isRecording ? (
+                  <MicOff size={32} className="text-white" />
+                ) : (
+                  <Mic size={32} className="text-white" />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Sound waves animation when recording */}
+          {isRecording && (
+            <div className="flex justify-center items-end gap-1 h-8 mb-4">
+              {[...Array(12)].map((_, i) => (
+                <div
+                  key={i}
+                  className="w-1 bg-yn-primary-500 rounded-full"
+                  style={{
+                    animation: `soundwave 0.8s ease-in-out infinite alternate`,
+                    animationDelay: `${i * 0.07}s`,
+                    height: `${Math.random() * 24 + 8}px`,
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 mb-4">
+              <p className="text-red-600 dark:text-red-400 text-sm text-center">{error}</p>
+            </div>
+          )}
+
+          {/* Content when idle (not recording, not processing) */}
+          {!isRecording && !isProcessing && !error && (
+            <>
+              {/* User's accounts/cards — so they know what names to say */}
+              <div className="mb-4">
+                <p className={`text-center text-[10px] font-bold uppercase tracking-widest ${theme.colors.textMuted} mb-2`}>
+                  Tus cuentas (di el nombre)
+                </p>
+                <div className="flex flex-wrap gap-1.5 justify-center">
+                  {accountsList.map(acc => (
+                    <div
+                      key={acc.alias}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg ${theme.colors.bgSecondary} border ${theme.colors.border}`}
+                    >
+                      {acc.tipo === 'efectivo' ? (
+                        <Wallet size={12} className={theme.colors.textMuted} />
+                      ) : acc.tipo === 'credito' ? (
+                        <CreditCardIcon size={12} className="text-blue-500" />
+                      ) : (
+                        <CreditCardIcon size={12} className="text-green-500" />
+                      )}
+                      <span className={`text-xs font-semibold ${theme.colors.textPrimary}`}>
+                        {acc.alias}
+                      </span>
+                      <span className={`text-[10px] ${theme.colors.textMuted}`}>
+                        {formatCurrency(acc.saldo)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Dynamic examples using real card names */}
+              <div className={`space-y-1.5 text-sm ${theme.colors.textMuted}`}>
+                <p className={`text-center text-[10px] font-bold uppercase tracking-widest ${theme.colors.textMuted} mb-1.5`}>
+                  Ejemplos
+                </p>
+                {dynamicExamples.map((example, i) => (
+                  <div key={i} className={`${theme.colors.bgSecondary} rounded-xl px-3 py-2 text-center italic text-xs`}>
+                    {example}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
-
-        {/* Sound waves animation when recording */}
-        {isRecording && (
-          <div className="flex justify-center items-end gap-1 h-8 mb-4">
-            {[...Array(12)].map((_, i) => (
-              <div
-                key={i}
-                className="w-1 bg-yn-primary-500 rounded-full"
-                style={{
-                  animation: `soundwave 0.8s ease-in-out infinite alternate`,
-                  animationDelay: `${i * 0.07}s`,
-                  height: `${Math.random() * 24 + 8}px`,
-                }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 mb-4">
-            <p className="text-red-600 dark:text-red-400 text-sm text-center">{error}</p>
-          </div>
-        )}
-
-        {/* Examples */}
-        {!isRecording && !isProcessing && !error && (
-          <div className={`space-y-2 text-sm ${theme.colors.textMuted}`}>
-            <p className="text-center text-xs font-semibold uppercase tracking-wider mb-2">Ejemplos:</p>
-            <div className={`${theme.colors.bgSecondary} rounded-xl p-3 text-center italic`}>
-              "Gasté 45 soles en pizza con la visa"
-            </div>
-            <div className={`${theme.colors.bgSecondary} rounded-xl p-3 text-center italic`}>
-              "Me pagaron 3000 de sueldo"
-            </div>
-            <div className={`${theme.colors.bgSecondary} rounded-xl p-3 text-center italic`}>
-              "Compré zapatillas a 3 cuotas por 280"
-            </div>
-          </div>
-        )}
       </div>
 
       {/* CSS for sound wave animation */}
