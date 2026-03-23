@@ -108,7 +108,19 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    // Extract actual text response (skip thinking parts if any)
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    let aiText = null;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (!parts[i].thought && parts[i].text) {
+        aiText = parts[i].text;
+        break;
+      }
+    }
+    if (!aiText) {
+      aiText = parts.find(p => p.text)?.text;
+    }
 
     if (!aiText) {
       throw new Error("Yunai no pudo generar un consejo.");

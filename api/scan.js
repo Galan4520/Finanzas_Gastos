@@ -143,7 +143,14 @@ export default async function handler(req, res) {
             }
           }
         ]
-      }]
+      }],
+      // Disable thinking — OCR doesn't need reasoning, and thinking tokens
+      // end up in parts[0] which breaks our JSON extraction from the response
+      generationConfig: {
+        thinkingConfig: {
+          thinkingBudget: 0
+        }
+      }
     };
 
     const response = await fetch(url, {
@@ -159,11 +166,29 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
-    let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    // Extract the actual text response (not thinking parts)
+    // Gemini 2.5 Flash returns thinking in parts[0] and output in later parts
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    let aiText = null;
+    // Find the last non-thought part (the actual output)
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (!parts[i].thought && parts[i].text) {
+        aiText = parts[i].text;
+        break;
+      }
+    }
+    // Fallback: if no non-thought part found, try first part with text
+    if (!aiText) {
+      aiText = parts.find(p => p.text)?.text;
+    }
 
     if (!aiText) {
+      console.error("Gemini response structure:", JSON.stringify(data.candidates?.[0]?.content, null, 2));
       throw new Error("La Inteligencia Artificial devolvió una respuesta vacía.");
     }
+
+    console.log("Gemini raw output (first 500 chars):", aiText.substring(0, 500));
 
     // Clean generic Markdown/JSON wrappers
     aiText = aiText.replace(/```json/gi, "").replace(/```/gi, "").trim();
