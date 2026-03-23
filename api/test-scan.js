@@ -1,27 +1,96 @@
-// Diagnostic endpoint to test Gemini 2.5 Flash OCR
+// Diagnostic endpoint to test Gemini 2.5 Flash OCR with the real scan prompt
 // Call: GET /api/test-scan to verify the API is working
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', '*');
+  // Prevent caching
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'GET') return res.status(405).json({ error: 'Use GET' });
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'GEMINI_API_KEY missing' });
   }
 
+  // If POST with image, test the real scan pipeline
+  if (req.method === 'POST' && req.body?.image) {
+    try {
+      const { image } = req.body;
+      const cleanBase64 = image.includes('base64,') ? image.split('base64,')[1] : image;
+      const today = new Date().toISOString().split('T')[0];
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      // Simplified prompt just to test OCR
+      const promptText =
+        "Lee esta imagen y extrae cualquier texto que veas.\n" +
+        "Responde SOLO con JSON (sin markdown):\n" +
+        '{"texto_encontrado": "el texto que veas", "es_ticket": true/false, "monto_total": numero_o_null, "fecha": "YYYY-MM-DD" o null}\n';
+
+      const payload = {
+        contents: [{
+          parts: [
+            { text: promptText },
+            { inline_data: { mime_type: "image/jpeg", data: cleanBase64 } }
+          ]
+        }],
+        generationConfig: {
+          thinkingConfig: { thinkingBudget: 1024 }
+        }
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      const parts = data.candidates?.[0]?.content?.parts || [];
+
+      // Extract non-thought text
+      let aiText = null;
+      for (let i = parts.length - 1; i >= 0; i--) {
+        if (!parts[i].thought && parts[i].text) {
+          aiText = parts[i].text;
+          break;
+        }
+      }
+      if (!aiText) aiText = parts.find(p => p.text)?.text;
+
+      return res.status(200).json({
+        timestamp: new Date().toISOString(),
+        imageSize: `${(cleanBase64.length / 1024).toFixed(0)}KB base64`,
+        geminiStatus: response.status,
+        partsCount: parts.length,
+        finishReason: data.candidates?.[0]?.finishReason,
+        partsDetail: parts.map((p, i) => ({
+          index: i,
+          thought: !!p.thought,
+          textLen: p.text?.length || 0,
+          preview: p.text?.substring(0, 300) || null
+        })),
+        rawText: aiText,
+        usageMetadata: data.usageMetadata,
+        error: data.error || null
+      });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // GET: run basic API health checks
   const results = {};
 
-  // Test 1: Simple text prompt (no image, no thinking config)
+  // Test: Simple OCR prompt with thinking enabled
   try {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const payload = {
-      contents: [{ parts: [{ text: 'Responde solo con el JSON: {"test": "ok", "numero": 42}' }] }],
+      contents: [{ parts: [{ text: 'Responde solo JSON sin markdown: {"status": "ok", "timestamp": "now"}' }] }],
       generationConfig: {
-        thinkingConfig: { thinkingBudget: 0 }
+        thinkingConfig: { thinkingBudget: 1024 }
       }
     };
 
@@ -34,7 +103,7 @@ export default async function handler(req, res) {
     const data = await response.json();
     const parts = data.candidates?.[0]?.content?.parts || [];
 
-    results.test1_textOnly = {
+    results.apiHealth = {
       status: response.status,
       partsCount: parts.length,
       finishReason: data.candidates?.[0]?.finishReason,
@@ -47,88 +116,14 @@ export default async function handler(req, res) {
       usageMetadata: data.usageMetadata
     };
   } catch (e) {
-    results.test1_textOnly = { error: e.message };
-  }
-
-  // Test 2: Same but WITHOUT thinkingConfig
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const payload = {
-      contents: [{ parts: [{ text: 'Responde solo con el JSON: {"test": "ok_noThinkConfig", "numero": 99}' }] }]
-    };
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-
-    results.test2_noThinkConfig = {
-      status: response.status,
-      partsCount: parts.length,
-      finishReason: data.candidates?.[0]?.finishReason,
-      parts: parts.map((p, i) => ({
-        index: i,
-        thought: !!p.thought,
-        textLength: p.text?.length || 0,
-        text: p.text?.substring(0, 300) || null
-      })),
-      usageMetadata: data.usageMetadata
-    };
-  } catch (e) {
-    results.test2_noThinkConfig = { error: e.message };
-  }
-
-  // Test 3: A tiny 1x1 white pixel JPEG as base64 to test image processing
-  try {
-    // Minimal JPEG: 1x1 white pixel
-    const tinyJpeg = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAVAQEBAAAAAAAAAAAAAAAAAAAAAf/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AKpgA//Z';
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const payload = {
-      contents: [{
-        parts: [
-          { text: 'Describe esta imagen en 1 oración corta. Responde en JSON: {"descripcion": "..."}' },
-          { inline_data: { mime_type: "image/jpeg", data: tinyJpeg } }
-        ]
-      }],
-      generationConfig: {
-        thinkingConfig: { thinkingBudget: 0 }
-      }
-    };
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-
-    results.test3_tinyImage = {
-      status: response.status,
-      partsCount: parts.length,
-      finishReason: data.candidates?.[0]?.finishReason,
-      parts: parts.map((p, i) => ({
-        index: i,
-        thought: !!p.thought,
-        textLength: p.text?.length || 0,
-        text: p.text?.substring(0, 300) || null
-      })),
-      error: data.error || null,
-      usageMetadata: data.usageMetadata
-    };
-  } catch (e) {
-    results.test3_tinyImage = { error: e.message };
+    results.apiHealth = { error: e.message };
   }
 
   return res.status(200).json({
     timestamp: new Date().toISOString(),
     model: 'gemini-2.5-flash',
+    thinkingBudget: 1024,
+    note: 'POST an image with {image: "base64..."} to test real OCR',
     results
   });
 }
