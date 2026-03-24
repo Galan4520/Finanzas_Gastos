@@ -11,9 +11,6 @@ interface VoiceRecorderProps {
   accountBalances: Record<string, number>;
 }
 
-// Detect mobile: Android Chrome can't run SpeechRecognition + MediaRecorder simultaneously
-const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   isOpen,
   onResult,
@@ -26,16 +23,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [transcript, setTranscript] = useState('');
-  const [interimTranscript, setInterimTranscript] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
-  const recognitionRef = useRef<any>(null);
-  const transcriptRef = useRef('');
-  const mobileModeRef = useRef(false); // true = text-only mode (mobile)
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -52,9 +44,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setError(null);
       setRecordingTime(0);
       setIsProcessing(false);
-      setTranscript('');
-      setInterimTranscript('');
-      transcriptRef.current = '';
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -94,151 +83,42 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     ];
   }, [userCards]);
 
-  // Dynamic regex for account alias matching in live transcript
-  const accountRegex = useMemo(() => {
-    const names = accountsList.map(a => a.alias).filter(Boolean);
-    if (names.length === 0) return null;
-    return new RegExp(`(${names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
-  }, [accountsList]);
-
-  // Highlight entities (montos, cuentas) in live transcript text
-  const highlightEntities = (text: string): React.ReactNode[] => {
-    if (!text) return [];
-
-    const montoRegex = /(?:S\/?\s*)?\d{1,6}(?:[.,]\d{1,2})?\s*(?:soles?|lucas?)?/gi;
-
-    // Collect all matches with their positions
-    type Match = { start: number; end: number; text: string; type: 'monto' | 'cuenta' };
-    const matches: Match[] = [];
-
-    let m: RegExpExecArray | null;
-    // Find montos
-    const montoRe = new RegExp(montoRegex.source, 'gi');
-    while ((m = montoRe.exec(text)) !== null) {
-      matches.push({ start: m.index, end: m.index + m[0].length, text: m[0], type: 'monto' });
-    }
-    // Find cuentas
-    if (accountRegex) {
-      const accRe = new RegExp(accountRegex.source, 'gi');
-      while ((m = accRe.exec(text)) !== null) {
-        matches.push({ start: m.index, end: m.index + m[0].length, text: m[0], type: 'cuenta' });
-      }
-    }
-
-    if (matches.length === 0) return [text];
-
-    // Sort by position and remove overlaps
-    matches.sort((a, b) => a.start - b.start);
-    const filtered: Match[] = [];
-    for (const match of matches) {
-      const last = filtered[filtered.length - 1];
-      if (!last || match.start >= last.end) {
-        filtered.push(match);
-      }
-    }
-
-    // Build result with highlighted spans
-    const result: React.ReactNode[] = [];
-    let lastEnd = 0;
-    filtered.forEach((match, i) => {
-      if (match.start > lastEnd) {
-        result.push(text.slice(lastEnd, match.start));
-      }
-      const cls = match.type === 'monto'
-        ? 'text-green-600 dark:text-green-400 font-bold'
-        : 'text-blue-600 dark:text-blue-400 font-semibold';
-      result.push(<span key={i} className={cls}>{match.text}</span>);
-      lastEnd = match.end;
-    });
-    if (lastEnd < text.length) {
-      result.push(text.slice(lastEnd));
-    }
-    return result;
-  };
-
-  // Setup SpeechRecognition instance (shared between mobile and desktop)
-  const setupRecognition = () => {
-    try {
-      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (!SpeechRecognitionAPI) return null;
-
-      const recognition = new SpeechRecognitionAPI();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = 'es-PE';
-
-      recognition.onresult = (event: any) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            transcriptRef.current += event.results[i][0].transcript + ' ';
-            setTranscript(transcriptRef.current.trim());
-          } else {
-            interim += event.results[i][0].transcript;
-          }
-        }
-        setInterimTranscript(interim);
-      };
-
-      recognition.onerror = (e: any) => {
-        // 'no-speech' is normal on silence — don't kill recognition
-        if (e.error !== 'no-speech') {
-          recognitionRef.current = null;
-        }
-      };
-
-      // Auto-restart: Android Chrome stops after each phrase or ~15s silence
-      recognition.onend = () => {
-        // Only auto-restart if we're still in recording state
-        if (recognitionRef.current === recognition) {
-          try { recognition.start(); } catch { /* already stopped or not available */ }
-        }
-      };
-
-      return recognition;
-    } catch {
-      return null;
-    }
-  };
-
   const startRecording = async () => {
     setError(null);
     audioChunksRef.current = [];
-    transcriptRef.current = '';
-    setTranscript('');
-    setInterimTranscript('');
-
-    const mobile = isMobile();
-    mobileModeRef.current = mobile;
 
     try {
-      if (mobile) {
-        // ═══ MOBILE MODE: SpeechRecognition ONLY (no MediaRecorder) ═══
-        // Android Chrome can't run both simultaneously — they fight for the mic.
-        // We use SpeechRecognition for live text, then send the text to Gemini.
-        const recognition = setupRecognition();
-        if (!recognition) {
-          // No SpeechRecognition available — fall back to audio-only
-          mobileModeRef.current = false;
-          await startDesktopRecording();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      });
+      streamRef.current = stream;
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        if (recordingTimeRef.current < 1) {
+          setError('Grabación muy corta. Mantén presionado al menos 1 segundo.');
           return;
         }
+        const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
+        processAudio(blob, mediaRecorder.mimeType);
+      };
 
-        recognition.start();
-        recognitionRef.current = recognition;
-        setIsRecording(true);
-        setRecordingTime(0);
-        recordingTimeRef.current = 0;
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+      recordingTimeRef.current = 0;
 
-        timerRef.current = setInterval(() => {
-          recordingTimeRef.current += 1;
-          setRecordingTime(recordingTimeRef.current);
-        }, 1000);
+      timerRef.current = setInterval(() => {
+        recordingTimeRef.current += 1;
+        setRecordingTime(recordingTimeRef.current);
+      }, 1000);
 
-      } else {
-        // ═══ DESKTOP MODE: SpeechRecognition + MediaRecorder (hybrid) ═══
-        await startDesktopRecording();
-      }
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
         setError('Permiso de micrófono denegado. Habilítalo en la configuración del navegador.');
@@ -248,83 +128,19 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     }
   };
 
-  // Desktop: both SpeechRecognition (live preview) + MediaRecorder (audio to Gemini)
-  const startDesktopRecording = async () => {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-    });
-    streamRef.current = stream;
-
-    // Start SpeechRecognition for live preview (best-effort, non-blocking)
-    const recognition = setupRecognition();
-    if (recognition) {
-      try {
-        recognition.start();
-        recognitionRef.current = recognition;
-      } catch { /* not available — continue without live preview */ }
-    }
-
-    // Start MediaRecorder for audio capture
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
-    mediaRecorderRef.current = mediaRecorder;
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) audioChunksRef.current.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      if (recordingTimeRef.current < 1) {
-        setError('Grabación muy corta. Mantén presionado al menos 1 segundo.');
-        return;
-      }
-      const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
-      processAudio(blob, mediaRecorder.mimeType);
-    };
-
-    mediaRecorder.start();
-    setIsRecording(true);
-    setRecordingTime(0);
-    recordingTimeRef.current = 0;
-
-    timerRef.current = setInterval(() => {
-      recordingTimeRef.current += 1;
-      setRecordingTime(recordingTimeRef.current);
-    }, 1000);
-  };
-
   const stopRecording = () => {
-    // Stop recognition first (prevents auto-restart via onend)
-    if (recognitionRef.current) {
-      const rec = recognitionRef.current;
-      recognitionRef.current = null; // clear ref BEFORE stop so onend doesn't restart
-      try { rec.stop(); } catch { /* already stopped */ }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
     }
-
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-
-    if (mobileModeRef.current) {
-      // ═══ MOBILE: no MediaRecorder, send accumulated text to Gemini ═══
-      setIsRecording(false);
-      const finalText = transcriptRef.current.trim();
-      if (recordingTimeRef.current < 1 || !finalText) {
-        setError(finalText ? 'Grabación muy corta.' : 'No se detectó ninguna voz. Intenta hablar más claro.');
-        return;
-      }
-      processText(finalText);
-    } else {
-      // ═══ DESKTOP: stop MediaRecorder → triggers onstop → processAudio ═══
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => t.stop());
-        streamRef.current = null;
-      }
-      setIsRecording(false);
-    }
+    setIsRecording(false);
   };
 
   const getSupportedMimeType = (): string => {
@@ -340,7 +156,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     setError(null);
 
     try {
-      // Convert blob to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => resolve(reader.result as string);
@@ -348,7 +163,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         reader.readAsDataURL(blob);
       });
 
-      // Build detailed cuentas list with bank info, type AND balance
       const cuentasDetalladas = [
         { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo', saldo: accountBalances['Billetera'] ?? 0 },
         ...userCards.map(card => ({
@@ -367,7 +181,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           audio: base64,
           mimeType: mimeType.split(';')[0],
           cuentas: cuentasDetalladas,
-          transcriptHint: transcriptRef.current || undefined,
         }),
       });
 
@@ -381,7 +194,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         throw new Error('Yunai no pudo interpretar el audio');
       }
 
-      // Handle empty array (pure noise, no voice detected)
       const items = Array.isArray(result.data) ? result.data : [result.data];
       if (items.length === 0) {
         throw new Error('No se detectó ningún movimiento. Intenta hablar más claro o en un lugar con menos ruido.');
@@ -390,55 +202,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       onResult(result.data);
     } catch (err: any) {
       setError(err.message || 'Error procesando el audio');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Mobile mode: send accumulated transcript text (no audio) to Gemini for NLP parsing
-  const processText = async (text: string) => {
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const cuentasDetalladas = [
-        { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo', saldo: accountBalances['Billetera'] ?? 0 },
-        ...userCards.map(card => ({
-          alias: card.alias,
-          banco: card.banco,
-          tipo: getCardType(card),
-          tipo_tarjeta: card.tipo_tarjeta,
-          saldo: accountBalances[card.alias] ?? 0,
-        })),
-      ];
-
-      const response = await fetch('/api/yunai-voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          textOnly: text,
-          cuentas: cuentasDetalladas,
-        }),
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `Error del servidor (${response.status})`);
-      }
-
-      const result = await response.json();
-      if (!result.success || !result.data) {
-        throw new Error('Yunai no pudo interpretar el mensaje');
-      }
-
-      const items = Array.isArray(result.data) ? result.data : [result.data];
-      if (items.length === 0) {
-        throw new Error('No se detectó ningún movimiento. Intenta hablar más claro.');
-      }
-
-      onResult(result.data);
-    } catch (err: any) {
-      setError(err.message || 'Error procesando el texto');
     } finally {
       setIsProcessing(false);
     }
@@ -573,20 +336,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
               </button>
             )}
           </div>
-
-          {/* Live transcript panel — shows while recording */}
-          {isRecording && (transcript || interimTranscript) && (
-            <div className={`mx-2 mb-3 p-3 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border} max-h-24 overflow-y-auto`}>
-              <p className={`text-sm ${theme.colors.textPrimary} leading-relaxed`}>
-                {highlightEntities(transcript)}
-                {interimTranscript && (
-                  <span className={`${theme.colors.textMuted} italic`}>
-                    {transcript ? ' ' : ''}{interimTranscript}
-                  </span>
-                )}
-              </p>
-            </div>
-          )}
 
           {/* Sound waves animation when recording */}
           {isRecording && (
