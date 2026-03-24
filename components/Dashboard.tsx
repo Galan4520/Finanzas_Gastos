@@ -243,6 +243,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     const compareWeekDaily = [0, 0, 0, 0, 0, 0, 0];
     // Track transactions per day for detail view
     const thisWeekTxns: Transaction[][] = [[], [], [], [], [], [], []];
+    const compareWeekTxns: Transaction[][] = [[], [], [], [], [], [], []];
 
     history.forEach(t => {
       if (t.tipo !== 'Gastos') return;
@@ -259,6 +260,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         compareWeekExpenses += monto;
         const dayIdx = (date.getDay() + 6) % 7;
         compareWeekDaily[dayIdx] += monto;
+        compareWeekTxns[dayIdx].push(t);
       }
     });
 
@@ -292,6 +294,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       compareLabel,
       compareRangeLabel,
       thisWeekTxns,
+      compareWeekTxns,
     };
   }, [history, compareWeekOffset, includeCardPayments]);
 
@@ -1224,8 +1227,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {/* NEW FEATURES ROW */}
       <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${mobileTab !== 'analisis' ? 'hidden md:grid' : ''}`}>
 
-        {/* Weekly Comparison Card with Bar Chart */}
-        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+        {/* Weekly Comparison Card with Bar Chart — full width on desktop */}
+        <div className={`lg:col-span-3 ${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
           <div className="flex items-center justify-between mb-4">
             <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider`}>
               Gastos Semanales
@@ -1336,41 +1339,69 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </div>
           </div>
 
-          {/* Day detail panel — shows transactions for the clicked day */}
+          {/* Day detail panel — shows transactions for both weeks side by side */}
           {selectedWeekDay != null && (() => {
             const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-            const txns = weeklyComparison.thisWeekTxns[selectedWeekDay];
-            const dayTotal = txns.reduce((s, t) => s + Number(t.monto), 0);
+            const thisTxns = weeklyComparison.thisWeekTxns[selectedWeekDay];
+            const compareTxns = weeklyComparison.compareWeekTxns[selectedWeekDay];
+            const thisTotal = thisTxns.reduce((s, t) => s + Number(t.monto), 0);
+            const compareTotal = compareTxns.reduce((s, t) => s + Number(t.monto), 0);
+            // Sort by timestamp (order of registration)
+            const sortByTime = (a: Transaction, b: Transaction) => {
+              const ta = a.timestamp || a.fecha;
+              const tb = b.timestamp || b.fecha;
+              return ta < tb ? -1 : ta > tb ? 1 : 0;
+            };
+            const renderTxnList = (txns: Transaction[]) => (
+              txns.length === 0 ? (
+                <p className={`text-xs ${theme.colors.textMuted} py-2`}>Sin gastos</p>
+              ) : (
+                <div className="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar">
+                  {[...txns].sort(sortByTime).map((t, i) => (
+                    <div key={i} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-medium ${theme.colors.textPrimary} truncate`}>{t.descripcion}</p>
+                        <p className={`text-[10px] ${theme.colors.textMuted}`}>{t.categoria}{t.cuenta ? ` · ${t.cuenta}` : ''}</p>
+                      </div>
+                      <span className={`text-xs font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>
+                        {formatCurrency(Number(t.monto))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )
+            );
             return (
               <div className={`mt-3 pt-3 border-t ${theme.colors.border} animate-in slide-in-from-top-2 duration-200`}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className={`text-xs font-bold ${theme.colors.textPrimary}`}>
-                    {dayNames[selectedWeekDay]} — {formatCurrency(dayTotal)}
+                <div className="flex items-center justify-between mb-3">
+                  <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>
+                    {dayNames[selectedWeekDay]}
                   </p>
                   <button
                     onClick={() => setSelectedWeekDay(null)}
                     className={`text-xs ${theme.colors.textMuted} hover:${theme.colors.textPrimary} px-1`}
                   >✕</button>
                 </div>
-                {txns.length === 0 ? (
-                  <p className={`text-xs ${theme.colors.textMuted} py-2`}>Sin gastos este día</p>
-                ) : (
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
-                    {txns
-                      .sort((a, b) => Number(b.monto) - Number(a.monto))
-                      .map((t, i) => (
-                      <div key={i} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs font-medium ${theme.colors.textPrimary} truncate`}>{t.descripcion}</p>
-                          <p className={`text-[10px] ${theme.colors.textMuted}`}>{t.categoria}{t.cuenta ? ` · ${t.cuenta}` : ''}</p>
-                        </div>
-                        <span className={`text-xs font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>
-                          {formatCurrency(Number(t.monto))}
-                        </span>
-                      </div>
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* This week */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#00A750' }} />
+                      <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>Esta semana</span>
+                      <span className={`text-xs font-bold ml-auto ${theme.colors.textPrimary}`}>{formatCurrency(thisTotal)}</span>
+                    </div>
+                    {renderTxnList(thisTxns)}
                   </div>
-                )}
+                  {/* Compare week */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#00A750', opacity: 0.25 }} />
+                      <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>{weeklyComparison.compareLabel}</span>
+                      <span className={`text-xs font-bold ml-auto ${theme.colors.textPrimary}`}>{formatCurrency(compareTotal)}</span>
+                    </div>
+                    {renderTxnList(compareTxns)}
+                  </div>
+                </div>
               </div>
             );
           })()}
