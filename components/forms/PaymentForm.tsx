@@ -222,6 +222,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
         id_gasto: selectedExpense.id,
         tarjeta: selectedExpense.tarjeta,
         descripcion_gasto: selectedExpense.descripcion,
+        categoria: selectedExpense.categoria,
         monto_pagado: montoPagado,
         tipo_pago: tipoPagoFinal,
         num_cuota: paymentType === 'Cuota' && !esSuscripcion ? (Math.floor(cuotasPagadasActual) + 1) : 0,

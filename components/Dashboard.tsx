@@ -1786,45 +1786,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         });
 
         const categoryData = filteredHistory.reduce((acc: { [key: string]: number }, t) => {
-          // If this is a card payment with generic category, distribute to real categories
+          // Card payment: try to distribute to real categories from pending expenses
           if (isCardPayment(t)) {
-            const cat = t.categoria || '';
-            const isGenericCategory = cat.includes('Otros') || cat.includes('Pagos') || !cat;
+            const desc = (t.descripcion || '').toLowerCase();
+            const notas = (t.notas || '').toLowerCase();
 
-            if (isGenericCategory) {
-              // Try to find card name from description and match with pending expenses
-              const desc = (t.descripcion || '').toLowerCase();
-              // Extract card name from: "Pago tarjeta IBK Gold" or from notas: "Pago de deuda - IBK Gold"
-              const cardMatch = desc
-                .replace(/pago\s+tarjeta\s*/i, '')
-                .replace(/pago\s+(cuota|total)\s*-?\s*/i, '')
-                .trim();
-              const notasMatch = (t.notas || '').toLowerCase()
-                .replace(/pago\s+de\s+(deuda|suscripción)\s*-?\s*/i, '')
-                .trim();
+            // Extract card alias from description or notas
+            // "Pago tarjeta IBK Gold" → "ibk gold"
+            // "Pago Cuota - Pizza desc" → uses notas "Pago de deuda - IBK Gold" → "ibk gold"
+            const descClean = desc
+              .replace(/pago\s+tarjeta\s*/i, '')
+              .replace(/pago\s+(cuota|total)\s*-?\s*/i, '')
+              .trim();
+            const notasClean = notas
+              .replace(/pago\s+de\s+(deuda|suscripción)\s*-?\s*/i, '')
+              .trim();
 
-              // Find pending expenses for this card
-              const cardExpenses = pendingExpenses.filter(pe => {
-                const alias = pe.tarjeta.toLowerCase();
-                return alias === cardMatch || alias === notasMatch ||
-                  alias.includes(cardMatch) || cardMatch.includes(alias) ||
-                  alias.includes(notasMatch) || notasMatch.includes(alias);
+            // Find all pending expenses for this card
+            const cardExpenses = pendingExpenses.filter(pe => {
+              const alias = pe.tarjeta.toLowerCase();
+              if (!alias) return false;
+              return descClean.includes(alias) || alias.includes(descClean) ||
+                notasClean.includes(alias) || alias.includes(notasClean);
+            });
+
+            if (cardExpenses.length > 0) {
+              const totalPending = cardExpenses.reduce((sum, pe) => sum + Number(pe.monto), 0);
+              const paymentAmount = Number(t.monto);
+
+              cardExpenses.forEach(pe => {
+                const proportion = totalPending > 0 ? Number(pe.monto) / totalPending : 1 / cardExpenses.length;
+                const peCat = pe.categoria || 'Sin categoría';
+                acc[peCat] = (acc[peCat] || 0) + (paymentAmount * proportion);
               });
-
-              if (cardExpenses.length > 0) {
-                const totalPending = cardExpenses.reduce((sum, pe) => sum + Number(pe.monto), 0);
-                const paymentAmount = Number(t.monto);
-
-                cardExpenses.forEach(pe => {
-                  const proportion = totalPending > 0 ? Number(pe.monto) / totalPending : 1 / cardExpenses.length;
-                  const distributed = paymentAmount * proportion;
-                  const peCat = pe.categoria || 'Sin categoría';
-                  acc[peCat] = (acc[peCat] || 0) + distributed;
-                });
-                return acc;
-              }
+              return acc;
             }
-            // If category is already real (from PaymentForm), or no pending found, use as-is
+            // No pending expenses found — fall through to use original category
           }
 
           const cat = t.categoria || 'Sin categoría';
