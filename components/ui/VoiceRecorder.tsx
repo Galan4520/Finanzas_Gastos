@@ -11,6 +11,9 @@ interface VoiceRecorderProps {
   accountBalances: Record<string, number>;
 }
 
+// Detect mobile: Android Chrome can't run SpeechRecognition + MediaRecorder simultaneously
+const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   isOpen,
   onResult,
@@ -32,6 +35,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const recordingTimeRef = useRef(0);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef('');
+  const mobileModeRef = useRef(false); // true = text-only mode (mobile)
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -152,91 +156,89 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     return result;
   };
 
+  // Setup SpeechRecognition instance (shared between mobile and desktop)
+  const setupRecognition = () => {
+    try {
+      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (!SpeechRecognitionAPI) return null;
+
+      const recognition = new SpeechRecognitionAPI();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'es-PE';
+
+      recognition.onresult = (event: any) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            transcriptRef.current += event.results[i][0].transcript + ' ';
+            setTranscript(transcriptRef.current.trim());
+          } else {
+            interim += event.results[i][0].transcript;
+          }
+        }
+        setInterimTranscript(interim);
+      };
+
+      recognition.onerror = (e: any) => {
+        // 'no-speech' is normal on silence — don't kill recognition
+        if (e.error !== 'no-speech') {
+          recognitionRef.current = null;
+        }
+      };
+
+      // Auto-restart: Android Chrome stops after each phrase or ~15s silence
+      recognition.onend = () => {
+        // Only auto-restart if we're still in recording state
+        if (recognitionRef.current === recognition) {
+          try { recognition.start(); } catch { /* already stopped or not available */ }
+        }
+      };
+
+      return recognition;
+    } catch {
+      return null;
+    }
+  };
+
   const startRecording = async () => {
     setError(null);
     audioChunksRef.current = [];
+    transcriptRef.current = '';
+    setTranscript('');
+    setInterimTranscript('');
+
+    const mobile = isMobile();
+    mobileModeRef.current = mobile;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        }
-      });
-      streamRef.current = stream;
-
-      // 1. Start SpeechRecognition FIRST — on mobile, whoever gets the mic first wins
-      transcriptRef.current = '';
-      setTranscript('');
-      setInterimTranscript('');
-
-      try {
-        const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRecognitionAPI) {
-          const recognition = new SpeechRecognitionAPI();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'es-PE';
-
-          recognition.onresult = (event: any) => {
-            let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              if (event.results[i].isFinal) {
-                transcriptRef.current += event.results[i][0].transcript + ' ';
-                setTranscript(transcriptRef.current.trim());
-              } else {
-                interim += event.results[i][0].transcript;
-              }
-            }
-            setInterimTranscript(interim);
-          };
-
-          recognition.onerror = () => {
-            recognitionRef.current = null;
-          };
-
-          // Auto-restart: Android Chrome stops after each phrase or ~15s silence
-          recognition.onend = () => {
-            if (mediaRecorderRef.current?.state === 'recording') {
-              try { recognition.start(); } catch { /* already stopped */ }
-            }
-          };
-
-          recognition.start();
-          recognitionRef.current = recognition;
-        }
-      } catch {
-        // SpeechRecognition not available — continue with audio only
-      }
-
-      // 2. THEN start MediaRecorder on the same stream
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
-      mediaRecorderRef.current = mediaRecorder;
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data);
-      };
-
-      mediaRecorder.onstop = () => {
-        if (recordingTimeRef.current < 1) {
-          setError('Grabación muy corta. Mantén presionado al menos 1 segundo.');
+      if (mobile) {
+        // ═══ MOBILE MODE: SpeechRecognition ONLY (no MediaRecorder) ═══
+        // Android Chrome can't run both simultaneously — they fight for the mic.
+        // We use SpeechRecognition for live text, then send the text to Gemini.
+        const recognition = setupRecognition();
+        if (!recognition) {
+          // No SpeechRecognition available — fall back to audio-only
+          mobileModeRef.current = false;
+          await startDesktopRecording();
           return;
         }
-        const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
-        processAudio(blob, mediaRecorder.mimeType);
-      };
 
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-      recordingTimeRef.current = 0;
+        recognition.start();
+        recognitionRef.current = recognition;
+        setIsRecording(true);
+        setRecordingTime(0);
+        recordingTimeRef.current = 0;
 
-      timerRef.current = setInterval(() => {
-        recordingTimeRef.current += 1;
-        setRecordingTime(recordingTimeRef.current);
-      }, 1000);
+        timerRef.current = setInterval(() => {
+          recordingTimeRef.current += 1;
+          setRecordingTime(recordingTimeRef.current);
+        }, 1000);
 
+      } else {
+        // ═══ DESKTOP MODE: SpeechRecognition + MediaRecorder (hybrid) ═══
+        await startDesktopRecording();
+      }
     } catch (err: any) {
       if (err.name === 'NotAllowedError') {
         setError('Permiso de micrófono denegado. Habilítalo en la configuración del navegador.');
@@ -246,23 +248,83 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     }
   };
 
+  // Desktop: both SpeechRecognition (live preview) + MediaRecorder (audio to Gemini)
+  const startDesktopRecording = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    });
+    streamRef.current = stream;
+
+    // Start SpeechRecognition for live preview (best-effort, non-blocking)
+    const recognition = setupRecognition();
+    if (recognition) {
+      try {
+        recognition.start();
+        recognitionRef.current = recognition;
+      } catch { /* not available — continue without live preview */ }
+    }
+
+    // Start MediaRecorder for audio capture
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
+    mediaRecorderRef.current = mediaRecorder;
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      if (recordingTimeRef.current < 1) {
+        setError('Grabación muy corta. Mantén presionado al menos 1 segundo.');
+        return;
+      }
+      const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
+      processAudio(blob, mediaRecorder.mimeType);
+    };
+
+    mediaRecorder.start();
+    setIsRecording(true);
+    setRecordingTime(0);
+    recordingTimeRef.current = 0;
+
+    timerRef.current = setInterval(() => {
+      recordingTimeRef.current += 1;
+      setRecordingTime(recordingTimeRef.current);
+    }, 1000);
+  };
+
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    // Stop recognition first (prevents auto-restart via onend)
+    if (recognitionRef.current) {
+      const rec = recognitionRef.current;
+      recognitionRef.current = null; // clear ref BEFORE stop so onend doesn't restart
+      try { rec.stop(); } catch { /* already stopped */ }
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+
+    if (mobileModeRef.current) {
+      // ═══ MOBILE: no MediaRecorder, send accumulated text to Gemini ═══
+      setIsRecording(false);
+      const finalText = transcriptRef.current.trim();
+      if (recordingTimeRef.current < 1 || !finalText) {
+        setError(finalText ? 'Grabación muy corta.' : 'No se detectó ninguna voz. Intenta hablar más claro.');
+        return;
+      }
+      processText(finalText);
+    } else {
+      // ═══ DESKTOP: stop MediaRecorder → triggers onstop → processAudio ═══
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      setIsRecording(false);
     }
-    setIsRecording(false);
   };
 
   const getSupportedMimeType = (): string => {
@@ -328,6 +390,55 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       onResult(result.data);
     } catch (err: any) {
       setError(err.message || 'Error procesando el audio');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Mobile mode: send accumulated transcript text (no audio) to Gemini for NLP parsing
+  const processText = async (text: string) => {
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      const cuentasDetalladas = [
+        { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo', saldo: accountBalances['Billetera'] ?? 0 },
+        ...userCards.map(card => ({
+          alias: card.alias,
+          banco: card.banco,
+          tipo: getCardType(card),
+          tipo_tarjeta: card.tipo_tarjeta,
+          saldo: accountBalances[card.alias] ?? 0,
+        })),
+      ];
+
+      const response = await fetch('/api/yunai-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          textOnly: text,
+          cuentas: cuentasDetalladas,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Error del servidor (${response.status})`);
+      }
+
+      const result = await response.json();
+      if (!result.success || !result.data) {
+        throw new Error('Yunai no pudo interpretar el mensaje');
+      }
+
+      const items = Array.isArray(result.data) ? result.data : [result.data];
+      if (items.length === 0) {
+        throw new Error('No se detectó ningún movimiento. Intenta hablar más claro.');
+      }
+
+      onResult(result.data);
+    } catch (err: any) {
+      setError(err.message || 'Error procesando el texto');
     } finally {
       setIsProcessing(false);
     }

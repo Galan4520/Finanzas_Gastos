@@ -14,12 +14,13 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY no configurada en Vercel' });
     }
 
-    const { audio, mimeType, cuentas, categorias, transcriptHint } = req.body;
-    if (!audio) {
-      return res.status(400).json({ error: 'No se recibió audio para procesar.' });
+    const { audio, mimeType, cuentas, categorias, transcriptHint, textOnly } = req.body;
+    if (!audio && !textOnly) {
+      return res.status(400).json({ error: 'No se recibió audio ni texto para procesar.' });
     }
 
-    const cleanBase64 = audio.includes('base64,') ? audio.split('base64,')[1] : audio;
+    const isTextMode = !!textOnly && !audio;
+    const cleanBase64 = audio ? (audio.includes('base64,') ? audio.split('base64,')[1] : audio) : null;
     const audioMime = mimeType || 'audio/webm';
     const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
@@ -182,33 +183,36 @@ export default async function handler(req, res) {
       ']\n\n' +
       "RESPONDE AHORA CON EL ARRAY JSON:";
 
-    // If browser provided a live transcript hint, append it as context
-    if (transcriptHint) {
-      promptText += `\n\nTRANSCRIPCIÓN APROXIMADA del navegador (puede tener errores, usa como referencia pero confía más en el audio):\n"${transcriptHint}"`;
+    // Build payload: text-only mode (mobile) vs audio mode (desktop)
+    let payload;
+    if (isTextMode) {
+      // Mobile text-only: SpeechRecognition transcript sent as primary input
+      promptText += `\n\nTEXTO DICTADO POR EL USUARIO (transcripción de voz):\n"${textOnly}"`;
+      payload = {
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: { temperature: 0.1 }
+      };
+      console.log(`[yunai-voice] Text-only mode, transcript: "${textOnly.substring(0, 100)}"`);
+    } else {
+      // Desktop/audio mode: audio is the primary input
+      if (transcriptHint) {
+        promptText += `\n\nTRANSCRIPCIÓN APROXIMADA del navegador (puede tener errores, usa como referencia pero confía más en el audio):\n"${transcriptHint}"`;
+      }
+      payload = {
+        contents: [{
+          parts: [
+            { text: promptText },
+            { inline_data: { mime_type: audioMime, data: cleanBase64 } }
+          ]
+        }],
+        generationConfig: { temperature: 0.1 }
+      };
     }
 
-    const payload = {
-      contents: [{
-        parts: [
-          { text: promptText },
-          {
-            inline_data: {
-              mime_type: audioMime,
-              data: cleanBase64
-            }
-          }
-        ]
-      }],
-      generationConfig: {
-        temperature: 0.1
-      }
-    };
-
-    // Model fallback chain: try best voice model first, fallback on 503/429
-    const voiceModels = [
-      'gemini-2.5-flash-lite',
-      'gemini-2.0-flash',
-    ];
+    // Model fallback chain: text-only can use lighter models
+    const voiceModels = isTextMode
+      ? ['gemini-2.5-flash-lite', 'gemini-2.0-flash']
+      : ['gemini-2.5-flash-lite', 'gemini-2.0-flash'];
 
     let response = null;
     let usedModel = null;
