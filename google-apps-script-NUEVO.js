@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════════
 // VERSIONAMIENTO Y AUTO-UPDATE
 // ═══════════════════════════════════════════════════════════════
-var GAS_VERSION = 5;
+var GAS_VERSION = 6;
 var SCHEMA_VERSION = 1;
 var VERSION_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/gas-version.json';
 var CODE_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js';
@@ -854,9 +854,25 @@ function doPost(e) {
               : 'Pago parcial';
         const fecha = params.fecha_pago || new Date().toISOString().slice(0, 10);
         const ts = params.timestamp || new Date().toISOString();
+
+        // Obtener categoría real del gasto pendiente original
+        var categoriaReal = params.categoria || 'Pagos';
+        if (categoriaReal === 'Pagos' && params.id_gasto) {
+          var gpSheet = sheet.getSheetByName('Gastos_Pendientes');
+          if (gpSheet) {
+            var gpData = gpSheet.getDataRange().getValues();
+            for (var g = 1; g < gpData.length; g++) {
+              if (gpData[g][0] === params.id_gasto && gpData[g][3]) {
+                categoriaReal = gpData[g][3]; // Columna D = Categoria
+                break;
+              }
+            }
+          }
+        }
+
         gastosSheet.appendRow([
           fecha,                                                             // A: Fecha
-          'Pagos',                                                           // B: Categoría
+          categoriaReal,                                                     // B: Categoría (real, del gasto pendiente)
           tipoPagoDesc + ' - ' + (params.descripcion_gasto || ''),          // C: Descripción
           parseFloat(params.monto_pagado),                                   // D: Monto
           params.tarjeta ? 'Tarjeta: ' + params.tarjeta : '',               // E: Notas
