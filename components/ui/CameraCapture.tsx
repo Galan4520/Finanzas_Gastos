@@ -107,13 +107,20 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     }
   }, [stopCamera]);
 
-  // Auto-start camera when modal opens
+  // Auto-start camera when modal opens, ALWAYS cleanup on close/unmount
   useEffect(() => {
     if (isOpen && !preview) {
       startCamera(facingMode);
     }
+    if (!isOpen) {
+      stopCamera();
+    }
+    // Always release stream on unmount — prevents mic/camera conflicts
     return () => {
-      if (!isOpen) stopCamera();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
     };
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
