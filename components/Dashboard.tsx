@@ -160,6 +160,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   const [yunaiAdvice, setYunaiAdvice] = useState<any>(null);
   const [isAdviceLoading, setIsAdviceLoading] = useState(false);
   const [showYunaiDetail, setShowYunaiDetail] = useState(false);
+  const [compareWeekOffset, setCompareWeekOffset] = useState(1); // 1 = semana pasada, 2 = hace 2 semanas, etc.
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -208,7 +209,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     }
   }, [dateFilter, dateRange, customRange]);
 
-  // Calculate weekly expenses comparison
+  // Calculate weekly expenses comparison + daily breakdown for chart
   const weeklyComparison = useMemo(() => {
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -218,12 +219,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     const dayOfWeek = todayStart.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
     thisWeekStart.setDate(todayStart.getDate() - ((dayOfWeek + 6) % 7));
 
-    // Get start of last week
-    const lastWeekStart = new Date(thisWeekStart);
-    lastWeekStart.setDate(thisWeekStart.getDate() - 7);
+    // Get start of compare week (N weeks ago)
+    const compareWeekStart = new Date(thisWeekStart);
+    compareWeekStart.setDate(thisWeekStart.getDate() - (7 * compareWeekOffset));
+    const compareWeekEnd = new Date(compareWeekStart);
+    compareWeekEnd.setDate(compareWeekStart.getDate() + 7);
 
     let thisWeekExpenses = 0;
-    let lastWeekExpenses = 0;
+    let compareWeekExpenses = 0;
+
+    // Daily breakdown: index 0=Lun, 1=Mar, ..., 6=Dom
+    const thisWeekDaily = [0, 0, 0, 0, 0, 0, 0];
+    const compareWeekDaily = [0, 0, 0, 0, 0, 0, 0];
 
     history.forEach(t => {
       if (t.tipo !== 'Gastos') return;
@@ -232,23 +239,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
       if (date >= thisWeekStart) {
         thisWeekExpenses += monto;
-      } else if (date >= lastWeekStart && date < thisWeekStart) {
-        lastWeekExpenses += monto;
+        const dayIdx = (date.getDay() + 6) % 7; // Mon=0, ..., Sun=6
+        thisWeekDaily[dayIdx] += monto;
+      } else if (date >= compareWeekStart && date < compareWeekEnd) {
+        compareWeekExpenses += monto;
+        const dayIdx = (date.getDay() + 6) % 7;
+        compareWeekDaily[dayIdx] += monto;
       }
     });
 
-    const difference = thisWeekExpenses - lastWeekExpenses;
-    const percentChange = lastWeekExpenses > 0
-      ? ((difference / lastWeekExpenses) * 100)
+    const difference = thisWeekExpenses - compareWeekExpenses;
+    const percentChange = compareWeekExpenses > 0
+      ? ((difference / compareWeekExpenses) * 100)
       : (thisWeekExpenses > 0 ? 100 : 0);
+
+    const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const chartData = dayNames.map((name, i) => ({
+      day: name,
+      actual: Math.round(thisWeekDaily[i] * 100) / 100,
+      comparar: Math.round(compareWeekDaily[i] * 100) / 100,
+    }));
+
+    // Generate label for the compare week
+    const compareLabel = compareWeekOffset === 1
+      ? 'Semana pasada'
+      : `Hace ${compareWeekOffset} semanas`;
+
+    // Generate date range label for compare week
+    const fmtShort = (d: Date) => `${d.getDate()}/${d.getMonth() + 1}`;
+    const compareRangeLabel = `${fmtShort(compareWeekStart)} - ${fmtShort(new Date(compareWeekEnd.getTime() - 86400000))}`;
 
     return {
       thisWeek: thisWeekExpenses,
-      lastWeek: lastWeekExpenses,
+      lastWeek: compareWeekExpenses,
       difference,
-      percentChange
+      percentChange,
+      chartData,
+      compareLabel,
+      compareRangeLabel,
     };
-  }, [history]);
+  }, [history, compareWeekOffset]);
 
   // Calculate card payments for this month and next month
   const cardPayments = useMemo(() => {
@@ -1179,57 +1209,103 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       {/* NEW FEATURES ROW */}
       <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${mobileTab !== 'analisis' ? 'hidden md:grid' : ''}`}>
 
-        {/* Weekly Comparison Card */}
+        {/* Weekly Comparison Card with Bar Chart */}
         <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
-          <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
-            Gastos Semanales
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider`}>
+              Gastos Semanales
+            </h3>
+            {/* Week selector */}
+            <select
+              value={compareWeekOffset}
+              onChange={(e) => setCompareWeekOffset(Number(e.target.value))}
+              className={`text-xs font-medium px-2 py-1 rounded-lg border ${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textSecondary} outline-none cursor-pointer`}
+            >
+              <option value={1}>vs Semana pasada</option>
+              <option value={2}>vs Hace 2 semanas</option>
+              <option value={3}>vs Hace 3 semanas</option>
+              <option value={4}>vs Hace 4 semanas</option>
+            </select>
+          </div>
 
-          <div className="space-y-4">
-            <div>
-              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Esta semana</p>
-              <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
+          {/* Summary row */}
+          <div className="flex items-center gap-4 mb-4">
+            <div className="flex-1">
+              <p className={`text-xs ${theme.colors.textMuted} mb-0.5`}>Esta semana</p>
+              <p className={`text-lg font-sans font-bold ${theme.colors.textPrimary}`}>
                 {formatCompact(weeklyComparison.thisWeek)}
               </p>
             </div>
-
-            <div>
-              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Semana pasada</p>
-              <p className={`text-lg font-sans font-bold truncate ${theme.colors.textSecondary}`}>
+            <div className="flex-1">
+              <p className={`text-xs ${theme.colors.textMuted} mb-0.5`}>{weeklyComparison.compareLabel}</p>
+              <p className={`text-lg font-sans font-bold ${theme.colors.textSecondary}`}>
                 {formatCompact(weeklyComparison.lastWeek)}
               </p>
             </div>
-
-            <div className={`p-3 rounded-xl ${
+            <div className={`px-2 py-1 rounded-lg ${
               weeklyComparison.difference > 0 ? 'bg-yn-error-500/10' : 'bg-yn-success-500/10'
             }`}>
-              <div className="flex items-center justify-between">
-                <span className={`text-xs ${theme.colors.textMuted}`}>Variación</span>
-                <div className="flex items-center gap-1">
-                  {weeklyComparison.difference > 0 ? (
-                    <ArrowUpRight className="text-yn-error-500" size={16} />
-                  ) : weeklyComparison.difference < 0 ? (
-                    <ArrowDownRight className="text-yn-success-500" size={16} />
-                  ) : null}
-                  <span className={`font-bold text-sm ${
-                    weeklyComparison.difference > 0 ? 'text-yn-error-500' :
-                    weeklyComparison.difference < 0 ? 'text-yn-success-500' :
-                    theme.colors.textMuted
-                  }`}>
-                    {weeklyComparison.percentChange > 0 ? '+' : ''}
-                    {weeklyComparison.percentChange.toFixed(1)}%
-                  </span>
-                </div>
+              <div className="flex items-center gap-0.5">
+                {weeklyComparison.difference > 0 ? (
+                  <ArrowUpRight className="text-yn-error-500" size={14} />
+                ) : weeklyComparison.difference < 0 ? (
+                  <ArrowDownRight className="text-yn-success-500" size={14} />
+                ) : null}
+                <span className={`font-bold text-xs ${
+                  weeklyComparison.difference > 0 ? 'text-yn-error-500' :
+                  weeklyComparison.difference < 0 ? 'text-yn-success-500' :
+                  theme.colors.textMuted
+                }`}>
+                  {weeklyComparison.percentChange > 0 ? '+' : ''}
+                  {weeklyComparison.percentChange.toFixed(1)}%
+                </span>
               </div>
-              {weeklyComparison.difference !== 0 && (
-                <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
-                  {weeklyComparison.difference > 0 ? '+' : ''}
-                  {formatCurrency(weeklyComparison.difference)}
-                </p>
-              )}
             </div>
           </div>
 
+          {/* Bar Chart */}
+          <div style={{ width: '100%', height: 180 }}>
+            <ResponsiveContainer>
+              <BarChart data={weeklyComparison.chartData} barCategoryGap="20%">
+                <XAxis
+                  dataKey="day"
+                  tick={{ fontSize: 11, fill: '#6F7D75' }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis hide />
+                <Tooltip
+                  formatter={(value: number, name: string) => [
+                    formatCurrency(value),
+                    name === 'actual' ? 'Esta semana' : weeklyComparison.compareLabel
+                  ]}
+                  contentStyle={{
+                    borderRadius: 12,
+                    border: 'none',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    fontSize: 12,
+                  }}
+                  cursor={{ fill: 'rgba(0,167,80,0.05)' }}
+                />
+                <Bar dataKey="actual" fill="#00A750" radius={[4, 4, 0, 0]} name="actual" />
+                <Bar dataKey="comparar" fill="#00A750" opacity={0.25} radius={[4, 4, 0, 0]} name="comparar" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center justify-center gap-4 mt-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#00A750' }} />
+              <span className={`text-[10px] font-medium ${theme.colors.textMuted}`}>Esta semana</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#00A750', opacity: 0.25 }} />
+              <span className={`text-[10px] font-medium ${theme.colors.textMuted}`}>
+                {weeklyComparison.compareLabel} ({weeklyComparison.compareRangeLabel})
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* This Month Payment Card */}
