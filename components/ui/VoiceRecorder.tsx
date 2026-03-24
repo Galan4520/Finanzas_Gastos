@@ -27,6 +27,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingTimeRef = useRef(0);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -104,7 +105,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       };
 
       mediaRecorder.onstop = () => {
-        if (recordingTime < 1) {
+        if (recordingTimeRef.current < 1) {
           setError('Grabación muy corta. Mantén presionado al menos 1 segundo.');
           return;
         }
@@ -115,9 +116,11 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       mediaRecorder.start();
       setIsRecording(true);
       setRecordingTime(0);
+      recordingTimeRef.current = 0;
 
       timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        recordingTimeRef.current += 1;
+        setRecordingTime(recordingTimeRef.current);
       }, 1000);
 
     } catch (err: any) {
