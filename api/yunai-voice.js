@@ -182,8 +182,6 @@ export default async function handler(req, res) {
       ']\n\n' +
       "RESPONDE AHORA CON EL ARRAY JSON:";
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
-
     const payload = {
       contents: [{
         parts: [
@@ -201,16 +199,44 @@ export default async function handler(req, res) {
       }
     };
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    // Model fallback chain: try best voice model first, fallback on 503/429
+    const voiceModels = [
+      'gemini-2.5-flash-lite',
+      'gemini-2.0-flash',
+    ];
 
-    if (!response.ok) {
+    let response = null;
+    let usedModel = null;
+
+    for (const model of voiceModels) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      console.log(`[yunai-voice] Trying model: ${model}`);
+      response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        usedModel = model;
+        console.log(`[yunai-voice] Success with model: ${model}`);
+        break;
+      }
+
+      if (response.status === 429 || response.status === 503) {
+        console.log(`[yunai-voice] ${model} returned ${response.status}, trying next...`);
+        continue;
+      }
+
+      // Other errors: don't fallback
       const errorText = await response.text();
-      console.error("Gemini Voice API Error:", errorText);
+      console.error(`[yunai-voice] ${model} error (${response.status}):`, errorText);
       throw new Error(`Error desde Google Gemini (${response.status})`);
+    }
+
+    if (!response || !response.ok) {
+      throw new Error('Todos los modelos de IA están saturados. Intenta en unos minutos.');
     }
 
     const data = await response.json();
