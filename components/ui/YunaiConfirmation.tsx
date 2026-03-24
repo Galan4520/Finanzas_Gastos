@@ -154,8 +154,8 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                 className={`rounded-2xl border-2 transition-all ${
                   isSelected
                     ? hasUnresolved
-                      ? 'border-yellow-400 dark:border-yellow-600'
-                      : 'border-yn-primary-500 dark:border-yn-primary-400'
+                      ? 'border-yn-sec1-400'
+                      : 'border-yn-primary-500'
                     : `${theme.colors.border} opacity-50`
                 }`}
               >
@@ -205,7 +205,7 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                       {item.tipo === 'ingreso' ? '+' : item.tipo === 'transferencia' ? '↔' : '-'}S/{item.monto?.toFixed(2)}
                     </span>
                     {hasUnresolved && (
-                      <AlertTriangle size={14} className="text-yellow-500 flex-shrink-0" />
+                      <AlertTriangle size={14} className="text-yn-sec1-500 flex-shrink-0" />
                     )}
                     {isExpanded ? <ChevronUp size={16} className={theme.colors.textMuted} /> : <ChevronDown size={16} className={theme.colors.textMuted} />}
                   </div>
@@ -216,9 +216,9 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                   <div className={`px-4 pb-4 pt-2 space-y-2 border-t ${theme.colors.border}`}>
                     {/* Unresolved fields alert */}
                     {hasUnresolved && (
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl p-2.5 flex items-start gap-2">
-                        <AlertTriangle size={14} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                      <div className="bg-yn-primary-500/10 border border-yn-primary-500/30 rounded-xl p-2.5 flex items-start gap-2">
+                        <AlertTriangle size={14} className="text-yn-primary-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-yn-primary-700">
                           {data[idx]?.campos_inciertos?.find(ci => unresolvedByItem[idx]?.has(ci.campo))?.pregunta ||
                             'Hay campos que necesitan tu confirmación'}
                         </p>
@@ -244,14 +244,13 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                             <button
                               key={acc}
                               onClick={() => resolveField(idx, 'cuenta', acc)}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+                              className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                                 acc === uncertainMap.get('cuenta')?.valor_sugerido
-                                  ? 'bg-yn-primary-500/20 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/40'
-                                  : 'bg-yn-neutral-100 dark:bg-yn-neutral-700 text-yn-neutral-600 dark:text-yn-neutral-300 border-yn-neutral-200 dark:border-yn-neutral-600'
-                              } hover:bg-yn-primary-500/20`}
+                                  ? 'bg-yn-primary-500 text-white border-yn-primary-600 shadow-sm'
+                                  : 'bg-yn-primary-500/10 text-yn-primary-700 border-yn-primary-500/25 hover:bg-yn-primary-500/20'
+                              }`}
                             >
                               {acc}
-                              {acc === uncertainMap.get('cuenta')?.valor_sugerido && ' *'}
                             </button>
                           ))}
                         </div>
@@ -271,14 +270,13 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                               <button
                                 key={opt}
                                 onClick={() => resolveField(idx, campo, campo === 'num_cuotas' ? Number(opt) : opt)}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all border ${
                                   opt === ci.valor_sugerido
-                                    ? 'bg-yn-primary-500/20 text-yn-primary-700 dark:text-yn-primary-300 border-yn-primary-500/40'
-                                    : 'bg-yn-neutral-100 dark:bg-yn-neutral-700 text-yn-neutral-600 dark:text-yn-neutral-300 border-yn-neutral-200 dark:border-yn-neutral-600'
-                                } hover:bg-yn-primary-500/20`}
+                                    ? 'bg-yn-primary-500 text-white border-yn-primary-600 shadow-sm'
+                                    : 'bg-yn-primary-500/10 text-yn-primary-700 border-yn-primary-500/25 hover:bg-yn-primary-500/20'
+                                }`}
                               >
                                 {opt}
-                                {opt === ci.valor_sugerido && ' *'}
                               </button>
                             ))}
                           </div>
