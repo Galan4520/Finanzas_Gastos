@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY no configurada en Vercel' });
     }
 
-    const { audio, mimeType, cuentas, categorias } = req.body;
+    const { audio, mimeType, cuentas, categorias, transcriptHint } = req.body;
     if (!audio) {
       return res.status(400).json({ error: 'No se recibió audio para procesar.' });
     }
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
       cuentasDescription = cuentasList.map(c => `- "${c}"`).join('\n');
     }
 
-    const promptText =
+    let promptText =
       "Eres Yunai, un asistente financiero peruano inteligente. El usuario está dictando movimientos financieros en español.\n\n" +
 
       "═══ PROCESAMIENTO DE AUDIO ═══\n" +
@@ -181,6 +181,11 @@ export default async function handler(req, res) {
       '  }\n' +
       ']\n\n' +
       "RESPONDE AHORA CON EL ARRAY JSON:";
+
+    // If browser provided a live transcript hint, append it as context
+    if (transcriptHint) {
+      promptText += `\n\nTRANSCRIPCIÓN APROXIMADA del navegador (puede tener errores, usa como referencia pero confía más en el audio):\n"${transcriptHint}"`;
+    }
 
     const payload = {
       contents: [{

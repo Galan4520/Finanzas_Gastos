@@ -23,11 +23,14 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
+  const recognitionRef = useRef<any>(null);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -44,6 +47,8 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setError(null);
       setRecordingTime(0);
       setIsProcessing(false);
+      setTranscript('');
+      setInterimTranscript('');
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -83,6 +88,68 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     ];
   }, [userCards]);
 
+  // Dynamic regex for account alias matching in live transcript
+  const accountRegex = useMemo(() => {
+    const names = accountsList.map(a => a.alias).filter(Boolean);
+    if (names.length === 0) return null;
+    return new RegExp(`(${names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi');
+  }, [accountsList]);
+
+  // Highlight entities (montos, cuentas) in live transcript text
+  const highlightEntities = (text: string): React.ReactNode[] => {
+    if (!text) return [];
+
+    const montoRegex = /(?:S\/?\s*)?\d{1,6}(?:[.,]\d{1,2})?\s*(?:soles?|lucas?)?/gi;
+
+    // Collect all matches with their positions
+    type Match = { start: number; end: number; text: string; type: 'monto' | 'cuenta' };
+    const matches: Match[] = [];
+
+    let m: RegExpExecArray | null;
+    // Find montos
+    const montoRe = new RegExp(montoRegex.source, 'gi');
+    while ((m = montoRe.exec(text)) !== null) {
+      matches.push({ start: m.index, end: m.index + m[0].length, text: m[0], type: 'monto' });
+    }
+    // Find cuentas
+    if (accountRegex) {
+      const accRe = new RegExp(accountRegex.source, 'gi');
+      while ((m = accRe.exec(text)) !== null) {
+        matches.push({ start: m.index, end: m.index + m[0].length, text: m[0], type: 'cuenta' });
+      }
+    }
+
+    if (matches.length === 0) return [text];
+
+    // Sort by position and remove overlaps
+    matches.sort((a, b) => a.start - b.start);
+    const filtered: Match[] = [];
+    for (const match of matches) {
+      const last = filtered[filtered.length - 1];
+      if (!last || match.start >= last.end) {
+        filtered.push(match);
+      }
+    }
+
+    // Build result with highlighted spans
+    const result: React.ReactNode[] = [];
+    let lastEnd = 0;
+    filtered.forEach((match, i) => {
+      if (match.start > lastEnd) {
+        result.push(text.slice(lastEnd, match.start));
+      }
+      const cls = match.type === 'monto'
+        ? 'text-green-600 dark:text-green-400 font-bold'
+        : 'text-blue-600 dark:text-blue-400 font-semibold';
+      result.push(<span key={i} className={cls}>{match.text}</span>);
+      lastEnd = match.end;
+    });
+    if (lastEnd < text.length) {
+      result.push(text.slice(lastEnd));
+    }
+    return result;
+  };
+
   const startRecording = async () => {
     setError(null);
     audioChunksRef.current = [];
@@ -117,6 +184,35 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setIsRecording(true);
       setRecordingTime(0);
       recordingTimeRef.current = 0;
+      setTranscript('');
+      setInterimTranscript('');
+
+      // Start Web Speech API for live transcription (runs in parallel, free)
+      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognitionAPI) {
+        const recognition = new SpeechRecognitionAPI();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'es-PE';
+
+        recognition.onresult = (event: any) => {
+          let final = '';
+          let interim = '';
+          for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              final += event.results[i][0].transcript + ' ';
+            } else {
+              interim += event.results[i][0].transcript;
+            }
+          }
+          setTranscript(final.trim());
+          setInterimTranscript(interim);
+        };
+
+        recognition.onerror = () => {}; // Silent fail — not critical
+        recognition.start();
+        recognitionRef.current = recognition;
+      }
 
       timerRef.current = setInterval(() => {
         recordingTimeRef.current += 1;
@@ -143,6 +239,10 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
+    }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
     }
     setIsRecording(false);
   };
@@ -187,6 +287,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           audio: base64,
           mimeType: mimeType.split(';')[0],
           cuentas: cuentasDetalladas,
+          transcriptHint: transcript || undefined,
         }),
       });
 
@@ -343,6 +444,20 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
               </button>
             )}
           </div>
+
+          {/* Live transcript panel — shows while recording */}
+          {isRecording && (transcript || interimTranscript) && (
+            <div className={`mx-2 mb-3 p-3 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border} max-h-24 overflow-y-auto`}>
+              <p className={`text-sm ${theme.colors.textPrimary} leading-relaxed`}>
+                {highlightEntities(transcript)}
+                {interimTranscript && (
+                  <span className={`${theme.colors.textMuted} italic`}>
+                    {transcript ? ' ' : ''}{interimTranscript}
+                  </span>
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Sound waves animation when recording */}
           {isRecording && (
