@@ -9,7 +9,6 @@ import { SubscriptionSelector } from './SubscriptionSelector';
 import { SUBSCRIPTION_APPS, SubscriptionApp } from '../../subscriptionApps';
 import { LoadingOverlay } from '../ui/LoadingOverlay';
 import { analyzeReceiptWithAI, sendToSheet } from '../../services/googleSheetService';
-import { ScanResultSummary } from '../ui/ScanResultSummary';
 import { CameraCapture } from '../ui/CameraCapture';
 import VoiceRecorder from '../ui/VoiceRecorder';
 import YunaiConfirmation from '../ui/YunaiConfirmation';
@@ -50,8 +49,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
   // Method selection for Gasto: manual, AI scan, or voice
   const [selectedMethod, setSelectedMethod] = useState<'manual' | 'ai' | 'voice' | null>(null);
-  const [scanResult, setScanResult] = useState<any | null>(null);
-  const [showScanSummary, setShowScanSummary] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showYunaiConfirmation, setShowYunaiConfirmation] = useState(false);
@@ -183,8 +180,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   // Reset method selection when changing entry type
   useEffect(() => {
     setSelectedMethod(null);
-    setScanResult(null);
-    setShowScanSummary(false);
   }, [entryType]);
 
   const handleBreakFromForm = () => {
@@ -309,19 +304,14 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
   // Handler para cámara in-app (getUserMedia)
   const handleCameraCapture = async (base64Image: string) => {
-    console.log('📸 [handleCameraCapture] Procesando imagen de cámara...');
     setIsScanning(true);
 
     try {
-      // Strip data URL prefix to reduce payload size for Vercel
+      // CameraCapture already sends clean base64 (no data URL prefix)
       const base64Clean = base64Image.includes('base64,')
         ? base64Image.split('base64,')[1]
         : base64Image;
 
-      console.log(`📦 [handleCameraCapture] Base64 limpio: ${(base64Clean.length / 1024).toFixed(2)}KB`);
-      console.log('🤖 [handleCameraCapture] Enviando a IA...');
-
-      // Build detailed cuentas for AI context (with balances)
       const cuentasDetalladas = [
         { alias: 'Billetera', banco: 'Efectivo', tipo: 'efectivo', saldo: accountBalances['Billetera'] ?? 0 },
         ...cards.map(card => ({
@@ -332,100 +322,29 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           saldo: accountBalances[card.alias] ?? 0,
         })),
       ];
+
       const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean, cuentasDetalladas);
 
       if (result.success && result.data) {
-        // API now returns array — use YunaiConfirmation
         const items = Array.isArray(result.data) ? result.data : [result.data];
-        if (items.length > 0 && items[0].campos_inciertos !== undefined) {
-          handleYunaiResult(items);
-        } else {
-          // Fallback to legacy ScanResultSummary
-          setScanResult(items[0] || result.data);
-          setShowScanSummary(true);
-        }
+        handleYunaiResult(items);
       } else {
-        console.error('❌ [handleCameraCapture] Error en respuesta IA:', result.error);
         notify?.(result.error || 'No se pudo analizar el ticket', 'error');
       }
     } catch (error) {
-      console.error('❌ [handleCameraCapture] Error capturado:', error);
       const errorMsg = error instanceof Error ? error.message : 'Error al procesar imagen';
       notify?.(errorMsg, 'error');
     } finally {
-      console.log('🏁 [handleCameraCapture] Finalizando proceso...');
       setIsScanning(false);
     }
-  };
-
-  // Ya no necesitamos handleFileChange - usamos handleCameraCapture
-
-  const handleConfirmScan = (cuenta: string) => {
-    if (!scanResult) return;
-
-    const { monto, fecha, categoria, descripcion } = scanResult;
-
-    setFormData(prev => ({
-      ...prev,
-      monto: monto ? String(monto) : prev.monto,
-      fecha: fecha || prev.fecha,
-      descripcion: descripcion || prev.descripcion,
-      categoria: (categories.includes(categoria) || customGastosCategories.includes(categoria)) ? categoria : prev.categoria
-    }));
-
-    setSelectedCuenta(cuenta);
-    setShowScanSummary(false);
-    notify?.('Datos cargados. Revisa y confirma', 'success');
-  };
-
-  const handleEditScan = () => {
-    if (!scanResult) return;
-
-    const { monto, fecha, categoria, descripcion } = scanResult;
-
-    setFormData(prev => ({
-      ...prev,
-      monto: monto ? String(monto) : '',
-      fecha: fecha || today,
-      descripcion: descripcion || '',
-      categoria: categoria || ''
-    }));
-
-    setShowScanSummary(false);
-    setSelectedMethod('manual');
   };
 
   // Handler for voice/scan AI extraction result (accepts single or array)
   const handleYunaiResult = (data: YunaiExtractionResult | YunaiExtractionResult[]) => {
     setShowVoiceRecorder(false);
     setShowCamera(false);
-    // Normalize to array
     const items = Array.isArray(data) ? data : [data];
     setYunaiExtraction(items);
-    setShowYunaiConfirmation(true);
-  };
-
-  // Handler for scan result that now goes through YunaiConfirmation
-  const handleScanYunaiResult = () => {
-    if (!scanResult) return;
-    // Convert legacy scan result to YunaiExtractionResult array
-    const extraction: YunaiExtractionResult = {
-      tipo: scanResult.tipo || 'gasto',
-      monto: scanResult.monto || 0,
-      descripcion: scanResult.descripcion || '',
-      categoria: scanResult.categoria || '',
-      cuenta: scanResult.cuenta || null,
-      fecha: scanResult.fecha || today,
-      notas: scanResult.notas || '',
-      num_cuotas: scanResult.num_cuotas || 1,
-      meta_id: '',
-      tipo_gasto: scanResult.tipo_gasto || 'deuda',
-      confianza: scanResult.confianza || 0.8,
-      campos_inciertos: scanResult.campos_inciertos || [],
-      pregunta_seguimiento: null,
-    };
-    setYunaiExtraction([extraction]);
-    setShowScanSummary(false);
     setShowYunaiConfirmation(true);
   };
 
@@ -1110,19 +1029,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             setShowCamera(false);
             if (!yunaiExtraction) setSelectedMethod(null);
           }}
-        />
-
-        {/* Scan Result Summary Modal (legacy fallback) */}
-        <ScanResultSummary
-          isOpen={showScanSummary}
-          result={scanResult || { monto: 0, fecha: today, categoria: '', descripcion: '' }}
-          availableAccounts={debitCards.map(card => ({
-            alias: card.alias,
-            balance: accountBalances[card.alias] || 0
-          }))}
-          onConfirm={handleConfirmScan}
-          onEdit={handleEditScan}
-          onClose={() => setShowScanSummary(false)}
         />
 
         {/* Voice Recorder Modal */}

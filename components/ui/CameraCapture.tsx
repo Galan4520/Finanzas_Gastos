@@ -1,12 +1,38 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { Camera, X, RefreshCw, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Camera, Upload, X, Loader2, RefreshCw } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
-import imageCompression from 'browser-image-compression';
 
 interface CameraCaptureProps {
   isOpen: boolean;
   onCapture: (base64Image: string) => void;
   onClose: () => void;
+}
+
+// Compress image using canvas — no external library needed
+async function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onerror = reject;
+    reader.onload = () => {
+      const img = new Image();
+      img.src = reader.result as string;
+      img.onerror = reject;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024; // Sufficient for OCR text reading
+        const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('No canvas context'));
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Returns clean base64 without data:image prefix
+        const base64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+        resolve(base64);
+      };
+    };
+  });
 }
 
 export const CameraCapture: React.FC<CameraCaptureProps> = ({
@@ -15,310 +41,174 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
   onClose
 }) => {
   const { theme } = useTheme();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [mode, setMode] = useState<'camera' | 'upload'>('camera');
 
-  // Iniciar la cámara web (WebRTC)
-  const startCamera = async () => {
+  const handleFile = async (file: File) => {
     setError(null);
-    setImagePreview(null);
+    setIsCompressing(true);
+
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' } // Usar la cámara trasera si está disponible
-      });
-      setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      const originalKB = (file.size / 1024).toFixed(0);
+      console.log(`[CameraCapture] Original: ${originalKB}KB`);
+
+      const base64 = await compressImage(file);
+
+      console.log(`[CameraCapture] Compressed: ${(base64.length / 1024).toFixed(0)}KB base64`);
+
+      // Show preview
+      setPreview(`data:image/jpeg;base64,${base64}`);
     } catch (err) {
-      console.error("Error accediendo a la cámara:", err);
-      setError("No se pudo acceder a la cámara. Por favor, otorga los permisos.");
+      console.error('[CameraCapture] Compression error:', err);
+      setError('Error al procesar la imagen. Intenta con otra foto.');
+    } finally {
+      setIsCompressing(false);
     }
   };
 
-  // Detener la cámara
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-  };
-
-  // Iniciar cámara al abrir el modal
-  useEffect(() => {
-    if (isOpen && mode === 'camera') {
-      startCamera();
-    } else {
-      stopCamera();
-      setImagePreview(null);
-      setError(null);
-    }
-    return () => stopCamera();
-  }, [isOpen, mode]);
-
-  // Manejar archivo subido desde galería
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsCapturing(true);
-    setError(null);
-
-    try {
-      console.log(`📂 [handleFileUpload] Archivo original: ${(file.size / 1024 / 1024).toFixed(2)}MB`);
-
-      // Comprimir imagen — calidad alta para OCR, dentro de límite Vercel (4.5MB body)
-      const options = {
-        maxSizeMB: 0.8, // 800KB — buena calidad OCR, ~1.1MB en base64
-        maxWidthOrHeight: 1536, // 1536px — tickets necesitan resolución
-        useWebWorker: true,
-        fileType: 'image/jpeg' as const,
-        initialQuality: 0.8
-      };
-
-      const compressedFile = await imageCompression(file, options);
-      console.log(`✅ [handleFileUpload] Archivo comprimido: ${(compressedFile.size / 1024).toFixed(2)}KB`);
-
-      // Convertir a Base64
-      const base64Image = await imageCompression.getDataUrlFromFile(compressedFile);
-      setImagePreview(base64Image);
-      setMode('upload');
-    } catch (error) {
-      console.error('❌ [handleFileUpload] Error al comprimir:', error);
-      setError('Error al procesar la imagen');
-    } finally {
-      setIsCapturing(false);
-    }
-  };
-
-  const capturePhoto = async () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    setIsCapturing(true);
-
-    try {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const context = canvas.getContext('2d');
-
-      if (!context) return;
-
-      // Configurar el canvas al tamaño del video
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      // Dibujar el frame actual en el canvas
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Convertir canvas a Blob
-      const blob = await new Promise<Blob>((resolve) => {
-        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.8);
-      });
-
-      console.log(`📸 [capturePhoto] Imagen original: ${(blob.size / 1024).toFixed(2)}KB`);
-
-      // Comprimir imagen — calidad alta para OCR, dentro de límite Vercel (4.5MB body)
-      const options = {
-        maxSizeMB: 0.8, // 800KB — buena calidad OCR, ~1.1MB en base64
-        maxWidthOrHeight: 1536, // 1536px — tickets necesitan resolución
-        useWebWorker: true,
-        fileType: 'image/jpeg' as const,
-        initialQuality: 0.8
-      };
-
-      const compressedFile = await imageCompression(blob as File, options);
-      console.log(`✅ [capturePhoto] Imagen comprimida: ${(compressedFile.size / 1024).toFixed(2)}KB`);
-
-      // Convertir a Base64
-      const base64Image = await imageCompression.getDataUrlFromFile(compressedFile);
-      setImagePreview(base64Image);
-
-      // Detener la cámara mientras el usuario confirma
-      stopCamera();
-    } catch (error) {
-      console.error('❌ [capturePhoto] Error al comprimir:', error);
-      setError('Error al capturar la foto');
-    } finally {
-      setIsCapturing(false);
-    }
+    if (file) handleFile(file);
+    // Reset input so same file can be re-selected
+    e.target.value = '';
   };
 
   const confirmCapture = () => {
-    if (imagePreview) {
-      onCapture(imagePreview);
+    if (preview) {
+      // Send clean base64 (strip the data URL prefix)
+      const base64 = preview.includes('base64,') ? preview.split('base64,')[1] : preview;
+      onCapture(base64);
       handleClose();
     }
   };
 
-  const retakePhoto = () => {
-    setImagePreview(null);
-    if (mode === 'camera') {
-      startCamera();
-    }
-  };
-
-  const switchToUpload = () => {
-    stopCamera();
-    setMode('upload');
-    setImagePreview(null);
-    fileInputRef.current?.click();
-  };
-
-  const switchToCamera = () => {
-    setMode('camera');
-    setImagePreview(null);
-    startCamera();
+  const retake = () => {
+    setPreview(null);
+    setError(null);
   };
 
   const handleClose = () => {
-    stopCamera();
-    setImagePreview(null);
+    setPreview(null);
     setError(null);
-    setMode('camera');
+    setIsCompressing(false);
     onClose();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className={`${theme.colors.bgCard} rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={!isCompressing ? handleClose : undefined} />
 
+      {/* Modal */}
+      <div className={`relative ${theme.colors.bgCard} rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border ${theme.colors.border}`}>
         {/* Header */}
         <div className="bg-gradient-to-r from-yn-primary-500 to-yn-sec1-500 p-4 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Camera size={24} />
-            <h3 className="text-lg font-semibold">Escanear Ticket</h3>
+            <Camera size={22} />
+            <h3 className="text-lg font-semibold">Escanear Boleta</h3>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-2 rounded-lg hover:bg-white/20 transition-colors"
-          >
-            <X size={20} />
-          </button>
+          {!isCompressing && (
+            <button onClick={handleClose} className="p-1.5 rounded-lg hover:bg-white/20 transition-colors">
+              <X size={18} />
+            </button>
+          )}
         </div>
 
-        {/* Cámara o Preview */}
-        <div className="relative bg-slate-900 aspect-[3/4] flex items-center justify-center">
-          {!imagePreview ? (
-            mode === 'camera' ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-4 p-8 text-slate-400">
-                <Upload size={64} />
-                <p className="text-center">Selecciona una imagen desde tu galería</p>
-              </div>
-            )
-          ) : (
-            <img
-              src={imagePreview}
-              alt="Ticket capturado"
-              className="w-full h-full object-cover"
-            />
-          )}
-
-          {/* Overlay de carga */}
-          {isCapturing && (
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-white backdrop-blur-sm">
-              <RefreshCw className="w-10 h-10 animate-spin mb-3 text-yn-primary-400" />
-              <p className="font-medium animate-pulse">Capturando foto...</p>
+        {/* Preview or capture buttons */}
+        {preview ? (
+          <>
+            {/* Image preview */}
+            <div className="bg-slate-900">
+              <img src={preview} alt="Boleta capturada" className="w-full max-h-80 object-contain" />
             </div>
-          )}
-        </div>
 
-        {/* Canvas oculto para capturar la foto */}
-        <canvas ref={canvasRef} className="hidden" />
+            {/* Confirm / Retake */}
+            <div className="p-4 flex gap-3">
+              <button
+                onClick={retake}
+                className={`flex-1 py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 ${theme.colors.bgSecondary} ${theme.colors.textPrimary} transition-all`}
+              >
+                <RefreshCw size={18} />
+                Otra Foto
+              </button>
+              <button
+                onClick={confirmCapture}
+                className="flex-1 bg-gradient-to-r from-yn-success-500 to-yn-success-600 text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-lg transition-all"
+              >
+                <Camera size={18} />
+                Analizar
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="p-6">
+            {/* Compressing indicator */}
+            {isCompressing ? (
+              <div className="flex flex-col items-center justify-center py-12 gap-3">
+                <Loader2 size={40} className="text-yn-primary-500 animate-spin" />
+                <p className={`font-medium ${theme.colors.textPrimary}`}>Procesando imagen...</p>
+              </div>
+            ) : (
+              <>
+                {/* Capture buttons */}
+                <div className="space-y-3">
+                  {/* Camera button — uses native camera on mobile */}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full bg-gradient-to-r from-yn-primary-500 to-yn-sec1-500 hover:from-yn-primary-600 hover:to-yn-sec1-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all shadow-lg"
+                  >
+                    <Camera size={22} />
+                    Tomar Foto a Boleta
+                  </button>
 
-        {/* Input oculto para subir archivo */}
+                  {/* Gallery button */}
+                  <button
+                    onClick={() => galleryInputRef.current?.click()}
+                    className={`w-full py-3.5 rounded-xl font-semibold flex items-center justify-center gap-3 ${theme.colors.bgSecondary} ${theme.colors.textPrimary} border ${theme.colors.border} transition-all`}
+                  >
+                    <Upload size={20} />
+                    Subir desde Galería
+                  </button>
+                </div>
+
+                {/* Tips */}
+                <div className={`mt-5 text-center text-xs ${theme.colors.textMuted} space-y-1`}>
+                  <p>Asegúrate que el ticket se vea completo y legible</p>
+                  <p>Funciona con boletas, facturas y vouchers</p>
+                </div>
+              </>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3">
+                <p className="text-red-600 dark:text-red-400 text-sm text-center">{error}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Hidden native inputs */}
         <input
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          onChange={handleFileUpload}
+          capture="environment"
+          onChange={handleInputChange}
           className="hidden"
         />
-
-        {/* Mensaje de Error */}
-        {error && (
-          <div className="p-4 bg-red-50 text-red-700 text-sm border-t border-red-100">
-            {error}
-          </div>
-        )}
-
-        {/* Controles */}
-        <div className="p-4 space-y-3">
-          {!imagePreview ? (
-            <>
-              {/* Botón principal según modo */}
-              {mode === 'camera' ? (
-                <button
-                  onClick={capturePhoto}
-                  disabled={!stream || isCapturing}
-                  className="w-full bg-gradient-to-r from-yn-primary-500 to-yn-sec1-500 hover:from-yn-primary-600 hover:to-yn-sec1-600 disabled:from-slate-300 disabled:to-slate-300 disabled:cursor-not-allowed text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
-                >
-                  <Camera className="w-5 h-5" />
-                  Capturar Foto
-                </button>
-              ) : (
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full bg-gradient-to-r from-yn-primary-500 to-yn-sec1-500 hover:from-yn-primary-600 hover:to-yn-sec1-600 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl"
-                >
-                  <Upload className="w-5 h-5" />
-                  Subir desde Galería
-                </button>
-              )}
-
-              {/* Botón para cambiar de modo */}
-              <button
-                onClick={mode === 'camera' ? switchToUpload : switchToCamera}
-                className={`w-full py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
-              >
-                {mode === 'camera' ? (
-                  <>
-                    <Upload className="w-5 h-5" />
-                    Subir desde Galería
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-5 h-5" />
-                    Usar Cámara
-                  </>
-                )}
-              </button>
-            </>
-          ) : (
-            <div className="flex gap-3">
-              <button
-                onClick={retakePhoto}
-                className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${theme.colors.bgSecondary} hover:${theme.colors.bgCardHover} ${theme.colors.textPrimary}`}
-              >
-                <RefreshCw className="w-5 h-5" />
-                {mode === 'camera' ? 'Tomar Otra' : 'Otra Imagen'}
-              </button>
-              <button
-                onClick={confirmCapture}
-                className="flex-1 bg-gradient-to-r from-yn-success-500 to-yn-success-600 hover:from-yn-success-600 hover:to-yn-success-700 text-white py-3 px-4 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-              >
-                <Camera className="w-5 h-5" />
-                Usar Foto
-              </button>
-            </div>
-          )}
-        </div>
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleInputChange}
+          className="hidden"
+        />
       </div>
     </div>
   );
