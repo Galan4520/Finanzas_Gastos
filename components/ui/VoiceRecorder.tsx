@@ -166,6 +166,51 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       });
       streamRef.current = stream;
 
+      // 1. Start SpeechRecognition FIRST — on mobile, whoever gets the mic first wins
+      transcriptRef.current = '';
+      setTranscript('');
+      setInterimTranscript('');
+
+      try {
+        const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (SpeechRecognitionAPI) {
+          const recognition = new SpeechRecognitionAPI();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'es-PE';
+
+          recognition.onresult = (event: any) => {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                transcriptRef.current += event.results[i][0].transcript + ' ';
+                setTranscript(transcriptRef.current.trim());
+              } else {
+                interim += event.results[i][0].transcript;
+              }
+            }
+            setInterimTranscript(interim);
+          };
+
+          recognition.onerror = () => {
+            recognitionRef.current = null;
+          };
+
+          // Auto-restart: Android Chrome stops after each phrase or ~15s silence
+          recognition.onend = () => {
+            if (mediaRecorderRef.current?.state === 'recording') {
+              try { recognition.start(); } catch { /* already stopped */ }
+            }
+          };
+
+          recognition.start();
+          recognitionRef.current = recognition;
+        }
+      } catch {
+        // SpeechRecognition not available — continue with audio only
+      }
+
+      // 2. THEN start MediaRecorder on the same stream
       const mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
       mediaRecorderRef.current = mediaRecorder;
 
@@ -186,48 +231,6 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setIsRecording(true);
       setRecordingTime(0);
       recordingTimeRef.current = 0;
-      setTranscript('');
-      setInterimTranscript('');
-
-      // Start Web Speech API for live transcription after a delay
-      // On mobile, starting it immediately can conflict with MediaRecorder
-      setTimeout(() => {
-        try {
-          const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-          if (!SpeechRecognitionAPI) return;
-
-          const recognition = new SpeechRecognitionAPI();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'es-PE';
-
-          recognition.onresult = (event: any) => {
-            let final = '';
-            let interim = '';
-            for (let i = 0; i < event.results.length; i++) {
-              if (event.results[i].isFinal) {
-                final += event.results[i][0].transcript + ' ';
-              } else {
-                interim += event.results[i][0].transcript;
-              }
-            }
-            const finalText = final.trim();
-            transcriptRef.current = finalText;
-            setTranscript(finalText);
-            setInterimTranscript(interim);
-          };
-
-          recognition.onerror = () => {
-            // Silent fail — speech recognition is optional enhancement
-            recognitionRef.current = null;
-          };
-
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch {
-          // SpeechRecognition not available or blocked — ignore
-        }
-      }, 500);
 
       timerRef.current = setInterval(() => {
         recordingTimeRef.current += 1;
