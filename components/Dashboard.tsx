@@ -171,6 +171,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   const [compareWeekOffset, setCompareWeekOffset] = useState(1); // 1 = semana pasada, 2 = hace 2 semanas, etc.
   const [includeCardPayments, setIncludeCardPayments] = useState(true);
   const [selectedWeekDay, setSelectedWeekDay] = useState<number | null>(null); // 0=Lun..6=Dom, null=none
+  const [expandedPaymentCard, setExpandedPaymentCard] = useState<string | null>(null); // "thisMonth:cardAlias" or "nextMonth:cardAlias"
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -311,8 +312,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     let thisMonthTotal = 0;
     let nextMonthTotal = 0;
 
-    const thisMonthDetails: { card: string; amount: number; date: string; paymentDay: number }[] = [];
-    const nextMonthDetails: { card: string; amount: number; date: string; paymentDay: number }[] = [];
+    type ExpenseItem = { descripcion: string; categoria: string; amount: number; cuota: string; tipo: string };
+    type CardDetail = { card: string; amount: number; date: string; paymentDay: number; expenses: ExpenseItem[] };
+    const thisMonthDetails: CardDetail[] = [];
+    const nextMonthDetails: CardDetail[] = [];
 
     // Process all pending expenses based on their fecha_pago
     pendingExpenses.forEach(expense => {
@@ -322,54 +325,55 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       const paymentDay = paymentDate.getDate();
 
       let amount = 0;
+      let cuotaLabel = '';
       if (expense.tipo === 'suscripcion') {
-        // For subscriptions, use full monthly amount
         amount = Number(expense.monto);
+        cuotaLabel = 'Suscripción';
       } else {
-        // For debts, calculate one monthly installment
         const total = Number(expense.monto);
-        const cuotaVal = total / Number(expense.num_cuotas);
-        const cuotasPagadas = Number(expense.cuotas_pagadas);
         const numCuotas = Number(expense.num_cuotas);
+        const cuotaVal = total / numCuotas;
+        const cuotasPagadas = Number(expense.cuotas_pagadas);
 
-        // Only include if there are unpaid installments
         if (cuotasPagadas < numCuotas) {
           amount = cuotaVal;
+          cuotaLabel = numCuotas > 1 ? `Cuota ${cuotasPagadas + 1}/${numCuotas}` : '';
         }
       }
 
       if (amount === 0) return;
 
-      // Check if it's due this month
+      const expenseItem: ExpenseItem = {
+        descripcion: expense.descripcion,
+        categoria: expense.categoria,
+        amount,
+        cuota: cuotaLabel,
+        tipo: expense.tipo || 'deuda',
+      };
+
+      const addToDetails = (details: CardDetail[]) => {
+        const existing = details.find(d => d.card === expense.tarjeta);
+        if (existing) {
+          existing.amount += amount;
+          existing.expenses.push(expenseItem);
+        } else {
+          details.push({
+            card: expense.tarjeta,
+            amount,
+            date: expense.fecha_pago,
+            paymentDay,
+            expenses: [expenseItem],
+          });
+        }
+      };
+
       if (expenseMonth === currentMonth && expenseYear === currentYear) {
         thisMonthTotal += amount;
-        const existingDetail = thisMonthDetails.find(d => d.card === expense.tarjeta);
-        if (existingDetail) {
-          existingDetail.amount += amount;
-        } else {
-          thisMonthDetails.push({
-            card: expense.tarjeta,
-            amount: amount,
-            date: expense.fecha_pago,
-            paymentDay: paymentDay
-          });
-        }
+        addToDetails(thisMonthDetails);
       }
-
-      // Check if it's due next month
       if (expenseMonth === nextMonth && expenseYear === nextMonthYear) {
         nextMonthTotal += amount;
-        const existingDetail = nextMonthDetails.find(d => d.card === expense.tarjeta);
-        if (existingDetail) {
-          existingDetail.amount += amount;
-        } else {
-          nextMonthDetails.push({
-            card: expense.tarjeta,
-            amount: amount,
-            date: expense.fecha_pago,
-            paymentDay: paymentDay
-          });
-        }
+        addToDetails(nextMonthDetails);
       }
     });
 
@@ -1452,15 +1456,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                 </div>
 
                 {cardPayments.thisMonth.details.length > 0 && (
-                  <div className="space-y-1.5">
-                    {cardPayments.thisMonth.details.map((detail, idx) => (
-                      <div key={idx} className="flex justify-between items-center">
-                        <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
-                        <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
-                          {formatCurrency(detail.amount)}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-1">
+                    {cardPayments.thisMonth.details.map((detail, idx) => {
+                      const key = `thisMonth:${detail.card}`;
+                      const isExpanded = expandedPaymentCard === key;
+                      return (
+                        <div key={idx}>
+                          <button
+                            onClick={() => setExpandedPaymentCard(isExpanded ? null : key)}
+                            className={`flex justify-between items-center w-full py-1 rounded transition-colors ${isExpanded ? '' : 'hover:bg-yn-neutral-100'}`}
+                          >
+                            <span className={`text-xs ${theme.colors.textMuted} flex items-center gap-1`}>
+                              <span className={`text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                              {detail.card}
+                            </span>
+                            <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
+                              {formatCurrency(detail.amount)}
+                            </span>
+                          </button>
+                          {isExpanded && detail.expenses && (
+                            <div className="ml-4 mt-1 mb-2 space-y-1 animate-in slide-in-from-top-1 duration-150">
+                              {detail.expenses.map((exp, ei) => (
+                                <div key={ei} className={`flex items-center justify-between py-1 px-2 rounded-lg ${theme.colors.bgCard}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                                    <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
+                                  </div>
+                                  <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>
+                                    {formatCurrency(exp.amount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     {cardPayments.thisMonth.details.length > 1 && (
                       <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
                         <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
@@ -1510,15 +1541,42 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                 </div>
 
                 {cardPayments.nextMonth.details.length > 0 && (
-                  <div className="space-y-1.5">
-                    {cardPayments.nextMonth.details.map((detail, idx) => (
-                      <div key={idx} className="flex justify-between items-center">
-                        <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
-                        <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
-                          {formatCurrency(detail.amount)}
-                        </span>
-                      </div>
-                    ))}
+                  <div className="space-y-1">
+                    {cardPayments.nextMonth.details.map((detail, idx) => {
+                      const key = `nextMonth:${detail.card}`;
+                      const isExpanded = expandedPaymentCard === key;
+                      return (
+                        <div key={idx}>
+                          <button
+                            onClick={() => setExpandedPaymentCard(isExpanded ? null : key)}
+                            className={`flex justify-between items-center w-full py-1 rounded transition-colors ${isExpanded ? '' : 'hover:bg-yn-neutral-100'}`}
+                          >
+                            <span className={`text-xs ${theme.colors.textMuted} flex items-center gap-1`}>
+                              <span className={`text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                              {detail.card}
+                            </span>
+                            <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
+                              {formatCurrency(detail.amount)}
+                            </span>
+                          </button>
+                          {isExpanded && detail.expenses && (
+                            <div className="ml-4 mt-1 mb-2 space-y-1 animate-in slide-in-from-top-1 duration-150">
+                              {detail.expenses.map((exp, ei) => (
+                                <div key={ei} className={`flex items-center justify-between py-1 px-2 rounded-lg ${theme.colors.bgCard}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                                    <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
+                                  </div>
+                                  <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>
+                                    {formatCurrency(exp.amount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                     {cardPayments.nextMonth.details.length > 1 && (
                       <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
                         <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
