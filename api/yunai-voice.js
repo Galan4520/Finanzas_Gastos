@@ -21,7 +21,7 @@ export default async function handler(req, res) {
 
     const cleanBase64 = audio.includes('base64,') ? audio.split('base64,')[1] : audio;
     const audioMime = mimeType || 'audio/webm';
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' });
 
     const categoriasGastos = categorias?.gastos || [
       '🏠 Vivienda', '💡 Servicios', '🍕 Alimentación', '🚗 Transporte',
@@ -44,8 +44,9 @@ export default async function handler(req, res) {
     if (cuentasList.length > 0 && typeof cuentasList[0] === 'object') {
       cuentasDescription = cuentasList.map(c => {
         const saldo = c.saldo !== undefined ? ` | Saldo: S/${Number(c.saldo).toFixed(2)}` : '';
-        if (c.tipo === 'efectivo') return `- "${c.alias}" (Efectivo/Cash)${saldo}`;
-        return `- "${c.alias}" → Banco: ${c.banco}, Tipo: ${c.tipo === 'credito' ? 'CRÉDITO' : 'DÉBITO'}, Tarjeta: ${c.tipo_tarjeta || 'N/A'}${saldo}`;
+        if (c.tipo === 'efectivo') return `- ALIAS: "${c.alias}" | TIPO: EFECTIVO${saldo}`;
+        const nivel = c.tipo_tarjeta ? ` | NIVEL: ${c.tipo_tarjeta}` : '';
+        return `- ALIAS: "${c.alias}" | BANCO: ${c.banco} | TIPO: ${c.tipo === 'credito' ? 'CRÉDITO' : 'DÉBITO'}${nivel}${saldo}`;
       }).join('\n');
     } else {
       cuentasDescription = cuentasList.map(c => `- "${c}"`).join('\n');
@@ -54,6 +55,13 @@ export default async function handler(req, res) {
     const promptText =
       "Eres Yunai, un asistente financiero peruano inteligente. El usuario está dictando movimientos financieros en español.\n\n" +
 
+      "═══ PROCESAMIENTO DE AUDIO ═══\n" +
+      "IMPORTANTE: El audio puede tener RUIDO DE CALLE (claxon, viento, motores, gente hablando).\n" +
+      "- IGNORA todo sonido de fondo y palabras incoherentes que parecen ruido.\n" +
+      "- Concéntrate SOLO en la voz principal que dicta montos y conceptos.\n" +
+      "- Si no estás seguro de un valor por el ruido, baja la confianza y agrégalo a campos_inciertos.\n" +
+      "- Si el audio es puro ruido sin voz clara, devuelve un array vacío: []\n\n" +
+
       "═══ REGLA PRINCIPAL: MÚLTIPLES MOVIMIENTOS ═══\n" +
       "El usuario puede mencionar VARIOS movimientos en un solo audio.\n" +
       "Ejemplo: 'Gasté 50 en pizza y me pagaron 3000 de sueldo'\n" +
@@ -61,32 +69,59 @@ export default async function handler(req, res) {
       "Si solo hay 1 movimiento, devuelve un array con 1 elemento.\n" +
       "SIEMPRE devuelve un array JSON, nunca un objeto suelto.\n\n" +
 
+      "═══ RECONOCIMIENTO FONÉTICO (CONTEXTO PERÚ) ═══\n" +
+      "- 'Luca'/'Luquita' = 1 Sol. 'Ferro' = 10 soles. 'Gamba' = 100 soles.\n" +
+      "- 'Gold' puede sonar como 'Gol', 'Gols', 'la dorada'.\n" +
+      "- 'Signature' puede sonar como 'Sinnachur', 'Sinaitur', 'la negra'.\n" +
+      "- 'Platinum' puede sonar como 'Platino', 'Platinun'.\n" +
+      "- 'Yape'/'Plin' → buscar la tarjeta de DÉBITO del banco correspondiente.\n\n" +
+
       "═══ CUENTAS Y TARJETAS DEL USUARIO ═══\n" +
       cuentasDescription + "\n\n" +
+
+      "═══ MATCHING INTELIGENTE DE CUENTAS ═══\n" +
+      "- NO esperes que digan 'Crédito' o 'Débito'. Si dice 'pagué con mi Interbank Gold', " +
+      "busca el ALIAS que contenga 'Gold' o 'Interbank'. Al ver su TIPO en la lista, sabrás si es crédito.\n" +
+      "- Si el nombre del alias contiene el nivel de tarjeta (Gold, Signature, Platinum, Classic), " +
+      "úsalo para hacer match fonético.\n" +
+      "- Siempre devuelve el ALIAS exacto tal como aparece en la lista, nunca lo modifiques.\n\n" +
+
+      "═══ CASUÍSTICAS FINANCIERAS (TIPOS DE MOVIMIENTO) ═══\n" +
+      "1. GASTO CORRIENTE: 'Gasté 10 soles en pan' → tipo: 'gasto'\n" +
+      "   - Sale de Billetera o tarjeta de débito. cuenta = la cuenta origen.\n" +
+      "2. INGRESO: 'Me depositaron 2000 de sueldo' → tipo: 'ingreso'\n" +
+      "   - Entra a Billetera o tarjeta de débito. NUNCA a tarjeta de crédito.\n" +
+      "3. TARJETA DE CRÉDITO (compra): 'Compré una TV de 2000 en 12 cuotas con mi visa' → tipo: 'tarjeta'\n" +
+      "   - Va a tarjeta de crédito. num_cuotas según lo que diga.\n" +
+      "4. PAGO DE TARJETA: 'Pagué 500 de mi tarjeta desde mi cuenta sueldo' → tipo: 'pago_tarjeta'\n" +
+      "   - Es un pago de deuda, NO un gasto en comida/ropa.\n" +
+      "   - cuenta_origen = la cuenta de débito/billetera de donde sale el dinero\n" +
+      "   - cuenta_destino = la tarjeta de crédito que se está pagando\n" +
+      "   - categoria = '💳 Otros'\n" +
+      "5. TRANSFERENCIA: 'Pasé 100 soles de mi BCP a Interbank' → tipo: 'transferencia'\n" +
+      "   - Dinero que pasa de una cuenta a otra del mismo usuario.\n" +
+      "   - cuenta_origen = de donde sale\n" +
+      "   - cuenta_destino = a donde llega\n" +
+      "   - categoria = '💳 Otros'\n\n" +
 
       "═══ REGLAS CRÍTICAS PARA SELECCIONAR CUENTA ═══\n" +
       "1. Si el usuario menciona un BANCO (ej: 'Interbank', 'IBK', 'BCP', 'BBVA', 'Scotia'), " +
       "busca en la lista la tarjeta que corresponda a ese banco.\n" +
-      "2. Si es un INGRESO (sueldo, pago recibido, transferencia) → SOLO puede ir a una tarjeta de DÉBITO o a Billetera. " +
-      "NUNCA a una tarjeta de CRÉDITO. Si el banco mencionado solo tiene crédito, pregunta.\n" +
-      "3. Si es un GASTO con cuotas → SOLO puede ir a una tarjeta de CRÉDITO.\n" +
+      "2. Si es un INGRESO → SOLO puede ir a DÉBITO o Billetera. NUNCA a CRÉDITO.\n" +
+      "3. Si es un GASTO con cuotas → SOLO puede ir a CRÉDITO.\n" +
       "4. Si es un GASTO sin cuotas → puede ir a Billetera, débito o crédito.\n" +
-      "5. Si el usuario dice 'IBK' o 'inter' = Interbank. 'BCP' = BCP. 'BBVA' o 'continental' = BBVA. 'Scotia' = Scotiabank.\n" +
-      "6. Si el banco mencionado tiene VARIAS tarjetas (ej: débito y crédito de Interbank), " +
-      "elige la correcta según el tipo de movimiento (reglas 2-4). " +
-      "Si no estás seguro, agrega a campos_inciertos con SOLO las opciones de ese banco.\n" +
-      "7. El valor de 'cuenta' DEBE ser EXACTAMENTE el alias de la lista (ej: 'Visa Signature', 'Débito Interbank'), NO el nombre del banco.\n" +
-      "8. Si dice 'efectivo', 'cash', 'plata' → cuenta = 'Billetera'\n" +
-      "9. Si no menciona banco ni cuenta → cuenta = null y agregar a campos_inciertos\n\n" +
+      "5. 'IBK'/'inter' = Interbank. 'BCP' = BCP. 'BBVA'/'continental' = BBVA. 'Scotia' = Scotiabank.\n" +
+      "6. Si el banco tiene VARIAS tarjetas, elige según el tipo de movimiento (reglas 2-4).\n" +
+      "7. El valor de 'cuenta' DEBE ser EXACTAMENTE el alias de la lista, NO el nombre del banco.\n" +
+      "8. 'efectivo'/'cash'/'plata' → cuenta = 'Billetera'\n" +
+      "9. Si no menciona banco ni cuenta → cuenta = null, agregar a campos_inciertos\n\n" +
 
       "═══ VALIDACIÓN DE SALDO ═══\n" +
-      "- Cada cuenta tiene un SALDO mostrado arriba. REVÍSALO antes de asignar.\n" +
       "- Si es un GASTO y el monto > saldo de la cuenta mencionada:\n" +
       "  → Agrega 'cuenta' a campos_inciertos\n" +
-      "  → En 'pregunta' di algo como: 'Causa, tu [cuenta] solo tiene S/X.XX, ¿seguro que pagaste de ahí o usaste otra?'\n" +
-      "  → En 'opciones' pon la cuenta mencionada + otras cuentas que SÍ tengan saldo suficiente\n" +
-      "  → Si NINGUNA cuenta tiene saldo suficiente, igual pon las opciones y advierte en la pregunta\n" +
-      "- Si es un INGRESO, no validar saldo (siempre se puede recibir dinero)\n\n" +
+      "  → En 'pregunta' di algo como: 'Causa, tu [cuenta] solo tiene S/X.XX, ¿seguro que pagaste de ahí?'\n" +
+      "  → En 'opciones' pon la cuenta mencionada + cuentas con saldo suficiente\n" +
+      "- Si es un INGRESO, no validar saldo\n\n" +
 
       "═══ CATEGORÍAS DE GASTOS (usar EXACTAMENTE con emoji) ═══\n" +
       categoriasGastos.map(c => `- ${c}`).join('\n') + "\n\n" +
@@ -95,11 +130,12 @@ export default async function handler(req, res) {
       categoriasIngresos.map(c => `- ${c}`).join('\n') + "\n\n" +
 
       "═══ CAMPOS POR CADA MOVIMIENTO ═══\n" +
-      "- tipo: 'gasto' (efectivo/débito), 'ingreso', o 'tarjeta' (crédito/cuotas)\n" +
+      "- tipo: 'gasto' | 'ingreso' | 'tarjeta' | 'pago_tarjeta' | 'transferencia'\n" +
       "- monto: número decimal (ej: 45.50)\n" +
       "- descripcion: qué se compró/recibió (máx 60 chars)\n" +
       "- categoria: EXACTAMENTE una de las categorías listadas (con emoji)\n" +
-      "- cuenta: EXACTAMENTE el alias de la cuenta/tarjeta, o null\n" +
+      "- cuenta: alias de la cuenta principal (origen si es gasto/transferencia, destino si es ingreso), o null\n" +
+      "- cuenta_destino: SOLO para 'transferencia' y 'pago_tarjeta'. Alias de la cuenta destino.\n" +
       "- fecha: YYYY-MM-DD. Si no dice fecha, usar hoy: " + today + "\n" +
       "- notas: detalles adicionales, o vacío\n" +
       "- num_cuotas: número de cuotas si mencionó. Si no, usar 1\n" +
@@ -130,11 +166,12 @@ export default async function handler(req, res) {
       '    "campos_inciertos": []\n' +
       '  },\n' +
       '  {\n' +
-      '    "tipo": "ingreso",\n' +
-      '    "monto": 3000,\n' +
-      '    "descripcion": "Sueldo marzo",\n' +
-      '    "categoria": "💼 Salario",\n' +
+      '    "tipo": "pago_tarjeta",\n' +
+      '    "monto": 500,\n' +
+      '    "descripcion": "Pago tarjeta Visa",\n' +
+      '    "categoria": "💳 Otros",\n' +
       '    "cuenta": "Débito Interbank",\n' +
+      '    "cuenta_destino": "Visa Signature",\n' +
       '    "fecha": "' + today + '",\n' +
       '    "notas": "",\n' +
       '    "num_cuotas": 1,\n' +
@@ -158,7 +195,10 @@ export default async function handler(req, res) {
             }
           }
         ]
-      }]
+      }],
+      generationConfig: {
+        temperature: 0.1
+      }
     };
 
     const response = await fetch(url, {

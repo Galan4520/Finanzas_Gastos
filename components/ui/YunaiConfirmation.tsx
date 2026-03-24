@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Edit3, X, AlertTriangle, ChevronDown, ChevronUp, Wallet, TrendingUp, CreditCard } from 'lucide-react';
+import { Check, Edit3, X, AlertTriangle, ChevronDown, ChevronUp, Wallet, TrendingUp, CreditCard, ArrowRightLeft, Receipt } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { YunaiExtractionResult, CampoIncierto } from '../../types';
 
@@ -95,6 +95,8 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
       case 'gasto': return { label: 'Gasto', icon: Wallet, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' };
       case 'ingreso': return { label: 'Ingreso', icon: TrendingUp, color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20' };
       case 'tarjeta': return { label: 'Tarjeta', icon: CreditCard, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' };
+      case 'pago_tarjeta': return { label: 'Pago Tarjeta', icon: Receipt, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20' };
+      case 'transferencia': return { label: 'Transferencia', icon: ArrowRightLeft, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' };
       default: return { label: tipo, icon: Wallet, color: 'text-gray-600', bg: 'bg-gray-50' };
     }
   };
@@ -185,16 +187,22 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                       {item.descripcion || 'Sin descripción'}
                     </p>
                     <p className={`text-xs ${theme.colors.textMuted} truncate`}>
-                      {item.categoria} {item.cuenta ? `· ${item.cuenta}` : ''}
+                      {item.categoria}
+                      {item.cuenta_destino && item.cuenta
+                        ? ` · ${item.cuenta} → ${item.cuenta_destino}`
+                        : item.cuenta ? ` · ${item.cuenta}` : ''}
                     </p>
                   </div>
 
                   {/* Amount + expand */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className={`text-base font-bold ${
-                      item.tipo === 'ingreso' ? 'text-green-600 dark:text-green-400' : theme.colors.textPrimary
+                      item.tipo === 'ingreso' ? 'text-green-600 dark:text-green-400'
+                        : item.tipo === 'transferencia' ? 'text-orange-600 dark:text-orange-400'
+                        : item.tipo === 'pago_tarjeta' ? 'text-purple-600 dark:text-purple-400'
+                        : theme.colors.textPrimary
                     }`}>
-                      {item.tipo === 'ingreso' ? '+' : '-'}S/{item.monto?.toFixed(2)}
+                      {item.tipo === 'ingreso' ? '+' : item.tipo === 'transferencia' ? '↔' : '-'}S/{item.monto?.toFixed(2)}
                     </span>
                     {hasUnresolved && (
                       <AlertTriangle size={14} className="text-yellow-500 flex-shrink-0" />
@@ -278,6 +286,10 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
                       ))
                     }
 
+                    {item.cuenta_destino && (
+                      <DetailField label="Cuenta destino" value={item.cuenta_destino} theme={theme} />
+                    )}
+
                     {(item.num_cuotas > 1) && (
                       <DetailField label="Cuotas" value={`${item.num_cuotas} cuotas`} theme={theme} />
                     )}
@@ -308,7 +320,9 @@ const YunaiConfirmation: React.FC<YunaiConfirmationProps> = ({
               <span className={`font-bold ${theme.colors.textPrimary}`}>
                 Total: S/ {[...selected].reduce((sum, idx) => {
                   const item = resolvedItems[idx];
-                  return sum + (item.tipo === 'ingreso' ? item.monto : -item.monto);
+                  if (item.tipo === 'ingreso') return sum + item.monto;
+                  if (item.tipo === 'transferencia') return sum; // net zero
+                  return sum - item.monto;
                 }, 0).toFixed(2)}
               </span>
             </div>

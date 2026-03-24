@@ -333,13 +333,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         })),
       ];
       const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean, cuentasDetalladas);
-      console.log('✅ [handleCameraCapture] Respuesta COMPLETA de IA:', JSON.stringify(result, null, 2));
-      if (result._debug) {
-        console.log('🔍 [handleCameraCapture] DEBUG info:', JSON.stringify(result._debug, null, 2));
-      }
 
       if (result.success && result.data) {
-        console.log('✅ [handleCameraCapture] Data items:', JSON.stringify(result.data));
         // API now returns array — use YunaiConfirmation
         const items = Array.isArray(result.data) ? result.data : [result.data];
         if (items.length > 0 && items[0].campos_inciertos !== undefined) {
@@ -449,7 +444,6 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         try {
           if (item.tipo === 'tarjeta') {
             // Credit card expense → Gastos_Pendientes
-            const selectedCard = creditCards.find(c => c.alias === item.cuenta);
             const newExpense: PendingExpense = {
               id: generateId(),
               fecha_gasto: item.fecha || today,
@@ -470,6 +464,48 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             onAddPending(newExpense);
             const sheetData = { ...newExpense, tipo_gasto: item.tipo_gasto || 'deuda' };
             await sendToSheet(scriptUrl, pin, sheetData, 'Gastos_Pendientes');
+          } else if (item.tipo === 'transferencia') {
+            // Transfer between accounts → 1 Gasto from origin + 1 Ingreso to destination
+            const ts = getLocalISOString();
+            await sendToSheet(scriptUrl, pin, {
+              fecha: item.fecha || today,
+              categoria: item.categoria || '💳 Otros',
+              descripcion: item.descripcion || 'Transferencia',
+              monto: item.monto,
+              notas: item.notas || `Transferencia a ${item.cuenta_destino || ''}`,
+              cuenta: item.cuenta || 'Billetera',
+              timestamp: ts
+            }, 'Gastos');
+            await sendToSheet(scriptUrl, pin, {
+              fecha: item.fecha || today,
+              categoria: item.categoria || '💳 Otros',
+              descripcion: item.descripcion || 'Transferencia',
+              monto: item.monto,
+              notas: item.notas || `Transferencia desde ${item.cuenta || ''}`,
+              cuenta: item.cuenta_destino || 'Billetera',
+              timestamp: ts
+            }, 'Ingresos');
+          } else if (item.tipo === 'pago_tarjeta') {
+            // Credit card payment → 1 Gasto from origin account + 1 Pago record
+            const ts = getLocalISOString();
+            await sendToSheet(scriptUrl, pin, {
+              fecha: item.fecha || today,
+              categoria: '💳 Otros',
+              descripcion: item.descripcion || `Pago tarjeta ${item.cuenta_destino || ''}`,
+              monto: item.monto,
+              notas: item.notas || '',
+              cuenta: item.cuenta || 'Billetera',
+              timestamp: ts
+            }, 'Gastos');
+            // Record the payment in Pagos sheet
+            await sendToSheet(scriptUrl, pin, {
+              fecha: item.fecha || today,
+              tarjeta: item.cuenta_destino || '',
+              monto: item.monto,
+              cuenta_origen: item.cuenta || 'Billetera',
+              notas: item.notas || '',
+              timestamp: ts
+            }, 'Pagos');
           } else {
             // Gasto or Ingreso
             const payload: Record<string, any> = {
@@ -514,8 +550,12 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   // When user chooses "Edit manual" from YunaiConfirmation (single item)
   const handleYunaiEdit = (prefillData: YunaiExtractionResult) => {
     // Fill the manual form with this single item
-    if (prefillData.tipo !== entryType) {
-      setEntryType(prefillData.tipo);
+    // Map new voice-only types to manual form equivalents
+    const manualTipo = prefillData.tipo === 'pago_tarjeta' || prefillData.tipo === 'transferencia'
+      ? 'gasto' as const
+      : prefillData.tipo;
+    if (manualTipo !== entryType) {
+      setEntryType(manualTipo);
     }
     setFormData(prev => ({
       ...prev,

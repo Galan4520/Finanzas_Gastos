@@ -87,7 +87,13 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     audioChunksRef.current = [];
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
+      });
       streamRef.current = stream;
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedMimeType() });
@@ -98,6 +104,10 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       };
 
       mediaRecorder.onstop = () => {
+        if (recordingTime < 1) {
+          setError('Grabación muy corta. Mantén presionado al menos 1 segundo.');
+          return;
+        }
         const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType });
         processAudio(blob, mediaRecorder.mimeType);
       };
@@ -185,6 +195,12 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       const result = await response.json();
       if (!result.success || !result.data) {
         throw new Error('Yunai no pudo interpretar el audio');
+      }
+
+      // Handle empty array (pure noise, no voice detected)
+      const items = Array.isArray(result.data) ? result.data : [result.data];
+      if (items.length === 0) {
+        throw new Error('No se detectó ningún movimiento. Intenta hablar más claro o en un lugar con menos ruido.');
       }
 
       onResult(result.data);

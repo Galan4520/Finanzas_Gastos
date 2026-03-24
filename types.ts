@@ -216,11 +216,12 @@ export interface CampoIncierto {
 }
 
 export interface YunaiExtractionResult {
-  tipo: 'gasto' | 'ingreso' | 'tarjeta';
+  tipo: 'gasto' | 'ingreso' | 'tarjeta' | 'pago_tarjeta' | 'transferencia';
   monto: number;
   descripcion: string;
   categoria: string;
   cuenta: string | null;
+  cuenta_destino?: string | null;
   fecha: string;
   notas: string;
   num_cuotas: number;
