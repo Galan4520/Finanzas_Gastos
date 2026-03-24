@@ -170,6 +170,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   const [showYunaiDetail, setShowYunaiDetail] = useState(false);
   const [compareWeekOffset, setCompareWeekOffset] = useState(1); // 1 = semana pasada, 2 = hace 2 semanas, etc.
   const [includeCardPayments, setIncludeCardPayments] = useState(true);
+  const [selectedWeekDay, setSelectedWeekDay] = useState<number | null>(null); // 0=Lun..6=Dom, null=none
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -240,6 +241,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
     // Daily breakdown: index 0=Lun, 1=Mar, ..., 6=Dom
     const thisWeekDaily = [0, 0, 0, 0, 0, 0, 0];
     const compareWeekDaily = [0, 0, 0, 0, 0, 0, 0];
+    // Track transactions per day for detail view
+    const thisWeekTxns: Transaction[][] = [[], [], [], [], [], [], []];
 
     history.forEach(t => {
       if (t.tipo !== 'Gastos') return;
@@ -251,6 +254,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         thisWeekExpenses += monto;
         const dayIdx = (date.getDay() + 6) % 7; // Mon=0, ..., Sun=6
         thisWeekDaily[dayIdx] += monto;
+        thisWeekTxns[dayIdx].push(t);
       } else if (date >= compareWeekStart && date < compareWeekEnd) {
         compareWeekExpenses += monto;
         const dayIdx = (date.getDay() + 6) % 7;
@@ -287,6 +291,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       chartData,
       compareLabel,
       compareRangeLabel,
+      thisWeekTxns,
     };
   }, [history, compareWeekOffset, includeCardPayments]);
 
@@ -1228,7 +1233,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             {/* Week selector */}
             <select
               value={compareWeekOffset}
-              onChange={(e) => setCompareWeekOffset(Number(e.target.value))}
+              onChange={(e) => { setCompareWeekOffset(Number(e.target.value)); setSelectedWeekDay(null); }}
               className={`text-xs font-medium px-2 py-1 rounded-lg border ${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textSecondary} outline-none cursor-pointer`}
             >
               <option value={1}>vs Semana pasada</option>
@@ -1276,7 +1281,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           {/* Bar Chart */}
           <div style={{ width: '100%', height: 180 }}>
             <ResponsiveContainer>
-              <BarChart data={weeklyComparison.chartData} barCategoryGap="20%">
+              <BarChart
+                data={weeklyComparison.chartData}
+                barCategoryGap="20%"
+                onClick={(state: any) => {
+                  if (state && state.activeTooltipIndex != null) {
+                    const idx = state.activeTooltipIndex;
+                    setSelectedWeekDay(prev => prev === idx ? null : idx);
+                  }
+                }}
+                style={{ cursor: 'pointer' }}
+              >
                 <XAxis
                   dataKey="day"
                   tick={{ fontSize: 11, fill: '#6F7D75' }}
@@ -1297,7 +1312,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                   }}
                   cursor={{ fill: 'rgba(0,167,80,0.05)' }}
                 />
-                <Bar dataKey="actual" fill="#00A750" radius={[4, 4, 0, 0]} name="actual" />
+                <Bar dataKey="actual" radius={[4, 4, 0, 0]} name="actual">
+                  {weeklyComparison.chartData.map((_: any, i: number) => (
+                    <Cell key={i} fill="#00A750" opacity={selectedWeekDay === i ? 1 : selectedWeekDay != null ? 0.4 : 1} />
+                  ))}
+                </Bar>
                 <Bar dataKey="comparar" fill="#00A750" opacity={0.25} radius={[4, 4, 0, 0]} name="comparar" />
               </BarChart>
             </ResponsiveContainer>
@@ -1317,12 +1336,51 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
             </div>
           </div>
 
+          {/* Day detail panel — shows transactions for the clicked day */}
+          {selectedWeekDay != null && (() => {
+            const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            const txns = weeklyComparison.thisWeekTxns[selectedWeekDay];
+            const dayTotal = txns.reduce((s, t) => s + Number(t.monto), 0);
+            return (
+              <div className={`mt-3 pt-3 border-t ${theme.colors.border} animate-in slide-in-from-top-2 duration-200`}>
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`text-xs font-bold ${theme.colors.textPrimary}`}>
+                    {dayNames[selectedWeekDay]} — {formatCurrency(dayTotal)}
+                  </p>
+                  <button
+                    onClick={() => setSelectedWeekDay(null)}
+                    className={`text-xs ${theme.colors.textMuted} hover:${theme.colors.textPrimary} px-1`}
+                  >✕</button>
+                </div>
+                {txns.length === 0 ? (
+                  <p className={`text-xs ${theme.colors.textMuted} py-2`}>Sin gastos este día</p>
+                ) : (
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar">
+                    {txns
+                      .sort((a, b) => Number(b.monto) - Number(a.monto))
+                      .map((t, i) => (
+                      <div key={i} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs font-medium ${theme.colors.textPrimary} truncate`}>{t.descripcion}</p>
+                          <p className={`text-[10px] ${theme.colors.textMuted}`}>{t.categoria}{t.cuenta ? ` · ${t.cuenta}` : ''}</p>
+                        </div>
+                        <span className={`text-xs font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>
+                          {formatCurrency(Number(t.monto))}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Card payments toggle */}
           <label className={`flex items-center gap-2 mt-3 pt-3 border-t ${theme.colors.border} cursor-pointer`}>
             <input
               type="checkbox"
               checked={includeCardPayments}
-              onChange={(e) => setIncludeCardPayments(e.target.checked)}
+              onChange={(e) => { setIncludeCardPayments(e.target.checked); setSelectedWeekDay(null); }}
               className="w-3.5 h-3.5 rounded accent-yn-primary-500"
             />
             <span className={`text-[11px] ${theme.colors.textMuted}`}>Incluir pagos de tarjeta</span>
