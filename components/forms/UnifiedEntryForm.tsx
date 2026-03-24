@@ -323,10 +323,13 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         })),
       ];
 
+      console.log(`[handleCameraCapture] Sending ${(base64Clean.length / 1024).toFixed(0)}KB to /api/scan with ${cuentasDetalladas.length} cuentas`);
       const result = await analyzeReceiptWithAI(scriptUrl, pin, base64Clean, cuentasDetalladas);
+      console.log('[handleCameraCapture] Scan result:', JSON.stringify(result).substring(0, 500));
 
       if (result.success && result.data) {
         const items = Array.isArray(result.data) ? result.data : [result.data];
+        console.log('[handleCameraCapture] Items to confirm:', items.length, items.map(i => ({ tipo: i.tipo, monto: i.monto, desc: i.descripcion })));
         handleYunaiResult(items);
       } else {
         notify?.(result.error || 'No se pudo analizar el ticket', 'error');
@@ -344,7 +347,27 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
     setShowVoiceRecorder(false);
     setShowCamera(false);
     const items = Array.isArray(data) ? data : [data];
-    setYunaiExtraction(items);
+
+    // Normalize: ensure all fields have at least default values
+    const normalized = items.map(item => ({
+      tipo: item.tipo || 'gasto',
+      monto: typeof item.monto === 'number' ? item.monto : (parseFloat(item.monto as any) || 0),
+      descripcion: item.descripcion || '',
+      categoria: item.categoria || '💳 Otros',
+      cuenta: item.cuenta || null,
+      cuenta_destino: item.cuenta_destino || null,
+      fecha: item.fecha || today,
+      notas: item.notas || '',
+      num_cuotas: item.num_cuotas || 1,
+      meta_id: item.meta_id || '',
+      tipo_gasto: item.tipo_gasto || 'deuda',
+      confianza: item.confianza ?? 0.5,
+      campos_inciertos: Array.isArray(item.campos_inciertos) ? item.campos_inciertos : [],
+      pregunta_seguimiento: item.pregunta_seguimiento || null,
+    } as YunaiExtractionResult));
+
+    console.log('[handleYunaiResult] Normalized:', normalized.map(i => ({ tipo: i.tipo, monto: i.monto, desc: i.descripcion })));
+    setYunaiExtraction(normalized);
     setShowYunaiConfirmation(true);
   };
 

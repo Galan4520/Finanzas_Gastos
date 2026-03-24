@@ -122,10 +122,16 @@ export const CameraCapture: React.FC<CameraCaptureProps> = ({
     const video = videoRef.current;
     if (!video || !cameraActive) return;
 
+    // Ensure video has valid dimensions (frame must be rendered)
+    if (!video.videoWidth || !video.videoHeight) {
+      setError('La cámara aún no está lista. Espera un momento.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
       const base64 = compressFromCanvas(video, video.videoWidth, video.videoHeight);
-      console.log(`[CameraCapture] Captured: ${(base64.length / 1024).toFixed(0)}KB base64`);
+      console.log(`[CameraCapture] Captured: ${video.videoWidth}x${video.videoHeight} → ${(base64.length / 1024).toFixed(0)}KB base64`);
       setPreview(`data:image/jpeg;base64,${base64}`);
       stopCamera();
     } catch (err) {
