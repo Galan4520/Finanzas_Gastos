@@ -31,6 +31,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const recordingTimeRef = useRef(0);
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef('');
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -49,6 +50,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setIsProcessing(false);
       setTranscript('');
       setInterimTranscript('');
+      transcriptRef.current = '';
     }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -187,32 +189,45 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
       setTranscript('');
       setInterimTranscript('');
 
-      // Start Web Speech API for live transcription (runs in parallel, free)
-      const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognitionAPI) {
-        const recognition = new SpeechRecognitionAPI();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'es-PE';
+      // Start Web Speech API for live transcription after a delay
+      // On mobile, starting it immediately can conflict with MediaRecorder
+      setTimeout(() => {
+        try {
+          const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+          if (!SpeechRecognitionAPI) return;
 
-        recognition.onresult = (event: any) => {
-          let final = '';
-          let interim = '';
-          for (let i = 0; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-              final += event.results[i][0].transcript + ' ';
-            } else {
-              interim += event.results[i][0].transcript;
+          const recognition = new SpeechRecognitionAPI();
+          recognition.continuous = true;
+          recognition.interimResults = true;
+          recognition.lang = 'es-PE';
+
+          recognition.onresult = (event: any) => {
+            let final = '';
+            let interim = '';
+            for (let i = 0; i < event.results.length; i++) {
+              if (event.results[i].isFinal) {
+                final += event.results[i][0].transcript + ' ';
+              } else {
+                interim += event.results[i][0].transcript;
+              }
             }
-          }
-          setTranscript(final.trim());
-          setInterimTranscript(interim);
-        };
+            const finalText = final.trim();
+            transcriptRef.current = finalText;
+            setTranscript(finalText);
+            setInterimTranscript(interim);
+          };
 
-        recognition.onerror = () => {}; // Silent fail — not critical
-        recognition.start();
-        recognitionRef.current = recognition;
-      }
+          recognition.onerror = () => {
+            // Silent fail — speech recognition is optional enhancement
+            recognitionRef.current = null;
+          };
+
+          recognition.start();
+          recognitionRef.current = recognition;
+        } catch {
+          // SpeechRecognition not available or blocked — ignore
+        }
+      }, 500);
 
       timerRef.current = setInterval(() => {
         recordingTimeRef.current += 1;
@@ -287,7 +302,7 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
           audio: base64,
           mimeType: mimeType.split(';')[0],
           cuentas: cuentasDetalladas,
-          transcriptHint: transcript || undefined,
+          transcriptHint: transcriptRef.current || undefined,
         }),
       });
 
