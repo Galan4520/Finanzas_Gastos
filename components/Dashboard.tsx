@@ -26,6 +26,10 @@ interface DashboardProps {
   onDeleteTransaction?: (transaction: Transaction) => void;
 }
 
+// Helper: detect if a transaction is a credit card payment (internal transfer, not real consumption)
+const isCardPayment = (t: Transaction): boolean =>
+  t.tipo === 'Gastos' && (t.descripcion || '').toLowerCase().includes('pago tarjeta');
+
 // Helper function to parse date string as local date (avoids timezone issues)
 const parseLocalDate = (dateStr: string): Date => {
   // If it's an ISO string with time, extract just the date part and parse as local
@@ -234,6 +238,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
     history.forEach(t => {
       if (t.tipo !== 'Gastos') return;
+      if (isCardPayment(t)) return; // Exclude card payments (internal transfers)
       const date = new Date(t.timestamp || t.fecha);
       const monto = Number(t.monto);
 
@@ -1752,6 +1757,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const now = new Date();
         const filteredHistory = history.filter(t => {
           if (t.tipo !== 'Gastos') return false;
+          if (isCardPayment(t)) return false; // Exclude card payments (internal transfers)
           const d = new Date(t.timestamp || t.fecha);
           if (categoryPeriod === 'week') {
             const dow = now.getDay(); // 0=Sun..6=Sat
