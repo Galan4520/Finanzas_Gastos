@@ -218,21 +218,34 @@ export default async function handler(req, res) {
     // Clean generic Markdown/JSON wrappers
     aiText = aiText.replace(/```json/gi, "").replace(/```/gi, "").trim();
 
-    // Try array first (multi-movement), then single object
-    const arrayMatch = aiText.match(/\[[\s\S]*\]/);
+    // Parse strategy: try object first (single movement), then array (multi-movement)
+    // IMPORTANT: We must prefer the outermost JSON object over inner arrays
+    // because campos_inciertos is an array INSIDE the object, and a greedy
+    // array regex would incorrectly match that inner array instead.
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    const arrayMatch = aiText.match(/^\s*\[[\s\S]*\]\s*$/); // Only match if the ENTIRE response is an array
 
+    let parsedData;
     if (arrayMatch) {
-      aiText = arrayMatch[0];
+      // Entire response is an array (multi-movement)
+      parsedData = JSON.parse(arrayMatch[0]);
     } else if (jsonMatch) {
-      aiText = jsonMatch[0];
+      // Single object (most common for receipts)
+      parsedData = JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error('No se encontró JSON válido en la respuesta de la IA');
     }
-
-    let parsedData = JSON.parse(aiText);
 
     // Normalize: always return an array
     if (!Array.isArray(parsedData)) {
       parsedData = [parsedData];
+    } else {
+      // If it's an array, validate it looks like movements (not campos_inciertos)
+      if (parsedData.length > 0 && !parsedData[0].tipo && !parsedData[0].monto && parsedData[0].campo) {
+        // This is a campos_inciertos array, not movements — something went wrong
+        console.error('[scan] Got campos_inciertos array instead of movements, wrapping in default');
+        parsedData = [{ campos_inciertos: parsedData }];
+      }
     }
 
     // Ensure each movement has campos_inciertos as array
