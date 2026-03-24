@@ -165,6 +165,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   const [isAdviceLoading, setIsAdviceLoading] = useState(false);
   const [showYunaiDetail, setShowYunaiDetail] = useState(false);
   const [compareWeekOffset, setCompareWeekOffset] = useState(1); // 1 = semana pasada, 2 = hace 2 semanas, etc.
+  const [includeCardPayments, setIncludeCardPayments] = useState(true);
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -238,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
 
     history.forEach(t => {
       if (t.tipo !== 'Gastos') return;
-      if (isCardPayment(t)) return; // Exclude card payments (internal transfers)
+      if (!includeCardPayments && isCardPayment(t)) return;
       const date = new Date(t.timestamp || t.fecha);
       const monto = Number(t.monto);
 
@@ -283,7 +284,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
       compareLabel,
       compareRangeLabel,
     };
-  }, [history, compareWeekOffset]);
+  }, [history, compareWeekOffset, includeCardPayments]);
 
   // Calculate card payments for this month and next month
   const cardPayments = useMemo(() => {
@@ -1311,6 +1312,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               </span>
             </div>
           </div>
+
+          {/* Card payments toggle */}
+          <label className={`flex items-center gap-2 mt-3 pt-3 border-t ${theme.colors.border} cursor-pointer`}>
+            <input
+              type="checkbox"
+              checked={includeCardPayments}
+              onChange={(e) => setIncludeCardPayments(e.target.checked)}
+              className="w-3.5 h-3.5 rounded accent-yn-primary-500"
+            />
+            <span className={`text-[11px] ${theme.colors.textMuted}`}>Incluir pagos de tarjeta</span>
+          </label>
         </div>
 
         {/* This Month Payment Card */}
@@ -1757,7 +1769,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const now = new Date();
         const filteredHistory = history.filter(t => {
           if (t.tipo !== 'Gastos') return false;
-          if (isCardPayment(t)) return false; // Exclude card payments (internal transfers)
           const d = new Date(t.timestamp || t.fecha);
           if (categoryPeriod === 'week') {
             const dow = now.getDay(); // 0=Sun..6=Sat
@@ -1771,6 +1782,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         });
 
         const categoryData = filteredHistory.reduce((acc: { [key: string]: number }, t) => {
+          // If this is a card payment, distribute to the real categories from pending expenses
+          if (isCardPayment(t)) {
+            const desc = (t.descripcion || '').toLowerCase();
+            // Extract card name: "Pago tarjeta Visa Signature" → "visa signature"
+            const cardMatch = desc.replace(/pago\s+tarjeta\s*/i, '').trim();
+            // Find pending expenses for this card (match by alias, case-insensitive)
+            const cardExpenses = pendingExpenses.filter(pe =>
+              pe.tarjeta.toLowerCase() === cardMatch ||
+              pe.tarjeta.toLowerCase().includes(cardMatch) ||
+              cardMatch.includes(pe.tarjeta.toLowerCase())
+            );
+
+            if (cardExpenses.length > 0) {
+              // Calculate total pending to distribute proportionally
+              const totalPending = cardExpenses.reduce((sum, pe) => sum + Number(pe.monto), 0);
+              const paymentAmount = Number(t.monto);
+
+              cardExpenses.forEach(pe => {
+                const proportion = totalPending > 0 ? Number(pe.monto) / totalPending : 1 / cardExpenses.length;
+                const distributed = paymentAmount * proportion;
+                const cat = pe.categoria || 'Sin categoría';
+                acc[cat] = (acc[cat] || 0) + distributed;
+              });
+              return acc;
+            }
+            // Fallback: if no pending expenses found, use original category
+          }
+
           const cat = t.categoria || 'Sin categoría';
           acc[cat] = (acc[cat] || 0) + Number(t.monto);
           return acc;
