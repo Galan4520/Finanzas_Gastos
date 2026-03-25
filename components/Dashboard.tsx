@@ -171,7 +171,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
   const [compareWeekOffset, setCompareWeekOffset] = useState(1); // 1 = semana pasada, 2 = hace 2 semanas, etc.
   const [includeCardPayments, setIncludeCardPayments] = useState(true);
   const [selectedWeekDay, setSelectedWeekDay] = useState<number | null>(null); // 0=Lun..6=Dom, null=none
-  const [expandedPaymentCard, setExpandedPaymentCard] = useState<string | null>(null); // "thisMonth:cardAlias" or "nextMonth:cardAlias"
+  const [expandedPaymentCard, setExpandedPaymentCard] = useState<string | null>(null); // mobile: "thisMonth:cardAlias" or "nextMonth:cardAlias"
+  const [paymentDetailFilter, setPaymentDetailFilter] = useState<string | null>(null); // desktop: null=all, "thisMonth:cardAlias" or "nextMonth:cardAlias"
 
   // Compute date range boundaries
   const dateRange = useMemo(() => {
@@ -1506,18 +1507,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     </div>
                   )}
                 </div>
-                {/* Right: all expenses detail (desktop only) */}
+                {/* Right: expenses grouped by card with filter (desktop only) */}
                 {allExpenses.length > 0 && (
                   <div className={`hidden md:block md:flex-1 md:border-l ${theme.colors.border} md:pl-6`}>
-                    <p className={`text-xs font-bold ${theme.colors.textSecondary} mb-2`}>Detalle de gastos</p>
-                    <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
-                      {allExpenses.map((exp, ei) => (
-                        <div key={ei} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
-                            <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''} · {exp.card}</p>
+                    {data.details.length > 1 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        <button
+                          onClick={() => setPaymentDetailFilter(null)}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                            paymentDetailFilter === null || !paymentDetailFilter?.startsWith(prefix)
+                              ? 'bg-yn-primary-500 text-white border-yn-primary-500'
+                              : `${theme.colors.bgSecondary} ${theme.colors.textMuted} ${theme.colors.border}`
+                          }`}
+                        >Todas</button>
+                        {data.details.map((d, di) => {
+                          const fKey = `${prefix}:${d.card}`;
+                          return (
+                            <button
+                              key={di}
+                              onClick={() => setPaymentDetailFilter(paymentDetailFilter === fKey ? null : fKey)}
+                              className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                paymentDetailFilter === fKey
+                                  ? 'bg-yn-primary-500 text-white border-yn-primary-500'
+                                  : `${theme.colors.bgSecondary} ${theme.colors.textMuted} ${theme.colors.border}`
+                              }`}
+                            >{d.card}</button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="space-y-3 max-h-52 overflow-y-auto custom-scrollbar">
+                      {data.details
+                        .filter(d => !paymentDetailFilter?.startsWith(prefix) || paymentDetailFilter === `${prefix}:${d.card}`)
+                        .map((detail, di) => (
+                        <div key={di}>
+                          <p className={`text-[11px] font-bold ${theme.colors.textSecondary} mb-1`}>{detail.card}</p>
+                          <div className="space-y-1">
+                            {detail.expenses.map((exp, ei) => (
+                              <div key={ei} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                                  <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
+                                </div>
+                                <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
+                              </div>
+                            ))}
                           </div>
-                          <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
                         </div>
                       ))}
                     </div>
@@ -1612,18 +1647,52 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     </div>
                   )}
                 </div>
-                {/* Right: all expenses detail (desktop only) */}
+                {/* Right: expenses grouped by card with filter (desktop only) */}
                 {allExpenses.length > 0 && (
                   <div className={`hidden md:block md:flex-1 md:border-l ${theme.colors.border} md:pl-6`}>
-                    <p className={`text-xs font-bold ${theme.colors.textSecondary} mb-2`}>Detalle de gastos</p>
-                    <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
-                      {allExpenses.map((exp, ei) => (
-                        <div key={ei} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
-                            <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''} · {exp.card}</p>
+                    {data.details.length > 1 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        <button
+                          onClick={() => setPaymentDetailFilter(null)}
+                          className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                            paymentDetailFilter === null || !paymentDetailFilter?.startsWith(prefix)
+                              ? 'bg-yn-primary-500 text-white border-yn-primary-500'
+                              : `${theme.colors.bgSecondary} ${theme.colors.textMuted} ${theme.colors.border}`
+                          }`}
+                        >Todas</button>
+                        {data.details.map((d, di) => {
+                          const fKey = `${prefix}:${d.card}`;
+                          return (
+                            <button
+                              key={di}
+                              onClick={() => setPaymentDetailFilter(paymentDetailFilter === fKey ? null : fKey)}
+                              className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                paymentDetailFilter === fKey
+                                  ? 'bg-yn-primary-500 text-white border-yn-primary-500'
+                                  : `${theme.colors.bgSecondary} ${theme.colors.textMuted} ${theme.colors.border}`
+                              }`}
+                            >{d.card}</button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="space-y-3 max-h-52 overflow-y-auto custom-scrollbar">
+                      {data.details
+                        .filter(d => !paymentDetailFilter?.startsWith(prefix) || paymentDetailFilter === `${prefix}:${d.card}`)
+                        .map((detail, di) => (
+                        <div key={di}>
+                          <p className={`text-[11px] font-bold ${theme.colors.textSecondary} mb-1`}>{detail.card}</p>
+                          <div className="space-y-1">
+                            {detail.expenses.map((exp, ei) => (
+                              <div key={ei} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                                  <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
+                                </div>
+                                <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
+                              </div>
+                            ))}
                           </div>
-                          <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
                         </div>
                       ))}
                     </div>
