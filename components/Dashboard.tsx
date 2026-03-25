@@ -1528,13 +1528,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
           );
         })()}
 
-        {/* Next Month Payment Card */}
+        {/* Next Month Payment Card — spans 2 cols on desktop for detail space */}
         {(() => {
           const data = cardPayments.nextMonth;
           const prefix = 'nextMonth';
           const allExpenses = data.details.flatMap(d => d.expenses.map(e => ({ ...e, card: d.card })));
           return (
-            <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+            <div className={`lg:col-span-2 ${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
               <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
                 Pago Próximo Mes
               </h3>
