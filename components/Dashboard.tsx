@@ -1423,174 +1423,216 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         </div>
 
         {/* This Month Payment Card */}
-        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
-          <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
-            Pago Este Mes
-          </h3>
-
-          <div className="space-y-4">
-            <div>
-              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total a pagar</p>
-              <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
-                {formatCompact(cardPayments.thisMonth.total)}
-              </p>
-            </div>
-
-            {cardPayments.thisMonth.paymentDays.length > 0 && (
-              <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                      {cardPayments.thisMonth.paymentDays.length === 1
-                        ? `Día ${cardPayments.thisMonth.paymentDays[0]}`
-                        : `Días ${cardPayments.thisMonth.paymentDays.join(', ')}`
-                      }
-                    </span>
+        {(() => {
+          const data = cardPayments.thisMonth;
+          const prefix = 'thisMonth';
+          const allExpenses = data.details.flatMap(d => d.expenses.map(e => ({ ...e, card: d.card })));
+          return (
+            <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+              <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
+                Pago Este Mes
+              </h3>
+              <div className="md:flex md:gap-6">
+                {/* Left: summary */}
+                <div className="md:flex-1 space-y-4">
+                  <div>
+                    <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total a pagar</p>
+                    <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
+                      {formatCompact(data.total)}
+                    </p>
                   </div>
-                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-yn-primary-500/10 px-2 py-1 rounded`}>
-                    {cardPayments.thisMonth.details.length} {cardPayments.thisMonth.details.length === 1 ? 'tarjeta' : 'tarjetas'}
-                  </span>
-                </div>
-
-                {cardPayments.thisMonth.details.length > 0 && (
-                  <div className="space-y-1">
-                    {cardPayments.thisMonth.details.map((detail, idx) => {
-                      const key = `thisMonth:${detail.card}`;
-                      const isExpanded = expandedPaymentCard === key;
-                      return (
-                        <div key={idx}>
-                          <button
-                            onClick={() => setExpandedPaymentCard(isExpanded ? null : key)}
-                            className={`flex justify-between items-center w-full py-1 rounded transition-colors ${isExpanded ? '' : 'hover:bg-yn-neutral-100'}`}
-                          >
-                            <span className={`text-xs ${theme.colors.textMuted} flex items-center gap-1`}>
-                              <span className={`text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
-                              {detail.card}
-                            </span>
-                            <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
-                              {formatCurrency(detail.amount)}
-                            </span>
-                          </button>
-                          {isExpanded && detail.expenses && (
-                            <div className="ml-4 mt-1 mb-2 space-y-1 animate-in slide-in-from-top-1 duration-150">
-                              {detail.expenses.map((exp, ei) => (
-                                <div key={ei} className={`flex items-center justify-between py-1 px-2 rounded-lg ${theme.colors.bgCard}`}>
-                                  <div className="flex-1 min-w-0">
-                                    <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
-                                    <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
-                                  </div>
-                                  <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>
-                                    {formatCurrency(exp.amount)}
+                  {data.paymentDays.length > 0 && (
+                    <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
+                            {data.paymentDays.length === 1 ? `Día ${data.paymentDays[0]}` : `Días ${data.paymentDays.join(', ')}`}
+                          </span>
+                        </div>
+                        <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-yn-primary-500/10 px-2 py-1 rounded`}>
+                          {data.details.length} {data.details.length === 1 ? 'tarjeta' : 'tarjetas'}
+                        </span>
+                      </div>
+                      {data.details.length > 0 && (
+                        <div className="space-y-1">
+                          {data.details.map((detail, idx) => {
+                            const key = `${prefix}:${detail.card}`;
+                            const isExpanded = expandedPaymentCard === key;
+                            return (
+                              <div key={idx}>
+                                {/* Mobile: expandable */}
+                                <button
+                                  onClick={() => setExpandedPaymentCard(isExpanded ? null : key)}
+                                  className={`md:hidden flex justify-between items-center w-full py-1 rounded transition-colors`}
+                                >
+                                  <span className={`text-xs ${theme.colors.textMuted} flex items-center gap-1`}>
+                                    <span className={`text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                                    {detail.card}
                                   </span>
+                                  <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>{formatCurrency(detail.amount)}</span>
+                                </button>
+                                {isExpanded && detail.expenses && (
+                                  <div className="md:hidden ml-4 mt-1 mb-2 space-y-1 animate-in slide-in-from-top-1 duration-150">
+                                    {detail.expenses.map((exp, ei) => (
+                                      <div key={ei} className={`flex items-center justify-between py-1 px-2 rounded-lg ${theme.colors.bgCard}`}>
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                                          <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
+                                        </div>
+                                        <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {/* Desktop: just the card row (detail shown on the right) */}
+                                <div className={`hidden md:flex justify-between items-center py-1`}>
+                                  <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
+                                  <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>{formatCurrency(detail.amount)}</span>
                                 </div>
-                              ))}
+                              </div>
+                            );
+                          })}
+                          {data.details.length > 1 && (
+                            <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
+                              <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
+                              <span className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>{formatCurrency(data.total)}</span>
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                    {cardPayments.thisMonth.details.length > 1 && (
-                      <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
-                        <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
-                        <span className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>
-                          {formatCurrency(cardPayments.thisMonth.total)}
-                        </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Right: all expenses detail (desktop only) */}
+                {allExpenses.length > 0 && (
+                  <div className={`hidden md:block md:flex-1 md:border-l ${theme.colors.border} md:pl-6`}>
+                    <p className={`text-xs font-bold ${theme.colors.textSecondary} mb-2`}>Detalle de gastos</p>
+                    <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
+                      {allExpenses.map((exp, ei) => (
+                        <div key={ei} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                            <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''} · {exp.card}</p>
+                          </div>
+                          <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })()}
 
         {/* Next Month Payment Card */}
-        <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
-          <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
-            Pago Próximo Mes
-          </h3>
-
-          <div className="space-y-4">
-            <div>
-              <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total estimado</p>
-              <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
-                {formatCompact(cardPayments.nextMonth.total)}
-              </p>
-            </div>
-
-            {cardPayments.nextMonth.paymentDays.length > 0 && (
-              <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
-                      {cardPayments.nextMonth.paymentDays.length === 1
-                        ? `Día ${cardPayments.nextMonth.paymentDays[0]}`
-                        : `Días ${cardPayments.nextMonth.paymentDays.join(', ')}`
-                      }
-                    </span>
+        {(() => {
+          const data = cardPayments.nextMonth;
+          const prefix = 'nextMonth';
+          const allExpenses = data.details.flatMap(d => d.expenses.map(e => ({ ...e, card: d.card })));
+          return (
+            <div className={`${theme.colors.bgCard} backdrop-blur-md p-6 rounded-3xl border ${theme.colors.border} shadow-xl`}>
+              <h3 className={`${theme.colors.textMuted} font-bold uppercase text-xs tracking-wider mb-4`}>
+                Pago Próximo Mes
+              </h3>
+              <div className="md:flex md:gap-6">
+                {/* Left: summary */}
+                <div className="md:flex-1 space-y-4">
+                  <div>
+                    <p className={`text-xs ${theme.colors.textMuted} mb-1`}>Total estimado</p>
+                    <p className={`text-xl sm:text-2xl font-sans font-bold truncate ${theme.colors.textPrimary}`}>
+                      {formatCompact(data.total)}
+                    </p>
                   </div>
-                  <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-yn-sec1-500/10 px-2 py-1 rounded`}>
-                    {cardPayments.nextMonth.details.length} {cardPayments.nextMonth.details.length === 1 ? 'tarjeta' : 'tarjetas'}
-                  </span>
-                </div>
-
-                {cardPayments.nextMonth.details.length > 0 && (
-                  <div className="space-y-1">
-                    {cardPayments.nextMonth.details.map((detail, idx) => {
-                      const key = `nextMonth:${detail.card}`;
-                      const isExpanded = expandedPaymentCard === key;
-                      return (
-                        <div key={idx}>
-                          <button
-                            onClick={() => setExpandedPaymentCard(isExpanded ? null : key)}
-                            className={`flex justify-between items-center w-full py-1 rounded transition-colors ${isExpanded ? '' : 'hover:bg-yn-neutral-100'}`}
-                          >
-                            <span className={`text-xs ${theme.colors.textMuted} flex items-center gap-1`}>
-                              <span className={`text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
-                              {detail.card}
-                            </span>
-                            <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>
-                              {formatCurrency(detail.amount)}
-                            </span>
-                          </button>
-                          {isExpanded && detail.expenses && (
-                            <div className="ml-4 mt-1 mb-2 space-y-1 animate-in slide-in-from-top-1 duration-150">
-                              {detail.expenses.map((exp, ei) => (
-                                <div key={ei} className={`flex items-center justify-between py-1 px-2 rounded-lg ${theme.colors.bgCard}`}>
-                                  <div className="flex-1 min-w-0">
-                                    <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
-                                    <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
-                                  </div>
-                                  <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>
-                                    {formatCurrency(exp.amount)}
+                  {data.paymentDays.length > 0 && (
+                    <div className={`p-3 rounded-xl ${theme.colors.bgSecondary}`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <svg className={`w-4 h-4 ${theme.colors.textMuted}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>
+                            {data.paymentDays.length === 1 ? `Día ${data.paymentDays[0]}` : `Días ${data.paymentDays.join(', ')}`}
+                          </span>
+                        </div>
+                        <span className={`text-xs font-bold ${theme.colors.textPrimary} bg-yn-sec1-500/10 px-2 py-1 rounded`}>
+                          {data.details.length} {data.details.length === 1 ? 'tarjeta' : 'tarjetas'}
+                        </span>
+                      </div>
+                      {data.details.length > 0 && (
+                        <div className="space-y-1">
+                          {data.details.map((detail, idx) => {
+                            const key = `${prefix}:${detail.card}`;
+                            const isExpanded = expandedPaymentCard === key;
+                            return (
+                              <div key={idx}>
+                                {/* Mobile: expandable */}
+                                <button
+                                  onClick={() => setExpandedPaymentCard(isExpanded ? null : key)}
+                                  className={`md:hidden flex justify-between items-center w-full py-1 rounded transition-colors`}
+                                >
+                                  <span className={`text-xs ${theme.colors.textMuted} flex items-center gap-1`}>
+                                    <span className={`text-[10px] transition-transform ${isExpanded ? 'rotate-90' : ''}`}>▶</span>
+                                    {detail.card}
                                   </span>
+                                  <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>{formatCurrency(detail.amount)}</span>
+                                </button>
+                                {isExpanded && detail.expenses && (
+                                  <div className="md:hidden ml-4 mt-1 mb-2 space-y-1 animate-in slide-in-from-top-1 duration-150">
+                                    {detail.expenses.map((exp, ei) => (
+                                      <div key={ei} className={`flex items-center justify-between py-1 px-2 rounded-lg ${theme.colors.bgCard}`}>
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                                          <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''}</p>
+                                        </div>
+                                        <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                {/* Desktop: just the card row */}
+                                <div className={`hidden md:flex justify-between items-center py-1`}>
+                                  <span className={`text-xs ${theme.colors.textMuted}`}>{detail.card}</span>
+                                  <span className={`text-xs font-sans font-semibold ${theme.colors.textPrimary}`}>{formatCurrency(detail.amount)}</span>
                                 </div>
-                              ))}
+                              </div>
+                            );
+                          })}
+                          {data.details.length > 1 && (
+                            <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
+                              <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
+                              <span className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>{formatCurrency(data.total)}</span>
                             </div>
                           )}
                         </div>
-                      );
-                    })}
-                    {cardPayments.nextMonth.details.length > 1 && (
-                      <div className={`flex justify-between items-center pt-2 mt-2 border-t ${theme.colors.border}`}>
-                        <span className={`text-xs font-bold ${theme.colors.textSecondary}`}>Total</span>
-                        <span className={`text-sm font-sans font-bold ${theme.colors.textPrimary}`}>
-                          {formatCurrency(cardPayments.nextMonth.total)}
-                        </span>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Right: all expenses detail (desktop only) */}
+                {allExpenses.length > 0 && (
+                  <div className={`hidden md:block md:flex-1 md:border-l ${theme.colors.border} md:pl-6`}>
+                    <p className={`text-xs font-bold ${theme.colors.textSecondary} mb-2`}>Detalle de gastos</p>
+                    <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
+                      {allExpenses.map((exp, ei) => (
+                        <div key={ei} className={`flex items-center justify-between py-1.5 px-2 rounded-lg ${theme.colors.bgSecondary}`}>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-[11px] font-medium ${theme.colors.textPrimary} truncate`}>{exp.descripcion}</p>
+                            <p className={`text-[10px] ${theme.colors.textMuted}`}>{exp.categoria}{exp.cuota ? ` · ${exp.cuota}` : ''} · {exp.card}</p>
+                          </div>
+                          <span className={`text-[11px] font-bold ml-2 whitespace-nowrap ${theme.colors.textPrimary}`}>{formatCurrency(exp.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Card Distribution */}
