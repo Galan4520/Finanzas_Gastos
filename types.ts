@@ -132,7 +132,7 @@ export const CATEGORIAS_INGRESOS = [
 
 export const BANCOS = [
   "BCP", "Interbank", "Scotiabank", "BBVA", "Banco Pichincha",
-  "Banbif", "Falabella", "Ripley", "Otro"
+  "Banbif", "Falabella", "Ripley", "Corredor Azul", "Metropolitano", "Otro"
 ];
 
 // Real Estate Investments

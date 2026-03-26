@@ -239,6 +239,28 @@ export const PERUVIAN_BANK_CARDS: BankCard[] = [
         imagen: 'https://www.bancoripley.com.pe/imagenes/tarjetas/ripley-visa.png',
         color: '#883696',
         gradient: 'from-[#883696] to-[#b35cad]'
+    },
+
+    // Corredor Azul (Transporte Lima)
+    {
+        id: 'corredor-azul',
+        banco: 'Corredor Azul',
+        nombre: 'Tarjeta Corredor Azul',
+        tipo: 'Débito',
+        imagen: '',
+        color: '#0066b3',
+        gradient: 'from-[#0066b3] to-[#0091ea]'
+    },
+
+    // Metropolitano (Transporte Lima)
+    {
+        id: 'metropolitano',
+        banco: 'Metropolitano',
+        nombre: 'Tarjeta Metropolitano',
+        tipo: 'Débito',
+        imagen: '',
+        color: '#e53935',
+        gradient: 'from-[#e53935] to-[#ff6f60]'
     }
 ];
 
@@ -267,6 +289,8 @@ export const getGradientByBank = (banco: string): string => {
         case 'Banco Pichincha': return 'from-[#ffdd00] to-[#ffea61]';
         case 'Falabella': return 'from-[#1a9f4b] to-[#a3cd39]';
         case 'Ripley': return 'from-[#883696] to-[#b35cad]';
+        case 'Corredor Azul': return 'from-[#0066b3] to-[#0091ea]';
+        case 'Metropolitano': return 'from-[#e53935] to-[#ff6f60]';
         default: return 'from-slate-700 to-slate-600';
     }
 };
