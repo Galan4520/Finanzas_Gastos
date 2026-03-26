@@ -364,6 +364,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   onAddCard={onAddCard}
                   existingCards={cards}
                   notify={notify}
+                  initialShowForm={true}
                 />
               </div>
             </div>

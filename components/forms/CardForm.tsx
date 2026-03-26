@@ -12,11 +12,12 @@ interface CardFormProps {
   onAddCard: (card: CreditCard) => void;
   existingCards: CreditCard[];
   notify?: (msg: string, type: 'success' | 'error') => void;
+  initialShowForm?: boolean;
 }
 
-export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, existingCards, notify }) => {
+export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, existingCards, notify, initialShowForm = false }) => {
   const { theme } = useTheme();
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(initialShowForm);
   const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState<Partial<CreditCard> & { selectedCardId?: string }>({
