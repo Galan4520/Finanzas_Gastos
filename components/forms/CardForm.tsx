@@ -135,7 +135,8 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
           </h2>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-yn-primary-600 hover:bg-yn-primary-500 text-white px-4 py-2 rounded-lg font-bold shadow-lg shadow-yn-primary-500/20 transition-all transform active:scale-95"
+            className="flex items-center gap-2 text-white px-4 py-2 rounded-lg font-bold shadow-lg transition-all transform active:scale-95"
+            style={{ backgroundColor: '#00A750' }}
           >
             <Plus size={18} /> Nueva
           </button>
@@ -413,7 +414,8 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-4 rounded-xl font-bold text-white mt-4 shadow-lg transition-all active:scale-95 ${loading ? 'bg-gray-600' : 'bg-yn-primary-600 hover:bg-yn-primary-500'}`}
+            className="w-full py-4 rounded-xl font-bold text-white mt-4 shadow-lg transition-all active:scale-95"
+            style={{ backgroundColor: loading ? '#4B5563' : '#00A750' }}
           >
             {loading ? 'Guardando...' : 'Agregar Tarjeta'}
           </button>

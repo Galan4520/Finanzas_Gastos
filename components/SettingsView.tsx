@@ -60,6 +60,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
   const [geminiKey, setGeminiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
+  const [editingCard, setEditingCard] = useState<CreditCardType | null>(null);
   const avatar = profile ? getAvatarById(profile.avatar_id) : null;
 
   const sections = [
@@ -304,48 +305,122 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     Tarjetas Registradas ({cards.length})
                   </h4>
                   <div className="space-y-3">
-                    {cards.map(card => (
-                      <div
-                        key={`${card.alias}-${card.banco}`}
-                        className={`${theme.colors.bgSecondary} p-4 rounded-xl border ${theme.colors.border} flex items-center justify-between`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-yn-primary-500 to-yn-primary-700 flex items-center justify-center">
-                            <CreditCard size={20} className="text-white" />
+                    {cards.map(card => {
+                      const isEditing = editingCard?.alias === card.alias && editingCard?.banco === card.banco;
+                      const inputCls = `w-full ${theme.colors.bgCard} border ${theme.colors.border} rounded-lg px-3 py-2 text-sm ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-yn-primary-500`;
+                      return (
+                        <div key={`${card.alias}-${card.banco}`} className={`${theme.colors.bgSecondary} rounded-xl border ${theme.colors.border} overflow-hidden`}>
+                          <div className="p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #00A750, #005B41)' }}>
+                                <CreditCard size={20} className="text-white" />
+                              </div>
+                              <div>
+                                <p className={`font-semibold ${theme.colors.textPrimary}`}>{card.alias}</p>
+                                <p className={`text-xs ${theme.colors.textMuted}`}>{card.banco} • {card.tipo_tarjeta}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right hidden sm:block">
+                                <p className={`text-xs ${theme.colors.textMuted}`}>Límite</p>
+                                <p className={`font-sans font-semibold ${theme.colors.textSecondary}`}>{formatCurrency(card.limite)}</p>
+                              </div>
+                              <p className={`text-xs ${theme.colors.textMuted} hidden sm:block`}>
+                                Cierre: {card.dia_cierre} | Pago: {card.dia_pago}
+                              </p>
+                              <div className="flex gap-1">
+                                <button
+                                  onClick={() => setEditingCard(isEditing ? null : { ...card })}
+                                  className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-yn-primary-500/20 transition-colors`}
+                                  title="Editar"
+                                >
+                                  <Pencil size={14} style={{ color: '#00A750' }} />
+                                </button>
+                                <button
+                                  onClick={() => onDeleteCard(card)}
+                                  className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-red-500/20 transition-colors`}
+                                  title="Eliminar"
+                                >
+                                  <Trash2 size={14} className="text-red-400" />
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <p className={`font-semibold ${theme.colors.textPrimary}`}>{card.alias}</p>
-                            <p className={`text-xs ${theme.colors.textMuted}`}>{card.banco} • {card.tipo_tarjeta}</p>
-                          </div>
+                          {/* Inline Edit Form */}
+                          {isEditing && editingCard && (
+                            <div className={`px-4 pb-4 pt-2 border-t ${theme.colors.border} space-y-3 animate-in slide-in-from-top-2 duration-200`}>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div>
+                                  <label className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase block mb-1`}>Alias</label>
+                                  <input
+                                    value={editingCard.alias}
+                                    onChange={e => setEditingCard({ ...editingCard, alias: e.target.value })}
+                                    className={inputCls}
+                                  />
+                                </div>
+                                <div>
+                                  <label className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase block mb-1`}>Límite</label>
+                                  <input
+                                    type="number"
+                                    value={editingCard.limite ?? ''}
+                                    onChange={e => setEditingCard({ ...editingCard, limite: Number(e.target.value) })}
+                                    className={inputCls}
+                                  />
+                                </div>
+                                <div>
+                                  <label className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase block mb-1`}>Día Cierre</label>
+                                  <input
+                                    type="number" min={1} max={31}
+                                    value={editingCard.dia_cierre ?? ''}
+                                    onChange={e => setEditingCard({ ...editingCard, dia_cierre: Number(e.target.value) })}
+                                    className={inputCls}
+                                  />
+                                </div>
+                                <div>
+                                  <label className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase block mb-1`}>Día Pago</label>
+                                  <input
+                                    type="number" min={1} max={31}
+                                    value={editingCard.dia_pago ?? ''}
+                                    onChange={e => setEditingCard({ ...editingCard, dia_pago: Number(e.target.value) })}
+                                    className={inputCls}
+                                  />
+                                </div>
+                              </div>
+                              {editingCard.tipo_cuenta !== 'debito' && (
+                                <div className="w-1/2 sm:w-1/4">
+                                  <label className={`text-[10px] font-bold ${theme.colors.textMuted} uppercase block mb-1`}>TEA %</label>
+                                  <input
+                                    type="number" step="0.01"
+                                    value={editingCard.tea ?? ''}
+                                    onChange={e => setEditingCard({ ...editingCard, tea: Number(e.target.value) })}
+                                    className={inputCls}
+                                  />
+                                </div>
+                              )}
+                              <div className="flex gap-2 pt-1">
+                                <button
+                                  onClick={() => {
+                                    onEditCard(editingCard);
+                                    setEditingCard(null);
+                                    notify('Tarjeta actualizada', 'success');
+                                  }}
+                                  className="px-4 py-2 rounded-lg text-white text-sm font-bold transition-all active:scale-95"
+                                  style={{ backgroundColor: '#00A750' }}
+                                >
+                                  Guardar
+                                </button>
+                                <button
+                                  onClick={() => setEditingCard(null)}
+                                  className={`px-4 py-2 rounded-lg text-sm font-medium ${theme.colors.textMuted} ${theme.colors.bgCard} border ${theme.colors.border}`}
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="text-right hidden sm:block">
-                            <p className={`text-xs ${theme.colors.textMuted}`}>Límite</p>
-                            <p className={`font-sans font-semibold ${theme.colors.textSecondary}`}>{formatCurrency(card.limite)}</p>
-                          </div>
-                          <p className={`text-xs ${theme.colors.textMuted} hidden sm:block`}>
-                            Cierre: {card.dia_cierre} | Pago: {card.dia_pago}
-                          </p>
-                          {/* Edit/Delete Buttons */}
-                          <div className="flex gap-1">
-                            <button
-                              onClick={() => onEditCard(card)}
-                              className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-yn-primary-500/20 transition-colors`}
-                              title="Editar"
-                            >
-                              <Pencil size={14} className="text-yn-primary-500" />
-                            </button>
-                            <button
-                              onClick={() => onDeleteCard(card)}
-                              className={`p-2 rounded-lg ${theme.colors.bgCard} hover:bg-red-500/20 transition-colors`}
-                              title="Eliminar"
-                            >
-                              <Trash2 size={14} className="text-red-400" />
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
