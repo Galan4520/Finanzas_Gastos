@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType } from '../../types';
 import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
-import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Sparkles, Edit as EditIcon, Mic, Camera } from 'lucide-react';
+import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Sparkles, Edit as EditIcon, Mic, Camera, ArrowRightLeft } from 'lucide-react';
 import { CategoryPicker } from '../ui/CategoryPicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getTextColor } from '../../themes';
@@ -31,7 +31,7 @@ interface UnifiedEntryFormProps {
   onRemoveCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
 }
 
-type EntryType = 'gasto' | 'ingreso' | 'tarjeta';
+type EntryType = 'gasto' | 'ingreso' | 'tarjeta' | 'transferencia';
 
 export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   scriptUrl, pin, cards, goals = [], history = [], pendingExpenses = [],
@@ -45,6 +45,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedMetaId, setSelectedMetaId] = useState('');
   const [selectedCuenta, setSelectedCuenta] = useState('Billetera');
+  const [transferDestino, setTransferDestino] = useState('');
   const [isScanning, setIsScanning] = useState(false);
 
   // Method selection for Gasto: manual, AI scan, or voice
@@ -180,6 +181,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   // Reset method selection when changing entry type
   useEffect(() => {
     setSelectedMethod(null);
+    setTransferDestino('');
   }, [entryType]);
 
   const handleBreakFromForm = () => {
@@ -227,6 +229,51 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
     setLoading(true);
 
     try {
+      if (entryType === 'transferencia') {
+        // Validate destination
+        if (!transferDestino) {
+          notify?.('Selecciona una cuenta de destino', 'error');
+          setLoading(false);
+          return;
+        }
+        // Validate balance
+        const saldoOrigen = accountBalances[selectedCuenta] ?? 0;
+        if (montoValue > saldoOrigen) {
+          notify?.(`Saldo insuficiente en ${selectedCuenta}. Disponible: ${formatCurrency(saldoOrigen)}`, 'error');
+          setLoading(false);
+          return;
+        }
+        const ts = getLocalISOString();
+        const desc = formData.descripcion || 'Transferencia';
+        // 1. Gasto from origin
+        await sendToSheet(scriptUrl, pin, {
+          fecha: today,
+          categoria: '💳 Otros',
+          descripcion: desc,
+          monto: montoValue,
+          notas: `Transferencia a ${transferDestino}`,
+          cuenta: selectedCuenta,
+          timestamp: ts
+        }, 'Gastos');
+        // 2. Ingreso to destination
+        await sendToSheet(scriptUrl, pin, {
+          fecha: today,
+          categoria: '💳 Otros',
+          descripcion: desc,
+          monto: montoValue,
+          notas: `Transferencia desde ${selectedCuenta}`,
+          cuenta: transferDestino,
+          timestamp: ts
+        }, 'Ingresos');
+
+        notify?.(`Transferencia de ${formatCurrency(montoValue)} registrada`, 'success');
+        setFormData(prev => ({ ...prev, monto: '', descripcion: '' }));
+        setTransferDestino('');
+        onSuccess();
+        setLoading(false);
+        return;
+      }
+
       if (entryType === 'tarjeta') {
         // Extract alias from tarjetaId (format: "alias-banco")
         const selectedCard = creditCards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
@@ -526,6 +573,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   const getLoadingMessage = () => {
     if (entryType === 'gasto') return 'Registrando gasto...';
     if (entryType === 'ingreso') return 'Registrando ingreso...';
+    if (entryType === 'transferencia') return 'Transfiriendo...';
     return 'Registrando cargo a tarjeta...';
   };
 
@@ -594,14 +642,14 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             </div>
 
             {/* Manual entry type buttons */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <button
                 type="button"
                 onClick={() => { setEntryType('gasto'); setSelectedMethod('manual'); }}
                 className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 hover:bg-yn-primary-500/5 transition-all`}
               >
                 <Wallet size={24} className={theme.colors.textMuted} />
-                <span className={`text-sm font-semibold ${theme.colors.textSecondary}`}>Gasto</span>
+                <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>Gasto</span>
               </button>
               <button
                 type="button"
@@ -609,7 +657,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 hover:bg-yn-primary-500/5 transition-all`}
               >
                 <TrendingUp size={24} className={theme.colors.textMuted} />
-                <span className={`text-sm font-semibold ${theme.colors.textSecondary}`}>Ingreso</span>
+                <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>Ingreso</span>
               </button>
               <button
                 type="button"
@@ -617,7 +665,15 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-yn-primary-500 hover:bg-yn-primary-500/5 transition-all`}
               >
                 <CreditIcon size={24} className={theme.colors.textMuted} />
-                <span className={`text-sm font-semibold ${theme.colors.textSecondary}`}>Tarjeta</span>
+                <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>Tarjeta</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setEntryType('transferencia'); setSelectedMethod('manual'); }}
+                className={`flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 ${theme.colors.border} ${theme.colors.bgSecondary} hover:border-orange-500 hover:bg-orange-500/5 transition-all`}
+              >
+                <ArrowRightLeft size={24} className={theme.colors.textMuted} />
+                <span className={`text-xs font-semibold ${theme.colors.textSecondary}`}>Transferir</span>
               </button>
             </div>
           </div>
@@ -629,20 +685,23 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         {/* Type Selector Tabs (only in manual mode) */}
         <div className={`${theme.colors.bgCard} p-1 rounded-2xl flex relative overflow-hidden border ${theme.colors.border}`}>
           <div
-            className={`absolute top-1 bottom-1 ${theme.colors.primary} rounded-xl transition-all duration-300 ease-out shadow-lg`}
+            className={`absolute top-1 bottom-1 ${entryType === 'transferencia' ? 'bg-orange-500' : theme.colors.primary} rounded-xl transition-all duration-300 ease-out shadow-lg`}
             style={{
-              left: entryType === 'gasto' ? '0.5%' : entryType === 'ingreso' ? '33.3%' : '66.6%',
-              width: '32.8%'
+              left: entryType === 'gasto' ? '0.5%' : entryType === 'ingreso' ? '25%' : entryType === 'tarjeta' ? '50%' : '75%',
+              width: '24.5%'
             }}
           />
           <button onClick={() => setEntryType('gasto')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'gasto' ? '${theme.colors.textPrimary}' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}`}>
-            <Wallet size={16} /> Gasto
+            <Wallet size={16} /> <span className="hidden sm:inline">Gasto</span>
           </button>
           <button onClick={() => setEntryType('ingreso')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'ingreso' ? '${theme.colors.textPrimary}' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}`}>
-            <TrendingUp size={16} /> Ingreso
+            <TrendingUp size={16} /> <span className="hidden sm:inline">Ingreso</span>
           </button>
           <button onClick={() => setEntryType('tarjeta')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'tarjeta' ? '${theme.colors.textPrimary}' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}`}>
-            <CreditIcon size={16} /> Tarjeta
+            <CreditIcon size={16} /> <span className="hidden sm:inline">Tarjeta</span>
+          </button>
+          <button onClick={() => setEntryType('transferencia')} className={`flex-1 relative z-10 py-3 text-sm font-bold flex items-center justify-center gap-2 transition-colors ${entryType === 'transferencia' ? 'text-white' : `${theme.colors.textMuted} hover:${theme.colors.textPrimary}`}`}>
+            <ArrowRightLeft size={16} /> <span className="hidden sm:inline">Transferir</span>
           </button>
         </div>
 
@@ -663,8 +722,117 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             </button>
           </div>
 
+          {/* === TRANSFER FORM === */}
+          {entryType === 'transferencia' && (
+            <div className="space-y-5">
+              {/* From account */}
+              <div className="space-y-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>De (origen)</label>
+                <select
+                  value={selectedCuenta}
+                  onChange={e => {
+                    setSelectedCuenta(e.target.value);
+                    // Reset destination if same as new origin
+                    if (transferDestino === e.target.value) setTransferDestino('');
+                  }}
+                  required
+                  className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-orange-500`}
+                >
+                  <option value="Billetera">
+                    💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)}
+                  </option>
+                  {debitCards.map(c => (
+                    <option key={c.alias} value={c.alias}>
+                      💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)}
+                    </option>
+                  ))}
+                </select>
+                <p className={`text-xs ${theme.colors.textMuted} ml-1`}>
+                  Disponible: <strong>{formatCurrency(accountBalances[selectedCuenta] ?? 0)}</strong>
+                </p>
+              </div>
+
+              {/* Arrow indicator */}
+              <div className="flex justify-center">
+                <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center">
+                  <ArrowRightLeft size={20} className="text-orange-400" />
+                </div>
+              </div>
+
+              {/* To account */}
+              <div className="space-y-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>A (destino)</label>
+                <select
+                  value={transferDestino}
+                  onChange={e => setTransferDestino(e.target.value)}
+                  required
+                  className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-orange-500`}
+                >
+                  <option value="">-- Selecciona destino --</option>
+                  {selectedCuenta !== 'Billetera' && (
+                    <option value="Billetera">
+                      💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)}
+                    </option>
+                  )}
+                  {debitCards
+                    .filter(c => c.alias !== selectedCuenta)
+                    .map(c => (
+                      <option key={c.alias} value={c.alias}>
+                        💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Amount */}
+              <div className="space-y-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Monto a transferir</label>
+                <div className="relative">
+                  <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
+                  <input
+                    type="number"
+                    name="monto"
+                    step="0.01"
+                    max="99999999"
+                    value={formData.monto}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    required
+                    className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-sans text-lg focus:ring-2 focus:ring-orange-500`}
+                  />
+                </div>
+                {parseFloat(formData.monto || '0') > (accountBalances[selectedCuenta] ?? 0) && parseFloat(formData.monto || '0') > 0 && (
+                  <p className="text-xs text-red-400 ml-1">⚠ Saldo insuficiente en la cuenta de origen</p>
+                )}
+              </div>
+
+              {/* Description (optional) */}
+              <div className="space-y-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Descripción (opcional)</label>
+                <input
+                  type="text"
+                  name="descripcion"
+                  value={formData.descripcion}
+                  onChange={handleChange}
+                  placeholder="Ej: Recarga tarjeta transporte"
+                  className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-orange-500`}
+                />
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={loading || !transferDestino || !formData.monto || parseFloat(formData.monto) <= 0 || parseFloat(formData.monto) > (accountBalances[selectedCuenta] ?? 0)}
+                className={`w-full py-4 rounded-xl font-bold text-lg text-white shadow-lg transition-all transform active:scale-95
+                  ${loading || !transferDestino || !formData.monto ? 'opacity-50 cursor-not-allowed bg-gray-500' : 'bg-orange-500 hover:bg-orange-600'}`}
+              >
+                {loading ? 'Transfiriendo...' : `Transferir ${formData.monto ? formatCurrency(parseFloat(formData.monto)) : ''}`}
+              </button>
+            </div>
+          )}
+
           {/* Date & Amount - Only show if method selected or not gasto */}
-          {(entryType !== 'gasto' || selectedMethod !== null) && (
+          {entryType !== 'transferencia' && (entryType !== 'gasto' || selectedMethod !== null) && (
           <>{/* Date & Amount */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
