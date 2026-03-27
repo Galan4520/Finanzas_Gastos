@@ -33,6 +33,10 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
     selectedCardId: ''
   });
 
+  // Transport cards: minimal form, only alias needed
+  const TRANSPORT_BANKS = ['Corredor Azul', 'Metropolitano'];
+  const isTransportCard = TRANSPORT_BANKS.includes(formData.banco || '');
+
   // Debit card: tipo_tarjeta selector = 'Débito'
   const isDebitForm = formData.tipo_tarjeta === 'Débito';
 
@@ -103,6 +107,16 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       // Reset selected card if bank or type changes
       if (name === 'banco' || name === 'tipo_tarjeta') {
         newData.selectedCardId = '';
+      }
+      // Auto-fill for transport cards
+      if (name === 'banco' && TRANSPORT_BANKS.includes(value)) {
+        newData.tipo_tarjeta = 'Débito';
+        newData.tipo_cuenta = 'debito';
+        newData.alias = `Tarjeta ${value}`;
+        newData.limite = 0;
+        newData.dia_cierre = 0;
+        newData.dia_pago = 0;
+        newData.tea = undefined;
       }
       // Derive tipo_cuenta from tipo_tarjeta selection
       if (name === 'tipo_tarjeta') {
@@ -261,12 +275,12 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       <div className={`${theme.colors.bgCard} backdrop-blur-sm p-6 md:p-8 rounded-2xl border ${theme.colors.border} shadow-xl`}>
         <h2 className={`text-2xl font-bold mb-6 ${theme.colors.textPrimary} flex items-center gap-2`}>
           <CardIcon size={28} />
-          Registrar Nueva Tarjeta
+          {isTransportCard ? `Agregar Tarjeta ${formData.banco}` : 'Registrar Nueva Tarjeta'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Banco y Tipo */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Banco */}
+          <div className={isTransportCard ? '' : 'grid grid-cols-1 md:grid-cols-2 gap-5'}>
             <div>
               <label className={labelClass}>Banco</label>
               <select name="banco" value={formData.banco} onChange={handleChange} required className={inputClass}>
@@ -274,17 +288,20 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
                 {BANCOS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
-            <div>
-              <label className={labelClass}>Tipo de Tarjeta</label>
-              <select name="tipo_tarjeta" value={formData.tipo_tarjeta} onChange={handleChange} required className={inputClass}>
-                <option value="">Selecciona tipo</option>
-                {TIPOS_TARJETA.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
+            {/* Tipo — oculto para transporte */}
+            {!isTransportCard && (
+              <div>
+                <label className={labelClass}>Tipo de Tarjeta</label>
+                <select name="tipo_tarjeta" value={formData.tipo_tarjeta} onChange={handleChange} required className={inputClass}>
+                  <option value="">Selecciona tipo</option>
+                  {TIPOS_TARJETA.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+            )}
           </div>
 
-          {/* Card Selection Grid */}
-          {availableCards.length > 0 && (
+          {/* Card Selection Grid — oculto para transporte */}
+          {!isTransportCard && availableCards.length > 0 && (
             <div>
               <label className={labelClass}>Selecciona tu tarjeta</label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -316,29 +333,49 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
               name="alias"
               value={formData.alias}
               onChange={handleChange}
-              placeholder="Ej: BCP Principal"
+              placeholder={isTransportCard ? `Tarjeta ${formData.banco}` : 'Ej: BCP Principal'}
               required
               className={inputClass}
             />
           </div>
 
-          {/* Límite / Saldo inicial — siempre visible */}
-          <div>
-            <label className={labelClass}>{isDebitForm ? 'Saldo inicial' : 'Límite de crédito'}</label>
-            <input
-              type="number"
-              name="limite"
-              step="0.01"
-              max="99999999"
-              value={formData.limite || ''}
-              onChange={handleChange}
-              required
-              className={inputClass}
-            />
-          </div>
+          {/* Saldo inicial — solo para transporte */}
+          {isTransportCard && (
+            <div>
+              <label className={labelClass}>Saldo actual</label>
+              <input
+                type="number"
+                name="limite"
+                step="0.01"
+                min="0"
+                value={formData.limite || ''}
+                onChange={handleChange}
+                placeholder="Ej: 10.00"
+                className={inputClass}
+              />
+              <p className={`text-[10px] ${theme.colors.textMuted} mt-1`}>Opcional — puedes dejarlo en 0</p>
+            </div>
+          )}
 
-          {/* Día Cierre, Día Pago y TEA — solo tarjetas de crédito */}
-          {!isDebitForm && (
+          {/* Límite / Saldo inicial — NO transporte */}
+          {!isTransportCard && (
+            <div>
+              <label className={labelClass}>{isDebitForm ? 'Saldo inicial' : 'Límite de crédito'}</label>
+              <input
+                type="number"
+                name="limite"
+                step="0.01"
+                max="99999999"
+                value={formData.limite || ''}
+                onChange={handleChange}
+                required
+                className={inputClass}
+              />
+            </div>
+          )}
+
+          {/* Día Cierre, Día Pago y TEA — solo tarjetas de crédito (no transporte) */}
+          {!isTransportCard && !isDebitForm && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className={labelClass}>Día Cierre</label>
@@ -387,8 +424,8 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
             </div>
           )}
 
-          {/* Card Preview */}
-          {selectedCard && (
+          {/* Card Preview — no transporte */}
+          {!isTransportCard && selectedCard && (
             <div className={`p-4 rounded-xl ${theme.colors.bgSecondary} border ${theme.colors.border}`}>
               <p className={`text-xs font-bold ${theme.colors.textMuted} uppercase mb-3`}>Vista Previa</p>
               <div className={`h-40 rounded-2xl bg-gradient-to-br ${selectedCard.gradient} p-4 shadow-lg overflow-hidden relative`}>
@@ -417,7 +454,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
             className="w-full py-4 rounded-xl font-bold text-white mt-4 shadow-lg transition-all active:scale-95"
             style={{ backgroundColor: loading ? '#4B5563' : '#00A750' }}
           >
-            {loading ? 'Guardando...' : 'Agregar Tarjeta'}
+            {loading ? 'Guardando...' : isTransportCard ? `Agregar ${formData.banco}` : 'Agregar Tarjeta'}
           </button>
         </form>
       </div>
