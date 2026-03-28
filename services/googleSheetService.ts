@@ -1,4 +1,15 @@
 import { Transaction, CreditCard, PendingExpense, NotificationConfig, Goal, FamilyConfig } from "../types";
+import { supabase } from './supabaseClient';
+
+// Helper to get auth headers for API calls
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
 
 // ═══════════════════════════════════════════════════════════════
 // ARQUITECTURA: Backend como única fuente de verdad
@@ -749,9 +760,10 @@ export const analyzeReceiptWithAI = async (
     console.log('🤖 [analyzeReceiptWithAI] Enviando imagen a Vercel Serverless API...');
 
     // Single attempt — scan.js handles model fallback internally (no client retry needed)
+    const authHeaders = await getAuthHeaders();
     const response = await fetch('/api/scan', {
       method: "POST",
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ image: base64Image, cuentas })
     });
 
@@ -867,9 +879,10 @@ export const getYunaiAdvice = async (
 
   // 2. Call Vercel serverless function
   console.log('🦫 [YunaiAdvice] Pidiendo consejo a Yunai...');
+  const adviceAuthHeaders = await getAuthHeaders();
   const response = await fetch('/api/yunai-advice', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...adviceAuthHeaders },
     body: JSON.stringify({ contexto })
   });
 

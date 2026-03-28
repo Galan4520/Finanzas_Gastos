@@ -3,7 +3,8 @@ import { CreditCard as CreditCardType, UserProfile, NotificationConfig, FamilyCo
 import { CardForm } from './forms/CardForm';
 import { NotificationSettings } from './NotificationSettings';
 import { useTheme } from '../contexts/ThemeContext';
-import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell, Users, Link2, Link2Off } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell, Users, Link2, Link2Off, LogOut, Shield } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 import { getAvatarById } from '../avatars';
 import { AvatarSvg } from './ui/AvatarSvg';
@@ -57,6 +58,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onSaveGeminiKey
 }) => {
   const { theme, themeName, setTheme } = useTheme();
+  const { user, isSubscribed, signOut } = useAuth();
   const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
   const [geminiKey, setGeminiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
@@ -116,6 +118,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <h3 className={`font-bold text-lg ${theme.colors.textPrimary}`}>{profile.nombre}</h3>
                     <p className={`text-sm ${theme.colors.textMuted}`}>{avatar.label}</p>
                     <p className="text-xs text-yn-primary-500 font-medium mt-1">● Cuenta Activa</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Account Section */}
+              {user && (
+                <div className={`${theme.colors.bgSecondary} p-4 rounded-xl border ${theme.colors.border} space-y-3`}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield size={18} className="text-yn-primary-500" />
+                    <h3 className={`font-bold ${theme.colors.textPrimary}`}>Cuenta</h3>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`text-sm ${theme.colors.textPrimary}`}>{user.email}</p>
+                      <p className={`text-xs ${isSubscribed ? 'text-yn-success-500' : 'text-amber-400'}`}>
+                        {isSubscribed ? '● Suscripción activa' : '○ Sin suscripción'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={signOut}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-400/10 transition-all border border-red-400/30"
+                    >
+                      <LogOut size={16} />
+                      Cerrar sesión
+                    </button>
                   </div>
                 </div>
               )}

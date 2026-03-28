@@ -18,7 +18,12 @@ import { EditSubscriptionModal } from './components/ui/EditSubscriptionModal';
 import { EditTransactionModal } from './components/ui/EditTransactionModal';
 import { ConfirmDialog } from './components/ui/ConfirmDialog';
 import { Toast } from './components/ui/Toast';
+import { LoginScreen } from './components/auth/LoginScreen';
+import { RegisterScreen } from './components/auth/RegisterScreen';
+import { SubscriptionRequiredScreen } from './components/auth/SubscriptionRequiredScreen';
+import { SetupScreen } from './components/auth/SetupScreen';
 import { useTheme } from './contexts/ThemeContext';
+import { useAuth } from './contexts/AuthContext';
 import { UserProfile, CreditCard, PendingExpense, Goal, Transaction, RealEstateInvestment, RealEstateProperty, NotificationConfig, FamilyConfig, FamilyMember } from './types';
 import * as googleSheetService from './services/googleSheetService';
 import { normalizarDeuda, isDeudaVencida } from './utils/debtUtils';
@@ -60,6 +65,8 @@ const MOCK_PROPERTIES: RealEstateProperty[] = [
 
 function App() {
    const { theme, themeName, setTheme } = useTheme();
+   const { user, loading: authLoading, isSubscribed, scriptUrl: authScriptUrl, signIn, signUp, signOut, refreshSubscription, saveScriptUrl } = useAuth();
+   const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
 
   // ─── Stale-While-Revalidate helpers ───
   const SYNC_FRESHNESS_MS = 10 * 60 * 1000; // 10 minutes
@@ -91,6 +98,14 @@ function App() {
   // Ref for freshness check inside useCallback (avoids stale closure)
   const lastSyncTimeRef = useRef(lastSyncTime);
   useEffect(() => { lastSyncTimeRef.current = lastSyncTime; }, [lastSyncTime]);
+
+  // Sync authScriptUrl from Supabase to local state
+  useEffect(() => {
+    if (authScriptUrl && !scriptUrl) {
+      setScriptUrl(authScriptUrl);
+      localStorage.setItem('scriptUrl', authScriptUrl);
+    }
+  }, [authScriptUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Data — load from cache instantly, then refresh from Google Sheets in background
   const [cards, setCards] = useState<CreditCard[]>(() => loadCached('yn_cards', []));
@@ -139,9 +154,10 @@ function App() {
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'subscription' | 'card' | 'transaction', item: PendingExpense | CreditCard | Transaction } | null>(null);
 
-  // Derived State
+  // Derived State — auth gates
   const showWelcome = !scriptUrl || !pin;
   const isNewVersion = !localStorage.getItem('app_version_5_0');
+  const needsSetup = !scriptUrl || !pin; // After auth, user still needs scriptUrl + pin
 
   // Helpers
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -159,6 +175,10 @@ function App() {
     setIsInitialLoading(true);
     setScriptUrl(url);
     setPin(newPin);
+    // Also save to Supabase if logged in
+    if (user) {
+      await saveScriptUrl(url);
+    }
   };
 
   // Sync Logic (Stale-While-Revalidate)
@@ -885,13 +905,45 @@ function App() {
     }
   };
 
-  // Show welcome screen if no URL configured
-  if (showWelcome) {
+  // ─── Auth Gates ───────────────────────────────────────────────────
+  // 1. Auth loading
+  if (authLoading) {
     return (
-      <>
-        <WelcomeScreen onUrlSubmit={saveUrl} isSyncing={isSyncing} />
-        <Toast message={toast.msg} type={toast.type} isVisible={toast.visible} onClose={hideToast} />
-      </>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-yn-neutral-900 text-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yn-primary-700 mb-4"></div>
+        <p className="text-yn-neutral-400 animate-pulse">Cargando...</p>
+      </div>
+    );
+  }
+
+  // 2. Not logged in → Login/Register
+  if (!user) {
+    if (authScreen === 'register') {
+      return <RegisterScreen onRegister={signUp} onSwitchToLogin={() => setAuthScreen('login')} />;
+    }
+    return <LoginScreen onLogin={signIn} onSwitchToRegister={() => setAuthScreen('register')} />;
+  }
+
+  // 3. No active subscription → Paywall
+  if (!isSubscribed) {
+    return (
+      <SubscriptionRequiredScreen
+        email={user.email || ''}
+        onRefresh={refreshSubscription}
+        onLogout={signOut}
+      />
+    );
+  }
+
+  // 4. No scriptUrl configured → Setup screen
+  if (needsSetup) {
+    return (
+      <SetupScreen
+        email={user.email || ''}
+        onSetup={saveUrl}
+        onLogout={signOut}
+        prefillUrl={localStorage.getItem('scriptUrl') || undefined}
+      />
     );
   }
 

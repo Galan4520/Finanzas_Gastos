@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Mic, MicOff, X, Loader2, Wallet, CreditCard as CreditCardIcon } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CreditCard, getCardType, YunaiExtractionResult } from '../../types';
+import { supabase } from '../../services/supabaseClient';
 
 interface VoiceRecorderProps {
   isOpen: boolean;
@@ -174,9 +175,16 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         })),
       ];
 
+      // Get auth token for API call
+      const { data: sessionData } = await supabase.auth.getSession();
+      const voiceAuthHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (sessionData.session?.access_token) {
+        voiceAuthHeaders['Authorization'] = `Bearer ${sessionData.session.access_token}`;
+      }
+
       const response = await fetch('/api/yunai-voice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: voiceAuthHeaders,
         body: JSON.stringify({
           audio: base64,
           mimeType: mimeType.split(';')[0],
