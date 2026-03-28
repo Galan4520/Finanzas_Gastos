@@ -24,8 +24,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [scriptUrl, setScriptUrl] = useState<string | null>(null);
+  // Prevents double-fire: getSession + onAuthStateChange both trigger on init
+  const initializedRef = React.useRef(false);
 
   // Load user data after authentication
+  // Sets ALL state at once at the end to avoid intermediate renders (flash)
   const loadUserData = async (currentUser: User) => {
     // 1. Link pending subscriptions by email
     if (currentUser.email) {
@@ -37,25 +40,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!subscribed && currentUser.email) {
       subscribed = await checkSubscriptionByEmail(currentUser.email);
     }
-    setIsSubscribed(subscribed);
 
     // 3. Load script_url
     const config = await getUserConfig(currentUser.id);
+    let url: string | null = null;
     if (config) {
-      setScriptUrl(config.scriptUrl);
+      url = config.scriptUrl;
       localStorage.setItem('scriptUrl', config.scriptUrl);
     } else {
-      // Check if there's a scriptUrl in localStorage (migration)
       const localUrl = localStorage.getItem('scriptUrl');
-      if (localUrl) {
-        setScriptUrl(localUrl);
-      }
+      if (localUrl) url = localUrl;
     }
+
+    // Set ALL state at once — no intermediate flash
+    setIsSubscribed(subscribed);
+    setScriptUrl(url);
   };
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session: s } }) => {
+      initializedRef.current = true;
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
@@ -65,11 +70,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (login/logout AFTER initial load)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (!initializedRef.current) return;
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
+        // Keep loading=true while we fetch subscription + config
+        setLoading(true);
         loadUserData(s.user).finally(() => setLoading(false));
       } else {
         setIsSubscribed(false);
@@ -82,7 +90,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const signIn = async (email: string, password: string) => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setLoading(false);
+    // On success, onAuthStateChange will call loadUserData and set loading=false
     return { error: error?.message ?? null };
   };
 
