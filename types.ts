@@ -8,8 +8,14 @@ export interface CreditCard {
   limite: number;
   tea?: number | null; // TEA: Tasa Efectiva Anual (porcentaje, ej: 60 = 60%). Solo para tarjetas de crédito.
   tipo_cuenta?: 'credito' | 'debito'; // 'credito' = solo en tab Tarjeta; 'debito' = en Gasto/Ingreso
+  moneda?: 'PEN' | 'USD'; // Moneda de la cuenta (default PEN)
   timestamp: string;
 }
+
+/** Devuelve la moneda de una tarjeta. Billetera siempre es PEN. */
+export const getCardMoneda = (card: CreditCard): 'PEN' | 'USD' => {
+  return card.moneda === 'USD' ? 'USD' : 'PEN';
+};
 
 /**
  * Determina si una tarjeta es de débito o crédito.
@@ -78,6 +84,7 @@ export interface Transaction {
   tipo: 'Gastos' | 'Ingresos' | 'Aporte_Meta' | 'Ruptura_Meta';
   meta_id?: string;
   cuenta?: string; // Cuenta/tarjeta asociada al movimiento
+  moneda?: 'PEN' | 'USD'; // Moneda heredada de la cuenta (default PEN)
 }
 
 export interface PendingExpense {
@@ -95,6 +102,7 @@ export interface PendingExpense {
   monto_pagado_total?: number; // Monto total pagado acumulado (soluciona bug de pagos parciales)
   tipo?: 'deuda' | 'suscripcion'; // Nueva propiedad para diferenciar
   notas?: string;
+  moneda?: 'PEN' | 'USD'; // Moneda del cargo (puede diferir de la moneda de la tarjeta)
   timestamp: string;
 }
 

@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { CreditCard, PendingExpense, Transaction, Goal, RealEstateInvestment, UserProfile, getCardType } from '../types';
-import { formatCurrency, formatCompact } from '../utils/format';
+import { CreditCard, PendingExpense, Transaction, Goal, RealEstateInvestment, UserProfile, getCardType, getCardMoneda } from '../types';
+import { formatCurrency, formatCompact, formatMoney } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { ArrowUpRight, ArrowDownRight, Wallet, CreditCard as CreditIcon, Target, PieChart as PieIcon, TrendingUp, Home, Pencil, Trash2, Calendar } from 'lucide-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -556,7 +556,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const gastos = history
           .filter(t => GASTO_TYPES.includes(t.tipo) && t.cuenta === c.alias)
           .reduce((sum, t) => sum + Number(t.monto), 0);
-        return { alias: c.alias, banco: c.banco, tipo_tarjeta: c.tipo_tarjeta, balance: Number(c.limite || 0) + ingresos - gastos, url_imagen: c.url_imagen };
+        return { alias: c.alias, banco: c.banco, tipo_tarjeta: c.tipo_tarjeta, balance: Number(c.limite || 0) + ingresos - gastos, url_imagen: c.url_imagen, moneda: getCardMoneda(c) };
       });
 
     // Credit cards: limite - deuda pendiente
@@ -566,7 +566,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
         const deuda = pendingExpenses
           .filter(p => p.tarjeta === c.alias)
           .reduce((sum, p) => sum + Math.max(0, Number(p.monto) - Number(p.monto_pagado_total || 0)), 0);
-        return { alias: c.alias, banco: c.banco, tipo_tarjeta: c.tipo_tarjeta, limite: Number(c.limite || 0), disponible: Math.max(0, Number(c.limite || 0) - deuda), deuda, url_imagen: c.url_imagen };
+        return { alias: c.alias, banco: c.banco, tipo_tarjeta: c.tipo_tarjeta, limite: Number(c.limite || 0), disponible: Math.max(0, Number(c.limite || 0) - deuda), deuda, url_imagen: c.url_imagen, moneda: getCardMoneda(c) };
       });
 
     return { billeteraBalance, debitAccounts, creditAccounts };
@@ -885,7 +885,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     </div>
                   </div>
                   <p className={`text-sm font-bold font-sans ${t.tipo === 'Ingresos' ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
-                    {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
+                    {t.tipo === 'Ingresos' ? '+' : '-'}{formatMoney(Number(t.monto), t.moneda ?? 'PEN')}
                   </p>
                 </div>
               ))
@@ -932,7 +932,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                   <p className={`text-[10px] ${theme.colors.textMuted}`}>Efectivo</p>
                 </div>
               </div>
-              <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{formatCurrency(accountBreakdown.billeteraBalance)}</p>
+              <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{formatMoney(accountBreakdown.billeteraBalance, 'PEN')}</p>
             </div>
             {/* Debit Cards */}
             {accountBreakdown.debitAccounts.map(acc => (
@@ -947,10 +947,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                   </div>
                   <div>
                     <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
-                    <p className={`text-[10px] ${theme.colors.textMuted}`}>{acc.banco}</p>
+                    <p className={`text-[10px] ${theme.colors.textMuted}`}>{acc.banco} · {acc.moneda === 'USD' ? '$' : 'S/'}</p>
                   </div>
                 </div>
-                <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{formatCurrency(acc.balance)}</p>
+                <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{formatMoney(acc.balance, acc.moneda)}</p>
               </div>
             ))}
           </div>
@@ -977,7 +977,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                       </div>
                       <div>
                         <p className="text-sm font-bold">{acc.alias}</p>
-                        <p className="text-xl font-extrabold mt-1">{formatCurrency(acc.disponible)}</p>
+                        <p className="text-xl font-extrabold mt-1">{formatMoney(acc.disponible, acc.moneda)}</p>
                       </div>
                       {acc.deuda > 0 && (
                         <>
@@ -985,8 +985,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                             <div className="bg-white h-full rounded-full" style={{ width: `${usoPct}%` }} />
                           </div>
                           <div className="flex justify-between text-[9px] uppercase tracking-wider font-bold text-white/70">
-                            <span>Deuda: {formatCurrency(acc.deuda)}</span>
-                            <span>Límite: {formatCurrency(acc.limite)}</span>
+                            <span>Deuda: {formatMoney(acc.deuda, acc.moneda)}</span>
+                            <span>Límite: {formatMoney(acc.limite, acc.moneda)}</span>
                           </div>
                         </>
                       )}
@@ -1007,10 +1007,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                         </div>
                         <div>
                           <p className={`text-sm font-bold ${theme.colors.textPrimary}`}>{acc.alias}</p>
-                          <p className={`text-[10px] ${theme.colors.textMuted}`}>{acc.banco}</p>
+                          <p className={`text-[10px] ${theme.colors.textMuted}`}>{acc.banco} · {acc.moneda === 'USD' ? '$' : 'S/'}</p>
                         </div>
                       </div>
-                      <p className={`text-base font-extrabold ${theme.colors.textPrimary}`}>{formatCurrency(acc.disponible)}</p>
+                      <p className={`text-base font-extrabold ${theme.colors.textPrimary}`}>{formatMoney(acc.disponible, acc.moneda)}</p>
                     </div>
                     {acc.deuda > 0 && (
                       <>
@@ -1018,8 +1018,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                           <div className="bg-yn-primary-500 h-full rounded-full" style={{ width: `${usoPct}%` }} />
                         </div>
                         <div className={`flex justify-between text-[9px] uppercase tracking-wider font-bold ${theme.colors.textMuted}`}>
-                          <span>Deuda: {formatCurrency(acc.deuda)}</span>
-                          <span>Disponible: {formatCurrency(acc.disponible)}</span>
+                          <span>Deuda: {formatMoney(acc.deuda, acc.moneda)}</span>
+                          <span>Disponible: {formatMoney(acc.disponible, acc.moneda)}</span>
                         </div>
                       </>
                     )}
@@ -1841,7 +1841,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
               <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>Billetera Física</span>
             </div>
             <span className={`text-sm font-sans font-bold truncate ${accountBreakdown.billeteraBalance >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
-              {formatCurrency(accountBreakdown.billeteraBalance)}
+              {formatMoney(accountBreakdown.billeteraBalance, 'PEN')}
             </span>
           </div>
           {/* Debit cards */}
@@ -1853,11 +1853,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                 </div>
                 <div>
                   <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>{acc.alias}</span>
-                  <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco}</span>
+                  <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco} · {acc.moneda === 'USD' ? '$' : 'S/'}</span>
                 </div>
               </div>
               <span className={`text-sm font-sans font-bold truncate ${acc.balance >= 0 ? 'text-yn-primary-500' : 'text-yn-error-400'}`}>
-                {formatCurrency(acc.balance)}
+                {formatMoney(acc.balance, acc.moneda)}
               </span>
             </div>
           ))}
@@ -1873,14 +1873,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                     </div>
                     <div>
                       <span className={`text-sm font-medium ${theme.colors.textPrimary}`}>{acc.alias}</span>
-                      <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco}</span>
+                      <span className={`text-[10px] ${theme.colors.textMuted} ml-1`}>{acc.banco} · {acc.moneda === 'USD' ? '$' : 'S/'}</span>
                       {acc.deuda > 0 && (
-                        <span className="text-[10px] text-yn-error-400 ml-1">· deuda {formatCurrency(acc.deuda)}</span>
+                        <span className="text-[10px] text-yn-error-400 ml-1">· deuda {formatMoney(acc.deuda, acc.moneda)}</span>
                       )}
                     </div>
                   </div>
                   <span className="text-sm font-sans font-bold truncate text-yn-sec1-700">
-                    {formatCurrency(acc.disponible)}
+                    {formatMoney(acc.disponible, acc.moneda)}
                   </span>
                 </div>
               ))}
@@ -2005,7 +2005,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ cards, pendingExpenses, hi
                                             </div>
                                         )}
                                         <span className={`font-sans font-bold text-sm ${t.tipo === 'Ingresos' ? 'text-yn-primary-500' : 'text-yn-error-500'}`}>
-                                            {t.tipo === 'Ingresos' ? '+' : '-'}{formatCurrency(Number(t.monto))}
+                                            {t.tipo === 'Ingresos' ? '+' : '-'}{formatMoney(Number(t.monto), t.moneda ?? 'PEN')}
                                         </span>
                                     </div>
                                 </div>

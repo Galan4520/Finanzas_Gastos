@@ -30,6 +30,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
     limite: undefined,
     tea: undefined,
     tipo_cuenta: undefined,
+    moneda: 'PEN',
     selectedCardId: ''
   });
 
@@ -80,6 +81,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
         limite: Number(formData.limite),
         tea: tipoCuenta === 'debito' ? null : (formData.tea ? Number(formData.tea) : null),
         tipo_cuenta: tipoCuenta,
+        moneda: formData.moneda ?? 'PEN',
         timestamp: getLocalISOString()
       };
 
@@ -89,7 +91,7 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
       setFormData({
         banco: '', tipo_tarjeta: '', alias: '', url_imagen: '',
         dia_cierre: undefined, dia_pago: undefined, limite: undefined,
-        tea: undefined, tipo_cuenta: undefined, selectedCardId: ''
+        tea: undefined, tipo_cuenta: undefined, moneda: 'PEN', selectedCardId: ''
       });
       notify?.('Tarjeta agregada correctamente', 'success');
       setShowForm(false);
@@ -338,6 +340,28 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
               className={inputClass}
             />
           </div>
+
+          {/* Moneda — no para transporte */}
+          {!isTransportCard && (
+            <div>
+              <label className={labelClass}>Moneda</label>
+              <div className="grid grid-cols-2 gap-3">
+                {(['PEN', 'USD'] as const).map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, moneda: m }))}
+                    className={`py-3 rounded-xl border-2 font-bold text-sm transition-all ${formData.moneda === m
+                      ? 'border-yn-primary-500 bg-yn-primary-500/15 text-yn-primary-400'
+                      : `${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textMuted}`
+                    }`}
+                  >
+                    {m === 'PEN' ? 'S/ Soles' : '$ Dólares'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Saldo inicial — solo para transporte */}
           {isTransportCard && (

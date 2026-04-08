@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType } from '../../types';
-import { generateId, formatCurrency, getLocalISOString } from '../../utils/format';
+import { CreditCard, CATEGORIAS_GASTOS, CATEGORIAS_INGRESOS, PendingExpense, Goal, Transaction, simularCompraEnCuotas, getCardType, getCardMoneda } from '../../types';
+import { generateId, formatCurrency, formatMoney, getLocalISOString } from '../../utils/format';
 import { Wallet, TrendingUp, CreditCard as CreditIcon, Banknote, DollarSign, RefreshCw, Lightbulb, Info, Sparkles, Edit as EditIcon, Mic, Camera, ArrowRightLeft } from 'lucide-react';
 import { CategoryPicker } from '../ui/CategoryPicker';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -13,6 +13,8 @@ import { CameraCapture } from '../ui/CameraCapture';
 import VoiceRecorder from '../ui/VoiceRecorder';
 import YunaiConfirmation from '../ui/YunaiConfirmation';
 import { YunaiExtractionResult } from '../../types';
+import { usePlan } from '../../hooks/usePlan';
+import { UpgradeModal } from '../ui/UpgradeModal';
 
 interface UnifiedEntryFormProps {
   scriptUrl: string;
@@ -41,6 +43,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 }) => {
   const { theme, themeName } = useTheme();
   const textColors = getTextColor(themeName);
+  const { plan } = usePlan();
+  const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
   const [entryType, setEntryType] = useState<EntryType>('gasto');
   const [loading, setLoading] = useState(false);
   const [selectedMetaId, setSelectedMetaId] = useState('');
@@ -58,6 +62,8 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   // Specific states for credit calculation
   const [useInstallments, setUseInstallments] = useState(false);
   const [expenseType, setExpenseType] = useState<'deuda' | 'suscripcion'>('deuda');
+  // Moneda del monto en tab Tarjeta (puede ser USD aunque la tarjeta sea PEN)
+  const [monedaMonto, setMonedaMonto] = useState<'PEN' | 'USD'>('PEN');
   const [selectedSubscriptionApp, setSelectedSubscriptionApp] = useState<string>('');
   const [customSubscriptionName, setCustomSubscriptionName] = useState<string>('');
 
@@ -71,9 +77,17 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Separar tarjetas por tipo
-  const creditCards = useMemo(() => cards.filter(c => getCardType(c) === 'credito'), [cards]);
-  const debitCards = useMemo(() => cards.filter(c => getCardType(c) === 'debito'), [cards]);
+  // Separar tarjetas por tipo — limitadas según plan (Billetera no cuenta)
+  const allCards = useMemo(() => cards.slice(0, plan.maxCuentas), [cards, plan.maxCuentas]);
+  const creditCards = useMemo(() => allCards.filter(c => getCardType(c) === 'credito'), [allCards]);
+  const debitCards = useMemo(() => allCards.filter(c => getCardType(c) === 'debito'), [allCards]);
+
+  // Moneda de la cuenta seleccionada actualmente (Billetera = siempre PEN)
+  const monedaCuenta = useMemo((): 'PEN' | 'USD' => {
+    if (selectedCuenta === 'Billetera') return 'PEN';
+    const card = allCards.find(c => c.alias === selectedCuenta);
+    return card ? getCardMoneda(card) : 'PEN';
+  }, [selectedCuenta, allCards]);
 
   // Calcular saldo disponible por cuenta (incluye fondos comprometidos en metas)
   const accountBalances = useMemo(() => {
@@ -125,10 +139,11 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
     fecha_pago: ''
   });
 
-  // Effect for Credit Card Dates calculation
+  // Effect for Credit Card Dates calculation (solo crédito, no débito/billetera)
   useEffect(() => {
     if (entryType === 'tarjeta' && formData.tarjetaId && creditCards.length > 0) {
       const card = creditCards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
+      if (!card) return; // débito o billetera — no calcular fechas
       if (card) {
         const hoy = new Date(formData.fecha);
         const anio = hoy.getFullYear();
@@ -168,6 +183,11 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
       }
     }
   }, [showBreakOption, goalsWithFunds]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Resetear monedaMonto a PEN cuando se cambia a tab que no es tarjeta
+  useEffect(() => {
+    if (entryType !== 'tarjeta') setMonedaMonto('PEN');
+  }, [entryType]);
 
   // Auto-compute suggested amount (deficit capped at goal's available funds)
   useEffect(() => {
@@ -221,7 +241,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           ? ` · ${formatCurrency(comprometido)} en metas`
           : '';
         const nombre = selectedCuenta === 'Billetera' ? 'Billetera Física' : selectedCuenta;
-        notify?.(`Saldo insuficiente en ${nombre}. Disponible: ${formatCurrency(saldoDisponible)}${hint}`, 'error');
+        notify?.(`Saldo insuficiente en ${nombre}. Disponible: ${formatMoney(saldoDisponible, monedaCuenta)}${hint}`, 'error');
         return;
       }
     }
@@ -239,7 +259,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         // Validate balance
         const saldoOrigen = accountBalances[selectedCuenta] ?? 0;
         if (montoValue > saldoOrigen) {
-          notify?.(`Saldo insuficiente en ${selectedCuenta}. Disponible: ${formatCurrency(saldoOrigen)}`, 'error');
+          notify?.(`Saldo insuficiente en ${selectedCuenta}. Disponible: ${formatMoney(saldoOrigen, monedaCuenta)}`, 'error');
           setLoading(false);
           return;
         }
@@ -253,6 +273,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           monto: montoValue,
           notas: `Transferencia a ${transferDestino}`,
           cuenta: selectedCuenta,
+          moneda: monedaCuenta,
           timestamp: ts
         }, 'Gastos');
         // 2. Ingreso to destination
@@ -263,6 +284,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           monto: montoValue,
           notas: `Transferencia desde ${selectedCuenta}`,
           cuenta: transferDestino,
+          moneda: monedaCuenta,
           timestamp: ts
         }, 'Ingresos');
 
@@ -276,8 +298,10 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
 
       if (entryType === 'tarjeta') {
         // Extract alias from tarjetaId (format: "alias-banco")
-        const selectedCard = creditCards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
-        const tarjetaAlias = selectedCard?.alias || '';
+        // Suscripciones pueden usar cualquier cuenta (crédito, débito, billetera)
+        const isBilletera = formData.tarjetaId === 'Billetera-Efectivo';
+        const selectedCard = allCards.find(c => `${c.alias}-${c.banco}` === formData.tarjetaId);
+        const tarjetaAlias = isBilletera ? 'Billetera' : (selectedCard?.alias || '');
 
         const newExpense: PendingExpense = {
           id: generateId(),
@@ -292,8 +316,9 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
           num_cuotas: expenseType === 'suscripcion' ? 1 : (useInstallments ? parseInt(formData.num_cuotas) : 1),
           cuotas_pagadas: 0,
           monto_pagado_total: 0,
-          tipo: expenseType, // For local state
+          tipo: expenseType,
           notas: formData.notas,
+          moneda: monedaMonto,
           timestamp: getLocalISOString()
         };
         onAddPending(newExpense);
@@ -313,6 +338,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
         // Include cuenta (account/card) if selected
         if (selectedCuenta) {
           payload.cuenta = selectedCuenta;
+          payload.moneda = monedaCuenta;
         }
         // If it's an income assigned to a goal, include meta_id
         if (entryType === 'ingreso' && selectedMetaId) {
@@ -612,6 +638,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  if (!plan.voz) { setUpgradeFeature('Entrada por voz'); return; }
                   setSelectedMethod('voice');
                   setShowVoiceRecorder(true);
                 }}
@@ -624,6 +651,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               <button
                 type="button"
                 onClick={() => {
+                  if (!plan.scanIA) { setUpgradeFeature('Escaneo de boletas'); return; }
                   setSelectedMethod('ai');
                   setShowCamera(true);
                 }}
@@ -739,16 +767,16 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                   className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-orange-500`}
                 >
                   <option value="Billetera">
-                    💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)}
+                    💵 Billetera Física — {formatMoney(accountBalances['Billetera'] ?? 0, 'PEN')}
                   </option>
                   {debitCards.map(c => (
                     <option key={c.alias} value={c.alias}>
-                      💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)}
+                      💳 {c.alias} — {c.banco} — {formatMoney(accountBalances[c.alias] ?? 0, getCardMoneda(c))}
                     </option>
                   ))}
                 </select>
                 <p className={`text-xs ${theme.colors.textMuted} ml-1`}>
-                  Disponible: <strong>{formatCurrency(accountBalances[selectedCuenta] ?? 0)}</strong>
+                  Disponible: <strong>{formatMoney(accountBalances[selectedCuenta] ?? 0, monedaCuenta)}</strong>
                 </p>
               </div>
 
@@ -771,14 +799,14 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                   <option value="">-- Selecciona destino --</option>
                   {selectedCuenta !== 'Billetera' && (
                     <option value="Billetera">
-                      💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)}
+                      💵 Billetera Física — {formatMoney(accountBalances['Billetera'] ?? 0, 'PEN')}
                     </option>
                   )}
                   {debitCards
                     .filter(c => c.alias !== selectedCuenta)
                     .map(c => (
                       <option key={c.alias} value={c.alias}>
-                        💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)}
+                        💳 {c.alias} — {c.banco} — {formatMoney(accountBalances[c.alias] ?? 0, getCardMoneda(c))}
                       </option>
                     ))}
                 </select>
@@ -788,7 +816,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               <div className="space-y-1">
                 <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Monto a transferir</label>
                 <div className="relative">
-                  <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
+                  <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>{monedaCuenta === 'USD' ? '$' : 'S/'}</span>
                   <input
                     type="number"
                     name="monto"
@@ -840,9 +868,28 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               <input type="date" name="fecha" value={formData.fecha} onChange={handleChange} required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-current`} />
             </div>
             <div className="space-y-1">
-              <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase ml-1`}>Monto</label>
+              <div className="flex items-center justify-between ml-1 mb-1">
+                <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>Monto</label>
+                {entryType === 'tarjeta' && (
+                  <div className="flex gap-1">
+                    {(['PEN', 'USD'] as const).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMonedaMonto(m)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${monedaMonto === m
+                          ? m === 'USD' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40' : 'bg-yn-primary-500/20 text-yn-primary-400 border border-yn-primary-500/40'
+                          : `${theme.colors.bgSecondary} ${theme.colors.textMuted} border ${theme.colors.border}`
+                        }`}
+                      >
+                        {m === 'PEN' ? 'S/ PEN' : '$ USD'}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="relative">
-                <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
+                <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>{entryType === 'tarjeta' ? (monedaMonto === 'USD' ? '$' : 'S/') : (monedaCuenta === 'USD' ? '$' : 'S/')}</span>
                 <input type="number" name="monto" step="0.01" max="99999999" value={formData.monto} onChange={handleChange} placeholder="0.00" required className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl pl-10 pr-4 py-3 ${theme.colors.textPrimary} font-sans text-lg focus:ring-2 focus:ring-yn-primary-500`} />
               </div>
               {/* Ya no necesitamos file input - usamos CameraCapture component */}
@@ -888,11 +935,26 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
               </div>
 
               <div>
-                <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-1 block">Seleccionar Tarjeta</label>
+                <label className="text-xs font-bold ${textColors.primary} uppercase ml-1 mb-1 block">
+                  {expenseType === 'suscripcion' ? 'Seleccionar Cuenta' : 'Seleccionar Tarjeta'}
+                </label>
                 <select name="tarjetaId" value={formData.tarjetaId} onChange={handleChange} required className="w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary}">
-                  <option value="">-- Elige tarjeta --</option>
-                  {creditCards.map(c => <option key={`${c.alias}-${c.banco}`} value={`${c.alias}-${c.banco}`}>{c.alias} ({c.banco})</option>)}
-                  {creditCards.length === 0 && <option disabled value="">Sin tarjetas de crédito registradas</option>}
+                  <option value="">-- Elige {expenseType === 'suscripcion' ? 'cuenta' : 'tarjeta'} --</option>
+                  {expenseType === 'suscripcion' ? (
+                    <>
+                      <option value="Billetera-Efectivo">💵 Billetera Física (Efectivo)</option>
+                      {allCards.map(c => (
+                        <option key={`${c.alias}-${c.banco}`} value={`${c.alias}-${c.banco}`}>
+                          {getCardType(c) === 'credito' ? '💳' : '🏦'} {c.alias} ({c.banco})
+                        </option>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      {creditCards.map(c => <option key={`${c.alias}-${c.banco}`} value={`${c.alias}-${c.banco}`}>{c.alias} ({c.banco})</option>)}
+                      {creditCards.length === 0 && <option disabled value="">Sin tarjetas de crédito registradas</option>}
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -1027,18 +1089,18 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
                 className={`w-full ${theme.colors.bgSecondary} border ${theme.colors.border} rounded-xl px-4 py-3 ${theme.colors.textPrimary} focus:ring-2 focus:ring-yn-primary-500`}
               >
                 <option value="Billetera">
-                  💵 Billetera Física — {formatCurrency(accountBalances['Billetera'] ?? 0)} disponible
+                  💵 Billetera Física — {formatMoney(accountBalances['Billetera'] ?? 0, 'PEN')} disponible
                 </option>
                 {debitCards.map(c => (
                   <option key={`${c.alias}-${c.banco}`} value={c.alias}>
-                    💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)} disponible
+                    💳 {c.alias} — {c.banco} — {formatMoney(accountBalances[c.alias] ?? 0, getCardMoneda(c))} disponible
                   </option>
                 ))}
               </select>
               {selectedCuenta && (
                 <p className={`text-xs ${theme.colors.textMuted} ml-1 mt-1 flex items-center gap-2`}>
                   <span>
-                    Disponible: <strong>{formatCurrency(accountBalances[selectedCuenta] ?? 0)}</strong>
+                    Disponible: <strong>{formatMoney(accountBalances[selectedCuenta] ?? 0, monedaCuenta)}</strong>
                   </span>
                   {entryType === 'gasto' && (accountBalances[selectedCuenta] ?? 0) < parseFloat(formData.monto || '0') && parseFloat(formData.monto || '0') > 0 && (
                     <span className="text-red-400">⚠ Saldo insuficiente</span>
@@ -1252,6 +1314,12 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             }}
           />
         )}
+
+        <UpgradeModal
+          isOpen={!!upgradeFeature}
+          feature={upgradeFeature ?? ''}
+          onClose={() => setUpgradeFeature(null)}
+        />
       </div>
     </>
   );

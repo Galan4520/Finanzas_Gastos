@@ -24,6 +24,8 @@ import { SubscriptionRequiredScreen } from './components/auth/SubscriptionRequir
 import { SetupScreen } from './components/auth/SetupScreen';
 import { useTheme } from './contexts/ThemeContext';
 import { useAuth } from './contexts/AuthContext';
+import { usePlan } from './hooks/usePlan';
+import { UpgradeModal } from './components/ui/UpgradeModal';
 import { UserProfile, CreditCard, PendingExpense, Goal, Transaction, RealEstateInvestment, RealEstateProperty, NotificationConfig, FamilyConfig, FamilyMember } from './types';
 import * as googleSheetService from './services/googleSheetService';
 import { normalizarDeuda, isDeudaVencida } from './utils/debtUtils';
@@ -66,6 +68,8 @@ const MOCK_PROPERTIES: RealEstateProperty[] = [
 function App() {
    const { theme, themeName, setTheme } = useTheme();
    const { user, loading: authLoading, isSubscribed, scriptUrl: authScriptUrl, signIn, signUp, signOut, refreshSubscription, saveScriptUrl } = useAuth();
+   const { plan, isPro } = usePlan();
+   const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
    const [authScreen, setAuthScreen] = useState<'login' | 'register'>('login');
 
   // ─── Stale-While-Revalidate helpers ───
@@ -112,6 +116,15 @@ function App() {
   const [pendingExpenses, setPendingExpenses] = useState<PendingExpense[]>(() => loadCached('yn_pendingExpenses', []));
   const [history, setHistory] = useState<Transaction[]>(() => loadCached('yn_history', []));
   const [goals, setGoals] = useState<Goal[]>(() => loadCached('yn_goals', []));
+
+  // Limitar historial según plan
+  const visibleHistory = React.useMemo(() => {
+    if (isPro || plan.historialMeses === Infinity) return history;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - plan.historialMeses);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    return history.filter(t => t.fecha >= cutoffStr);
+  }, [history, isPro, plan.historialMeses]);
   const [realEstateInvestments, setRealEstateInvestments] = useState<RealEstateInvestment[]>([]);
   const [availableProperties] = useState<RealEstateProperty[]>(MOCK_PROPERTIES);
   const [notificationConfig, setNotificationConfig] = useState<NotificationConfig | null>(null);
@@ -462,6 +475,10 @@ function App() {
   };
 
   const handleAddCard = (card: CreditCard) => {
+    if (cards.length >= plan.maxCuentas) {
+      setUpgradeFeature('Cuentas ilimitadas');
+      return;
+    }
     setCards(prev => [...prev, card]);
   };
 
@@ -694,7 +711,7 @@ function App() {
           <Dashboard
             pendingExpenses={pendingExpenses}
             cards={cards}
-            history={history}
+            history={visibleHistory}
             goals={goals}
             profile={profile}
             onEditTransaction={(t) => setEditingTransaction(t)}
@@ -703,7 +720,24 @@ function App() {
         );
 
       case 'metas':
-        return <GoalsView history={history} goals={goals} cards={cards} onAddGoal={addGoal} onUpdateGoal={updateGoal} onDeleteGoal={deleteGoal} onContributeToGoal={contributeToGoal} onRomperMeta={romperMeta} />;
+        if (!plan.metas) {
+          return (
+            <>
+              <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-8">
+                <p className="text-lg font-bold text-yn-neutral-300">Metas de ahorro</p>
+                <p className="text-sm text-yn-neutral-500">Esta función es exclusiva del plan Pro.</p>
+                <button
+                  onClick={() => setUpgradeFeature('Metas de ahorro')}
+                  className="px-6 py-3 rounded-xl bg-[#00a750] text-white font-bold hover:bg-[#008f44] transition-colors"
+                >
+                  Ver planes
+                </button>
+              </div>
+              <UpgradeModal isOpen={!!upgradeFeature} feature={upgradeFeature ?? ''} onClose={() => setUpgradeFeature(null)} />
+            </>
+          );
+        }
+        return <GoalsView history={visibleHistory} goals={goals} cards={cards} onAddGoal={addGoal} onUpdateGoal={updateGoal} onDeleteGoal={deleteGoal} onContributeToGoal={contributeToGoal} onRomperMeta={romperMeta} />;
 
       case 'registrar':
         return (
@@ -712,7 +746,7 @@ function App() {
             pin={pin}
             cards={cards}
             goals={goals}
-            history={history}
+            history={visibleHistory}
             pendingExpenses={pendingExpenses}
             onAddPending={(newExpense) => setPendingExpenses(prev => [...prev, newExpense])}
             onSuccess={() => {
@@ -745,7 +779,7 @@ function App() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Left Column (3/5): Payment Form - IS the debt list + payment controls */}
             <div className="lg:col-span-3">
-              <PaymentForm scriptUrl={scriptUrl} pin={pin} cards={cards} pendingExpenses={pendingExpenses} history={history} goals={goals} onUpdateExpense={handleUpdateExpense} onAddToHistory={handleAddToHistory} onRomperMeta={romperMeta} {...commonProps} />
+              <PaymentForm scriptUrl={scriptUrl} pin={pin} cards={cards} pendingExpenses={pendingExpenses} history={visibleHistory} goals={goals} onUpdateExpense={handleUpdateExpense} onAddToHistory={handleAddToHistory} onRomperMeta={romperMeta} {...commonProps} />
             </div>
 
             {/* Right Column (2/5): Summary + Subscriptions */}
@@ -849,6 +883,23 @@ function App() {
       }
 
       case 'familia':
+        if (!plan.planFamiliar) {
+          return (
+            <>
+              <div className="flex flex-col items-center justify-center h-64 gap-4 text-center px-8">
+                <p className="text-lg font-bold text-yn-neutral-300">Plan Familiar</p>
+                <p className="text-sm text-yn-neutral-500">Esta función es exclusiva del plan Pro.</p>
+                <button
+                  onClick={() => setUpgradeFeature('Plan familiar')}
+                  className="px-6 py-3 rounded-xl bg-[#00a750] text-white font-bold hover:bg-[#008f44] transition-colors"
+                >
+                  Ver planes
+                </button>
+              </div>
+              <UpgradeModal isOpen={!!upgradeFeature} feature={upgradeFeature ?? ''} onClose={() => setUpgradeFeature(null)} />
+            </>
+          );
+        }
         return (
           <FamiliaView
             myProfile={profile}
@@ -898,7 +949,7 @@ function App() {
         );
 
       case 'reportes':
-        return <ReportsView history={history} pendingExpenses={pendingExpenses} cards={cards} />;
+        return <ReportsView history={visibleHistory} pendingExpenses={pendingExpenses} cards={cards} />;
 
       default:
         return null;
@@ -924,16 +975,7 @@ function App() {
     return <LoginScreen onLogin={signIn} onSwitchToRegister={() => setAuthScreen('register')} />;
   }
 
-  // 3. No active subscription → Paywall
-  if (!isSubscribed) {
-    return (
-      <SubscriptionRequiredScreen
-        email={user.email || ''}
-        onRefresh={refreshSubscription}
-        onLogout={signOut}
-      />
-    );
-  }
+  // 3. No active subscription → Free plan (no paywall)
 
   // 4. No scriptUrl configured → Setup screen
   if (needsSetup) {
@@ -942,7 +984,8 @@ function App() {
         email={user.email || ''}
         onSetup={saveUrl}
         onLogout={signOut}
-        prefillUrl={localStorage.getItem('scriptUrl') || undefined}
+        prefillUrl={authScriptUrl || localStorage.getItem('scriptUrl') || undefined}
+        hasScriptUrl={!!authScriptUrl}
       />
     );
   }
@@ -972,6 +1015,7 @@ function App() {
         {renderContent()}
       </Layout>
       <Toast message={toast.msg} type={toast.type} isVisible={toast.visible} onClose={hideToast} />
+      <UpgradeModal isOpen={!!upgradeFeature} feature={upgradeFeature ?? ''} onClose={() => setUpgradeFeature(null)} />
 
       {/* Profile Setup Modal */}
       {showProfileSetup && (

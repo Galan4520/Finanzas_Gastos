@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { CreditCard as CreditCardType, UserProfile, NotificationConfig, FamilyConfig } from '../types';
+import { CreditCard as CreditCardType, UserProfile, NotificationConfig, FamilyConfig, getCardMoneda } from '../types';
 import { CardForm } from './forms/CardForm';
 import { NotificationSettings } from './NotificationSettings';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { usePlan } from '../hooks/usePlan';
+import { UpgradeModal } from './ui/UpgradeModal';
 import { CreditCard, Settings as SettingsIcon, Pencil, Trash2, AlertTriangle, Bell, Users, Link2, Link2Off, LogOut, Shield } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
 import { getAvatarById } from '../avatars';
@@ -59,6 +61,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const { theme, themeName, setTheme } = useTheme();
   const { user, isSubscribed, signOut } = useAuth();
+  const { plan, isPro } = usePlan();
+  const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
+  const visibleCards = cards.slice(0, plan.maxCuentas); // Billetera no cuenta, solo tarjetas
   const [activeSection, setActiveSection] = useState<'tarjetas' | 'meta' | 'general' | 'notificaciones'>('general');
   const [geminiKey, setGeminiKey] = useState('');
   const [isSavingKey, setIsSavingKey] = useState(false);
@@ -326,13 +331,26 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {activeSection === 'tarjetas' && (
             <div className="space-y-6">
               {/* Existing Cards List */}
-              {cards.length > 0 && (
+              {visibleCards.length > 0 && (
                 <div>
                   <h4 className={`text-sm font-bold ${theme.colors.textPrimary} uppercase tracking-wider mb-3`}>
-                    Tarjetas Registradas ({cards.length})
+                    Tarjetas Registradas ({visibleCards.length}{!isPro && cards.length > plan.maxCuentas ? ` de ${cards.length}` : ''})
                   </h4>
+                  {!isPro && cards.length > plan.maxCuentas && (
+                    <div className="mb-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-between gap-3">
+                      <p className="text-xs text-amber-600 font-medium">
+                        Tienes {cards.length} cuentas. El plan Free muestra solo {plan.maxCuentas}.
+                      </p>
+                      <button
+                        onClick={() => setUpgradeFeature('Cuentas ilimitadas')}
+                        className="text-xs font-bold text-[#00a750] whitespace-nowrap hover:underline"
+                      >
+                        Ver Pro →
+                      </button>
+                    </div>
+                  )}
                   <div className="space-y-3">
-                    {cards.map(card => {
+                    {visibleCards.map(card => {
                       const isEditing = editingCard?.alias === card.alias && editingCard?.banco === card.banco;
                       const inputCls = `w-full ${theme.colors.bgCard} border ${theme.colors.border} rounded-lg px-3 py-2 text-sm ${theme.colors.textPrimary} focus:outline-none focus:ring-2 focus:ring-yn-primary-500`;
                       return (
@@ -343,7 +361,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                                 <CreditCard size={20} className="text-white" />
                               </div>
                               <div>
-                                <p className={`font-semibold ${theme.colors.textPrimary}`}>{card.alias}</p>
+                                <div className="flex items-center gap-2">
+                                  <p className={`font-semibold ${theme.colors.textPrimary}`}>{card.alias}</p>
+                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${getCardMoneda(card) === 'USD' ? 'bg-blue-500/15 text-blue-400' : 'bg-yn-primary-500/15 text-yn-primary-500'}`}>
+                                    {getCardMoneda(card) === 'USD' ? '$ USD' : 'S/ PEN'}
+                                  </span>
+                                </div>
                                 <p className={`text-xs ${theme.colors.textMuted}`}>{card.banco} • {card.tipo_tarjeta}</p>
                               </div>
                             </div>
@@ -498,6 +521,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         </div>
       </div>
+      <UpgradeModal isOpen={!!upgradeFeature} feature={upgradeFeature ?? ''} onClose={() => setUpgradeFeature(null)} />
     </div>
   );
 };

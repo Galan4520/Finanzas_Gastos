@@ -8,8 +8,8 @@
 // ═══════════════════════════════════════════════════════════════
 // VERSIONAMIENTO Y AUTO-UPDATE
 // ═══════════════════════════════════════════════════════════════
-var GAS_VERSION = 6;
-var SCHEMA_VERSION = 1;
+var GAS_VERSION = 7;
+var SCHEMA_VERSION = 2;
 var VERSION_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/gas-version.json';
 var CODE_URL = 'https://raw.githubusercontent.com/Galan4520/Finanzas_Gastos/main/google-apps-script-NUEVO.js';
 
@@ -90,21 +90,21 @@ var MIGRATIONS = [
       ensureHeaders(tarjetas, [
         'Banco', 'Tipo_Tarjeta', 'Alias', 'URL_Imagen',
         'Dia_Cierre', 'Dia_Pago', 'Limite', 'Credito_Disponible',
-        'Tea', 'Tipo_Cuenta', 'Timestamp'
+        'Tea', 'Tipo_Cuenta', 'Timestamp', 'Moneda'
       ]);
 
       // --- Gastos ---
       var gastos = ensureSheet(ss, 'Gastos');
       ensureHeaders(gastos, [
         'Fecha', 'Categoria', 'Descripcion', 'Monto',
-        'Notas', 'Timestamp', 'Meta_ID', 'Cuenta', 'Tipo'
+        'Notas', 'Timestamp', 'Meta_ID', 'Cuenta', 'Tipo', 'Moneda'
       ]);
 
       // --- Ingresos ---
       var ingresos = ensureSheet(ss, 'Ingresos');
       ensureHeaders(ingresos, [
         'Fecha', 'Categoria', 'Descripcion', 'Monto',
-        'Notas', 'Timestamp', 'Meta_ID', 'Cuenta', 'Tipo'
+        'Notas', 'Timestamp', 'Meta_ID', 'Cuenta', 'Tipo', 'Moneda'
       ]);
 
       // --- Gastos_Pendientes ---
@@ -113,7 +113,7 @@ var MIGRATIONS = [
         'ID', 'Fecha_Gasto', 'Tarjeta', 'Categoria', 'Descripcion',
         'Monto', 'Fecha_Cierre', 'Fecha_Pago', 'Estado',
         'Num_Cuotas', 'Cuotas_Pagadas', 'Monto_Pagado_Total',
-        'Tipo', 'Notas', 'Timestamp'
+        'Tipo', 'Notas', 'Timestamp', 'Moneda'
       ]);
 
       // --- Pagos ---
@@ -138,9 +138,24 @@ var MIGRATIONS = [
       // --- Propiedades_Disponibles (opcional) ---
       ensureSheet(ss, 'Propiedades_Disponibles');
     }
+  },
+  {
+    version: 2,
+    description: 'Agrega columna Moneda a Tarjetas, Gastos, Ingresos y Gastos_Pendientes',
+    migrate: function (ss) {
+      var tarjetas = ensureSheet(ss, 'Tarjetas');
+      ensureHeaders(tarjetas, ['Moneda']);
+
+      var gastos = ensureSheet(ss, 'Gastos');
+      ensureHeaders(gastos, ['Moneda']);
+
+      var ingresos = ensureSheet(ss, 'Ingresos');
+      ensureHeaders(ingresos, ['Moneda']);
+
+      var pendientes = ensureSheet(ss, 'Gastos_Pendientes');
+      ensureHeaders(pendientes, ['Moneda']);
+    }
   }
-  // Futuras migraciones:
-  // { version: 2, description: '...', migrate: function(ss) { ... } }
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -483,18 +498,28 @@ function getGoals(sheet) {
   }
 
   var data = metasSheet.getDataRange().getValues();
+  var mh = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+  // Usar primera ocurrencia de cada header (ignorar duplicados en cols I+)
+  var mColId       = mh.indexOf('id');
+  var mColNombre   = mh.indexOf('nombre');
+  var mColObjetivo = mh.indexOf('monto_objetivo');
+  var mColAhorrado = mh.indexOf('monto_ahorrado');
+  var mColNotas    = mh.indexOf('notas');
+  var mColEstado   = mh.indexOf('estado');
+  var mColTs       = mh.indexOf('timestamp');
+  var mColIcono    = mh.indexOf('icono');
   var goals = [];
   for (var i = 1; i < data.length; i++) {
     if (data[i][0]) {
       goals.push({
-        id: data[i][0],
-        nombre: data[i][1],
-        monto_objetivo: data[i][2],
-        monto_ahorrado: data[i][3],
-        notas: data[i][4] || '',
-        estado: data[i][5] || 'activa',
-        timestamp: data[i][6],
-        icono: data[i][7] || ''
+        id:             mColId       >= 0 ? data[i][mColId]       : data[i][0],
+        nombre:         mColNombre   >= 0 ? data[i][mColNombre]   : data[i][1],
+        monto_objetivo: mColObjetivo >= 0 ? data[i][mColObjetivo] : data[i][2],
+        monto_ahorrado: mColAhorrado >= 0 ? data[i][mColAhorrado] : data[i][3],
+        notas:         (mColNotas    >= 0 ? data[i][mColNotas]    : data[i][4]) || '',
+        estado:        (mColEstado   >= 0 ? data[i][mColEstado]   : data[i][5]) || 'activa',
+        timestamp:      mColTs       >= 0 ? data[i][mColTs]       : data[i][6],
+        icono:         (mColIcono    >= 0 ? data[i][mColIcono]    : data[i][7]) || ''
       });
     }
   }
@@ -759,18 +784,20 @@ function doPost(e) {
 
   } else if (params.tipo === 'Gastos' || params.tipo === 'Ingresos') {
     // ===== HOJAS SIMPLES: Gastos e Ingresos =====
-    // G = meta_id (opcional), H = cuenta (cuenta/tarjeta asociada)
+    // G = meta_id (opcional), H = cuenta, I = tipo (col calculada), J = moneda
     var metaId = params.meta_id || '';
     var cuentaAsociada = params.cuenta || '';
     row = [
-      params.fecha,         // A: Fecha
-      params.categoria,     // B: Categoría
-      params.descripcion,   // C: Descripción
+      params.fecha,             // A: Fecha
+      params.categoria,         // B: Categoría
+      params.descripcion,       // C: Descripción
       parseFloat(params.monto), // D: Monto
-      params.notas || '',   // E: Notas
-      params.timestamp,     // F: Timestamp
-      metaId,               // G: Meta ID (opcional)
-      cuentaAsociada        // H: Cuenta/tarjeta asociada
+      params.notas || '',       // E: Notas
+      params.timestamp,         // F: Timestamp
+      metaId,                   // G: Meta ID (opcional)
+      cuentaAsociada,           // H: Cuenta/tarjeta asociada
+      '',                       // I: Tipo (col existente, no se sobreescribe)
+      params.moneda || 'PEN'    // J: Moneda (PEN o USD)
     ];
 
     // Si es un ingreso asignado a una meta, actualizar monto_ahorrado
@@ -782,7 +809,7 @@ function doPost(e) {
     // ===== HOJA: Tarjetas =====
     // Columnas: A:Banco, B:Tipo_Tarjeta, C:Alias, D:URL_Imagen, E:Dia_Cierre,
     //           F:Dia_Pago, G:Limite, H:Credito_Disponible (fórmula, se deja vacío),
-    //           I:Tea, J:Tipo_Cuenta, K:Timestamp
+    //           I:Tea, J:Tipo_Cuenta, K:Timestamp, L:Moneda
     row = [
       params.banco,
       params.tipo_tarjeta,
@@ -794,7 +821,8 @@ function doPost(e) {
       '',  // H: Credito_Disponible — fórmula del sheet, no se sobreescribe
       params.tea ? parseFloat(params.tea) : '',
       params.tipo_cuenta || 'credito',
-      params.timestamp
+      params.timestamp,
+      params.moneda || 'PEN'   // L: Moneda (PEN o USD)
     ];
 
   } else if (params.tipo === 'Gastos_Pendientes') {
@@ -817,10 +845,17 @@ function doPost(e) {
       params.estado,                        // I: Estado (Pendiente/Pagado)
       numCuotas,                            // J: Número de cuotas
       cuotasPagadas,                        // K: Cuotas pagadas
-      montoPagadoTotal,                     // L: 🆕 Monto pagado total (suma acumulada)
+      montoPagadoTotal,                     // L: Monto pagado total (suma acumulada)
       tipoGasto,                            // M: Tipo (deuda/suscripcion)
       params.notas || '',                   // N: Notas
-      params.timestamp                      // O: Timestamp
+      params.timestamp,                     // O: Timestamp
+      '',                                   // P: Deuda_Restantes (col extra — vacío)
+      '',                                   // Q: Deuda_Total (col extra — vacío)
+      '',                                   // R: Categoria dup (col extra — vacío)
+      '',                                   // S: Descripcion dup (col extra — vacío)
+      '',                                   // T: Monto_Pagado_Total dup (col extra — vacío)
+      '',                                   // U: Tipo dup (col extra — vacío)
+      params.moneda || 'PEN'                // V: Moneda del cargo (PEN o USD)
     ];
 
   } else if (params.tipo === 'Pagos') {
@@ -1174,14 +1209,17 @@ function doGet(e) {
   let cards = [];
   if (tarjetasSheet) {
     const data = tarjetasSheet.getDataRange().getValues();
+    const tarjetasHeaders = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+    const tarjetasMonedaCol = tarjetasHeaders.indexOf('moneda');
+    const tarjetasTeaCol = tarjetasHeaders.indexOf('tea');
+    const tarjetasTipoCuentaCol = tarjetasHeaders.indexOf('tipo_cuenta');
+    const tarjetasTimestampCol = tarjetasHeaders.indexOf('timestamp');
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) {
-        // Columnas: A:Banco(0), B:Tipo_Tarjeta(1), C:Alias(2), D:URL_Imagen(3),
-        //           E:Dia_Cierre(4), F:Dia_Pago(5), G:Limite(6),
-        //           H:Credito_Disponible(7, fórmula — ignorar),
-        //           I:Tea(8), J:Tipo_Cuenta(9), K:Timestamp(10)
-        const teaVal = data[i][8];
-        const tipoCuentaVal = data[i][9];
+        const teaVal = tarjetasTeaCol >= 0 ? data[i][tarjetasTeaCol] : data[i][8];
+        const tipoCuentaVal = tarjetasTipoCuentaCol >= 0 ? data[i][tarjetasTipoCuentaCol] : data[i][9];
+        const tsVal = tarjetasTimestampCol >= 0 ? data[i][tarjetasTimestampCol] : (data[i][10] || data[i][7]);
+        const monedaVal = tarjetasMonedaCol >= 0 ? data[i][tarjetasMonedaCol] : '';
         cards.push({
           banco: data[i][0],
           tipo_tarjeta: data[i][1],
@@ -1192,7 +1230,8 @@ function doGet(e) {
           limite: data[i][6],
           tea: teaVal && !isNaN(parseFloat(teaVal)) ? parseFloat(teaVal) : null,
           tipo_cuenta: (tipoCuentaVal === 'debito' || tipoCuentaVal === 'credito') ? tipoCuentaVal : null,
-          timestamp: data[i][10] || data[i][7] // fallback para filas antiguas sin col K
+          timestamp: tsVal,
+          moneda: (monedaVal === 'USD') ? 'USD' : 'PEN'
         });
       }
     }
@@ -1203,6 +1242,8 @@ function doGet(e) {
   let pending = [];
   if (pendientesSheet) {
     const data = pendientesSheet.getDataRange().getValues();
+    const pendientesHeaders = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+    const pendientesMonedaCol = pendientesHeaders.indexOf('moneda');
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) {
         pending.push({
@@ -1217,10 +1258,11 @@ function doGet(e) {
           estado: data[i][8],
           num_cuotas: data[i][9],
           cuotas_pagadas: data[i][10],
-          monto_pagado_total: data[i][11] || 0, // 🆕 NUEVA COLUMNA
-          tipo: data[i][12] || 'deuda',          // 🆕 Ahora en columna M
-          notas: data[i][13],                    // 🆕 Ahora en columna N
-          timestamp: data[i][14]                 // 🆕 Ahora en columna O
+          monto_pagado_total: data[i][11] || 0,
+          tipo: data[i][12] || 'deuda',
+          notas: data[i][13],
+          timestamp: data[i][14],
+          moneda: (pendientesMonedaCol >= 0 && data[i][pendientesMonedaCol] === 'USD') ? 'USD' : 'PEN'
         });
       }
     }
@@ -1231,6 +1273,11 @@ function doGet(e) {
   const gastosSheet = ss.getSheetByName('Gastos');
   if (gastosSheet) {
     const data = gastosSheet.getDataRange().getValues();
+    const gh = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+    const gColMoneda  = gh.indexOf('moneda');
+    const gColTipo    = gh.indexOf('tipo');
+    const gColCuenta  = gh.indexOf('cuenta');
+    const gColMetaId  = gh.indexOf('meta_id');
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) {
         history.push({
@@ -1240,9 +1287,10 @@ function doGet(e) {
           monto: data[i][3],
           notas: data[i][4],
           timestamp: data[i][5],
-          tipo: data[i][8] || 'Gastos',
-          meta_id: data[i][6] || '',
-          cuenta: data[i][7] || ''
+          tipo: (gColTipo >= 0 ? data[i][gColTipo] : '') || 'Gastos',
+          meta_id: (gColMetaId >= 0 ? data[i][gColMetaId] : '') || '',
+          cuenta: (gColCuenta >= 0 ? data[i][gColCuenta] : '') || '',
+          moneda: (gColMoneda >= 0 && data[i][gColMoneda] === 'USD') ? 'USD' : 'PEN'
         });
       }
     }
@@ -1251,6 +1299,11 @@ function doGet(e) {
   const ingresosSheet = ss.getSheetByName('Ingresos');
   if (ingresosSheet) {
     const data = ingresosSheet.getDataRange().getValues();
+    const ih = data[0].map(function(h) { return h.toString().trim().toLowerCase(); });
+    const iColMoneda  = ih.indexOf('moneda');
+    const iColTipo    = ih.indexOf('tipo');
+    const iColCuenta  = ih.indexOf('cuenta');
+    const iColMetaId  = ih.indexOf('meta_id');
     for (let i = 1; i < data.length; i++) {
       if (data[i][0]) {
         history.push({
@@ -1260,9 +1313,10 @@ function doGet(e) {
           monto: data[i][3],
           notas: data[i][4],
           timestamp: data[i][5],
-          tipo: data[i][8] || 'Ingresos',
-          meta_id: data[i][6] || '',
-          cuenta: data[i][7] || ''
+          tipo: (iColTipo >= 0 ? data[i][iColTipo] : '') || 'Ingresos',
+          meta_id: (iColMetaId >= 0 ? data[i][iColMetaId] : '') || '',
+          cuenta: (iColCuenta >= 0 ? data[i][iColCuenta] : '') || '',
+          moneda: (iColMoneda >= 0 && data[i][iColMoneda] === 'USD') ? 'USD' : 'PEN'
         });
       }
     }

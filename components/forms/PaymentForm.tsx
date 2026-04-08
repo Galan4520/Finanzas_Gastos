@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PendingExpense, Transaction, CreditCard as CreditCardAccount, Goal, getCardType } from '../../types';
 import { sendToSheet, fetchData } from '../../services/googleSheetService';
-import { formatCurrency, formatDate, getLocalISOString } from '../../utils/format';
+import { formatCurrency, formatMoney, formatDate, getLocalISOString } from '../../utils/format';
 import { calcularSaldoPendiente } from '../../utils/debtUtils';
 import { Banknote, Lightbulb, CheckCircle, Loader2, CreditCard, ArrowLeft } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -31,6 +31,9 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
   // Romper chanchito inline
   const [breakMetaId, setBreakMetaId] = useState('');
   const [breakAmount, setBreakAmount] = useState('');
+
+  // USD: tipo de cambio para deudas en dólares
+  const [tipoCambio, setTipoCambio] = useState('3.70');
 
   // Tarjetas débito (para validación de saldo)
   const debitCards = useMemo(() => cards.filter(c => getCardType(c) === 'debito'), [cards]);
@@ -97,6 +100,8 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
   };
 
   const selectedExpense = pendingExpenses.find(e => e.id === selectedExpenseId);
+  const esUSD = selectedExpense?.moneda === 'USD';
+  const currSymbol = esUSD ? '$' : 'S/';
 
   // Auto-fill amount based on type
   useEffect(() => {
@@ -391,6 +396,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                   const debt = total - montoPagadoTotal;
                   const progreso = ((total - debt) / total) * 100;
                   const cuotasPagadas = Math.floor(Number(e.cuotas_pagadas));
+                  const isUSD = e.moneda === 'USD';
 
                   return (
                     <button
@@ -403,14 +409,15 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                         <div className="flex items-center gap-2">
                           <CreditCard size={14} className={theme.colors.textMuted} />
                           <span className={`text-xs font-medium ${theme.colors.textMuted}`}>{e.tarjeta}</span>
+                          {isUSD && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">USD</span>}
                         </div>
-                        <span className="font-sans font-bold text-sm text-red-400">
-                          {formatCurrency(debt)}
+                        <span className={`font-sans font-bold text-sm ${isUSD ? 'text-blue-400' : 'text-red-400'}`}>
+                          {formatMoney(debt, isUSD ? 'USD' : 'PEN')}
                         </span>
                       </div>
                       <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{e.descripcion}</p>
                       <div className="flex items-center gap-2 mt-1.5">
-                        <div className={`flex-1 h-1.5 rounded-full overflow-hidden bg-gray-700`}>
+                        <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${theme.colors.bgSecondary}`}>
                           <div className="h-full rounded-full bg-yn-primary-500" style={{ width: `${progreso}%` }} />
                         </div>
                         <span className={`text-[10px] ${theme.colors.textMuted}`}>
@@ -436,9 +443,10 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-purple-500" />
                         <p className={`font-semibold text-sm ${theme.colors.textPrimary}`}>{e.descripcion}</p>
+                        {e.moneda === 'USD' && <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-blue-500/20 text-blue-400">USD</span>}
                       </div>
-                      <span className="font-sans font-bold text-sm text-purple-400">
-                        {formatCurrency(Number(e.monto))}/mes
+                      <span className={`font-sans font-bold text-sm ${e.moneda === 'USD' ? 'text-blue-400' : 'text-purple-400'}`}>
+                        {formatMoney(Number(e.monto), e.moneda === 'USD' ? 'USD' : 'PEN')}/mes
                       </span>
                     </div>
                   </button>
@@ -470,17 +478,20 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
               <>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="bg-purple-500/20 text-purple-400 text-xs px-2 py-0.5 rounded font-bold">SUSCRIPCIÓN RECURRENTE</span>
+                  {esUSD && <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded font-bold">$ USD</span>}
                 </div>
                 <div className={`flex justify-between items-center border-b ${theme.colors.border} pb-2`}>
                   <span className={theme.colors.textMuted}>Costo Mensual:</span>
-                  <span className={`font-bold ${theme.colors.textPrimary} text-lg`}>{formatCurrency(selectedExpense.monto)}</span>
+                  <span className={`font-bold text-lg ${esUSD ? 'text-blue-400' : theme.colors.textPrimary}`}>
+                    {formatMoney(Number(selectedExpense.monto), esUSD ? 'USD' : 'PEN')}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className={theme.colors.textMuted}>Próxima Fecha de Cargo:</span>
                   <span className={`font-bold ${theme.colors.textPrimary}`}>{formatDate(selectedExpense.fecha_pago)}</span>
                 </div>
                 <div className="mt-3 p-3 bg-purple-500/10 rounded-lg">
-                  <p className="text-xs text-purple-200 flex items-center gap-1">
+                  <p className="text-xs text-purple-300 flex items-center gap-1">
                     <Lightbulb size={14} />
                     Al pagar, la fecha se actualizará automáticamente al próximo mes
                   </p>
@@ -488,10 +499,15 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
               </>
             ) : (
               <>
-                <p className={`font-bold ${theme.colors.textPrimary}`}>{selectedExpense.descripcion}</p>
+                <div className="flex items-center gap-2">
+                  <p className={`font-bold ${theme.colors.textPrimary}`}>{selectedExpense.descripcion}</p>
+                  {esUSD && <span className="bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded font-bold">$ USD</span>}
+                </div>
                 <div className={`flex justify-between items-center border-b ${theme.colors.border} pb-2`}>
                   <span className={theme.colors.textMuted}>Total Compra:</span>
-                  <span className={`font-bold ${theme.colors.textPrimary} text-lg`}>{formatCurrency(selectedExpense.monto)}</span>
+                  <span className={`font-bold text-lg ${esUSD ? 'text-blue-400' : theme.colors.textPrimary}`}>
+                    {formatMoney(Number(selectedExpense.monto), esUSD ? 'USD' : 'PEN')}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className={theme.colors.textMuted}>Cuotas Pagadas:</span>
@@ -510,44 +526,96 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
 
           {/* Payment type & amount */}
           {selectedExpense.tipo === 'suscripcion' ? (
-            <div>
-              <label className={labelClass}>Monto a Pagar (Fijo)</label>
-              <div className="relative">
-                <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={customAmount}
-                  readOnly
-                  className={`${inputClass} pl-10 font-sans text-lg font-bold text-purple-400`}
-                />
-              </div>
-              <p className={`text-xs ${theme.colors.textMuted} mt-2`}>Las suscripciones se pagan siempre por el monto completo</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-3">
               <div>
-                <label className={labelClass}>Tipo de Pago</label>
-                <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className={inputClass}>
-                  <option value="Cuota">Pago de 1 Cuota</option>
-                  <option value="Total">Liquidar Todo</option>
-                  <option value="Parcial">Pago Parcial (Manual)</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelClass}>Monto a Pagar</label>
+                <label className={labelClass}>Monto a Pagar (Fijo)</label>
                 <div className="relative">
-                  <span className={`absolute left-4 top-3.5 ${theme.colors.textMuted}`}>S/</span>
+                  <span className={`absolute left-4 top-3.5 ${esUSD ? 'text-blue-400' : theme.colors.textMuted}`}>{currSymbol}</span>
                   <input
                     type="number"
                     step="0.01"
-                    max="99999999"
                     value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
-                    className={`${inputClass} pl-10 font-sans text-lg font-bold text-emerald-400`}
+                    readOnly
+                    className={`${inputClass} pl-10 font-sans text-lg font-bold ${esUSD ? 'text-blue-400' : 'text-purple-400'}`}
                   />
                 </div>
+                <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Las suscripciones se pagan siempre por el monto completo</p>
               </div>
+              {esUSD && (
+                <div className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-2">
+                  <p className="text-xs text-blue-400 font-bold">💱 Cargo en dólares — ¿cuánto pagaste en soles?</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`${labelClass} text-blue-400/70`}>Tipo de cambio</label>
+                      <div className="relative">
+                        <span className={`absolute left-3 top-3 text-xs ${theme.colors.textMuted}`}>S//</span>
+                        <input
+                          type="number" step="0.01" value={tipoCambio}
+                          onChange={e => setTipoCambio(e.target.value)}
+                          className={`${inputClass} pl-8 text-sm`}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} text-blue-400/70`}>Equivalente en S/</label>
+                      <div className={`w-full px-4 py-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} font-bold text-yn-primary-400 font-sans`}>
+                        S/ {(parseFloat(customAmount || '0') * parseFloat(tipoCambio || '0')).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Tipo de Pago</label>
+                  <select value={paymentType} onChange={(e) => setPaymentType(e.target.value)} className={inputClass}>
+                    <option value="Cuota">Pago de 1 Cuota</option>
+                    <option value="Total">Liquidar Todo</option>
+                    <option value="Parcial">Pago Parcial (Manual)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelClass}>Monto a Pagar {esUSD ? '(USD)' : ''}</label>
+                  <div className="relative">
+                    <span className={`absolute left-4 top-3.5 ${esUSD ? 'text-blue-400' : theme.colors.textMuted}`}>{currSymbol}</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      max="99999999"
+                      value={customAmount}
+                      onChange={(e) => setCustomAmount(e.target.value)}
+                      className={`${inputClass} pl-10 font-sans text-lg font-bold ${esUSD ? 'text-blue-400' : 'text-yn-primary-400'}`}
+                    />
+                  </div>
+                </div>
+              </div>
+              {esUSD && (
+                <div className="p-3 rounded-xl border border-blue-500/30 bg-blue-500/5 space-y-2">
+                  <p className="text-xs text-blue-400 font-bold">💱 Deuda en dólares — ¿cuánto pagaste en soles?</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`${labelClass} text-blue-400/70`}>Tipo de cambio</label>
+                      <div className="relative">
+                        <span className={`absolute left-3 top-3 text-xs ${theme.colors.textMuted}`}>S//</span>
+                        <input
+                          type="number" step="0.01" value={tipoCambio}
+                          onChange={e => setTipoCambio(e.target.value)}
+                          className={`${inputClass} pl-8 text-sm`}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={`${labelClass} text-blue-400/70`}>Equivalente en S/</label>
+                      <div className={`w-full px-4 py-3 rounded-xl border ${theme.colors.border} ${theme.colors.bgSecondary} font-bold text-yn-primary-400 font-sans`}>
+                        S/ {(parseFloat(customAmount || '0') * parseFloat(tipoCambio || '0')).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -567,7 +635,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
               </option>
               {debitCards.map(c => (
                 <option key={`${c.alias}-${c.banco}`} value={c.alias}>
-                  💳 {c.alias} — {c.banco} — {formatCurrency(accountBalances[c.alias] ?? 0)} disponible
+                  💳 {c.alias} — {c.banco} — {formatMoney(accountBalances[c.alias] ?? 0, c.moneda ?? 'PEN')} disponible
                 </option>
               ))}
               {cards.filter(c => getCardType(c) === 'credito').map(c => (
@@ -579,7 +647,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({ scriptUrl, pin, cards 
             {isTrackedAccount && (
               <p className={`text-xs ml-1 mt-1 flex items-center gap-2 ${theme.colors.textMuted}`}>
                 <span>Disponible: <strong>{formatCurrency(saldoActualCuenta)}</strong></span>
-                {montoAPagar > 0 && montoAPagar > saldoActualCuenta && (
+                {montoAPagar > 0 && montoAPagar > saldoActualCuenta && !esUSD && (
                   <span className="text-red-400">⚠ Saldo insuficiente</span>
                 )}
               </p>

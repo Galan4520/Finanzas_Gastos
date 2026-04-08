@@ -29,6 +29,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
         dia_pago: '',
         limite: '',
         tea: '',
+        moneda: 'PEN' as 'PEN' | 'USD',
         selectedCardId: ''
     });
 
@@ -62,6 +63,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                 dia_pago: card.dia_pago.toString(),
                 limite: card.limite.toString(),
                 tea: card.tea ? card.tea.toString() : '',
+                moneda: card.moneda ?? 'PEN',
                 selectedCardId: matchingCard?.id || ''
             });
         }
@@ -83,7 +85,8 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                 dia_cierre: parseInt(formData.dia_cierre),
                 dia_pago: parseInt(formData.dia_pago),
                 limite: parseFloat(formData.limite),
-                tea: formData.tea ? parseFloat(formData.tea) : null
+                tea: formData.tea ? parseFloat(formData.tea) : null,
+                moneda: formData.moneda
             };
 
             // Pass both the updated card AND the original alias
@@ -203,6 +206,27 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                                 disabled={loading}
                                 className={inputClass}
                             />
+                        </div>
+
+                        {/* Moneda */}
+                        <div>
+                            <label className={labelClass}>Moneda</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                {(['PEN', 'USD'] as const).map(m => (
+                                    <button
+                                        key={m}
+                                        type="button"
+                                        disabled={loading}
+                                        onClick={() => setFormData(prev => ({ ...prev, moneda: m }))}
+                                        className={`py-3 rounded-xl border-2 font-bold text-sm transition-all ${formData.moneda === m
+                                            ? 'border-yn-primary-500 bg-yn-primary-500/15 text-yn-primary-400'
+                                            : `${theme.colors.border} ${theme.colors.bgSecondary} ${theme.colors.textMuted}`
+                                        }`}
+                                    >
+                                        {m === 'PEN' ? 'S/ Soles' : '$ Dólares'}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Días, Límite y TEA */}

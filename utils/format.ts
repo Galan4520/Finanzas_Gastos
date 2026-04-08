@@ -8,26 +8,47 @@ export const formatCurrency = (amount: number) => {
 };
 
 /**
+ * Formatea un monto según la moneda indicada.
+ * PEN → "S/ 100.00"   USD → "$ 100.00"
+ */
+export const formatMoney = (amount: number, moneda: 'PEN' | 'USD' = 'PEN'): string => {
+  if (moneda === 'USD') {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  }
+  return formatCurrency(amount);
+};
+
+/** Símbolo de moneda corto: "S/" o "$" */
+export const currencySymbol = (moneda: 'PEN' | 'USD' = 'PEN'): string =>
+  moneda === 'USD' ? '$' : 'S/';
+
+/**
  * Formato compacto para displays con espacio limitado.
  * < 10K: "S/ 9,999.99" (completo)
  * 10K–999K: "S/ 25.3K"
  * 1M+: "S/ 1.2M"
  */
-export const formatCompact = (amount: number): string => {
+export const formatCompact = (amount: number, moneda: 'PEN' | 'USD' = 'PEN'): string => {
   const abs = Math.abs(amount);
   const sign = amount < 0 ? '-' : '';
+  const sym = moneda === 'USD' ? '$' : 'S/';
 
   if (abs < 10_000) {
-    return formatCurrency(amount);
+    return formatMoney(amount, moneda);
   }
   if (abs < 1_000_000) {
     const k = abs / 1_000;
     const formatted = k % 1 === 0 ? k.toFixed(0) : k.toFixed(1);
-    return `${sign}S/ ${formatted}K`;
+    return `${sign}${sym} ${formatted}K`;
   }
   const m = abs / 1_000_000;
   const formatted = m % 1 === 0 ? m.toFixed(0) : m.toFixed(1);
-  return `${sign}S/ ${formatted}M`;
+  return `${sign}${sym} ${formatted}M`;
 };
 
 export const formatDate = (dateString: string) => {

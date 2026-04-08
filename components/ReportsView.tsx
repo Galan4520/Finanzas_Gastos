@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { Transaction, CreditCard, PendingExpense } from '../types';
-import { formatCurrency, formatCompact } from '../utils/format';
+import { formatCompact, formatMoney } from '../utils/format';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend, CartesianGrid } from 'recharts';
 import { TrendingUp, PieChart as PieIcon, Calendar, CreditCard as CardIcon, Download, ArrowUpRight, ArrowDownRight, BarChart3 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { getTextColor } from '../themes';
+import { usePlan } from '../hooks/usePlan';
+import { UpgradeModal } from './ui/UpgradeModal';
 import { CHART_COLORS, CHART_INCOME, CHART_EXPENSE, CHART_SAVINGS } from '../utils/yunaiColors';
 
 interface ReportsViewProps {
@@ -16,10 +18,13 @@ interface ReportsViewProps {
 type DateRange = 'week' | 'month' | 'quarter' | 'year';
 
 export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendingExpenses }) => {
-  const { theme, currentTheme } = useTheme();
-  const textColors = getTextColor(currentTheme);
+  const { theme, themeName } = useTheme();
+  const textColors = getTextColor(themeName);
+  const { isPro } = usePlan();
+  const [upgradeFeature, setUpgradeFeature] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>('month');
   const [selectedCard, setSelectedCard] = useState<string>('all');
+  const [monedaFilter, setMonedaFilter] = useState<'PEN' | 'USD'>('PEN');
 
   // Filter data by date range
   const filteredData = useMemo(() => {
@@ -41,8 +46,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
         break;
     }
 
-    return history.filter(t => new Date(t.timestamp || t.fecha) >= startDate);
-  }, [history, dateRange]);
+    return history.filter(t =>
+      new Date(t.timestamp || t.fecha) >= startDate &&
+      (t.moneda ?? 'PEN') === monedaFilter
+    );
+  }, [history, dateRange, monedaFilter]);
 
   // 1. Category Analysis (Pie Chart)
   const categoryData = useMemo(() => {
@@ -175,25 +183,46 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             <p className={`text-sm ${theme.colors.textMuted}`}>Análisis detallado de tus finanzas</p>
           </div>
 
-          {/* Date Range Selector */}
-          <div className="flex gap-2">
-            {[
-              { value: 'week' as DateRange, label: '7 días' },
-              { value: 'month' as DateRange, label: '1 mes' },
-              { value: 'quarter' as DateRange, label: '3 meses' },
-              { value: 'year' as DateRange, label: '1 año' }
-            ].map(range => (
-              <button
-                key={range.value}
-                onClick={() => setDateRange(range.value)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${dateRange === range.value
-                  ? `${theme.colors.primary} text-white shadow-lg`
-                  : `${theme.colors.bgSecondary} ${theme.colors.textSecondary} hover:${theme.colors.bgCardHover}`
+          <div className="flex flex-col gap-2">
+            {/* Moneda selector */}
+            <div className="flex gap-2">
+              {(['PEN', 'USD'] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMonedaFilter(m)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${monedaFilter === m
+                    ? 'bg-yn-primary-500 text-white shadow'
+                    : `${theme.colors.bgSecondary} ${theme.colors.textMuted}`
                   }`}
-              >
-                {range.label}
-              </button>
-            ))}
+                >
+                  {m === 'PEN' ? 'S/ Soles' : '$ Dólares'}
+                </button>
+              ))}
+            </div>
+            {/* Date Range Selector */}
+            <div className="flex gap-2">
+              {[
+                { value: 'week' as DateRange, label: '7 días', proOnly: false },
+                { value: 'month' as DateRange, label: '1 mes', proOnly: false },
+                { value: 'quarter' as DateRange, label: '3 meses', proOnly: true },
+                { value: 'year' as DateRange, label: '1 año', proOnly: true }
+              ].map(range => (
+                <button
+                  key={range.value}
+                  onClick={() => {
+                    if (range.proOnly && !isPro) { setUpgradeFeature('Reportes avanzados'); return; }
+                    setDateRange(range.value);
+                  }}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all relative ${dateRange === range.value
+                    ? `${theme.colors.primary} text-white shadow-lg`
+                    : `${theme.colors.bgSecondary} ${theme.colors.textSecondary} hover:${theme.colors.bgCardHover}`
+                    } ${range.proOnly && !isPro ? 'opacity-50' : ''}`}
+                >
+                  {range.label}
+                  {range.proOnly && !isPro && <span className="ml-1 text-[10px]">🔒</span>}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -219,7 +248,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             {healthMetrics.ahorro >= 0 ? <ArrowUpRight className="text-yn-primary-500" size={20} /> : <ArrowDownRight className="text-yn-error-500" size={20} />}
           </div>
           <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate ${healthMetrics.ahorro >= 0 ? 'text-yn-primary-600' : 'text-yn-error-600'}`}>
-            {formatCompact(healthMetrics.ahorro)}
+            {formatCompact(healthMetrics.ahorro, monedaFilter)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Período seleccionado</p>
         </div>
@@ -233,7 +262,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             {healthMetrics.usoCredito.toFixed(1)}%
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>
-            {formatCurrency(healthMetrics.deudaTotal)} deuda
+            {formatMoney(healthMetrics.deudaTotal)} deuda
           </p>
         </div>
 
@@ -243,7 +272,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
             <ArrowUpRight className="text-yn-primary-500" size={20} />
           </div>
           <p className={`text-xl sm:text-2xl md:text-3xl font-bold truncate text-yn-primary-600`}>
-            {formatCompact(healthMetrics.totalIngresos)}
+            {formatCompact(healthMetrics.totalIngresos, monedaFilter)}
           </p>
           <p className={`text-xs ${theme.colors.textMuted} mt-1`}>Período seleccionado</p>
         </div>
@@ -277,7 +306,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                       <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                  <Tooltip formatter={(value: number) => formatMoney(value, monedaFilter)} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -294,7 +323,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                         <div className="w-4 h-4 rounded" style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}></div>
                         <span className={`font-medium ${theme.colors.textPrimary}`}>{cat.name}</span>
                       </div>
-                      <span className={`font-bold truncate ${theme.colors.textPrimary}`}>{formatCurrency(cat.value)}</span>
+                      <span className={`font-bold truncate ${theme.colors.textPrimary}`}>{formatMoney(cat.value)}</span>
                     </div>
                     <div className={`w-full bg-yn-neutral-200 rounded-full h-2 ${theme.colors.border}`}>
                       <div
@@ -327,7 +356,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.colors.border} />
                 <XAxis dataKey="month" stroke={theme.colors.textMuted} />
                 <YAxis stroke={theme.colors.textMuted} tickFormatter={(value) => `S/ ${value}`} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Tooltip formatter={(value: number) => formatMoney(value, monedaFilter)} />
                 <Legend />
                 <Line type="monotone" dataKey="ingresos" stroke={CHART_INCOME} strokeWidth={2} name="Ingresos" />
                 <Line type="monotone" dataKey="gastos" stroke={CHART_EXPENSE} strokeWidth={2} name="Gastos" />
@@ -361,11 +390,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className={`${theme.colors.textMuted}`}>Mes anterior</p>
-                    <p className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(cat.lastMonth)}</p>
+                    <p className={`font-bold ${theme.colors.textPrimary}`}>{formatMoney(cat.lastMonth)}</p>
                   </div>
                   <div>
                     <p className={`${theme.colors.textMuted}`}>Este mes</p>
-                    <p className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(cat.thisMonth)}</p>
+                    <p className={`font-bold ${theme.colors.textPrimary}`}>{formatMoney(cat.thisMonth)}</p>
                   </div>
                 </div>
               </div>
@@ -426,11 +455,11 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className={theme.colors.textMuted}>Deuda actual</span>
-                      <span className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(deuda)}</span>
+                      <span className={`font-bold ${theme.colors.textPrimary}`}>{formatMoney(deuda)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className={theme.colors.textMuted}>Límite</span>
-                      <span className={theme.colors.textSecondary}>{formatCurrency(Number(card.limite))}</span>
+                      <span className={theme.colors.textSecondary}>{formatMoney(Number(card.limite))}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className={theme.colors.textMuted}>Uso</span>
@@ -470,7 +499,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                         <div className="flex gap-4 mt-2 text-sm">
                           <div>
                             <p className={theme.colors.textMuted}>Total</p>
-                            <p className={`font-bold ${theme.colors.textPrimary}`}>{formatCurrency(total)}</p>
+                            <p className={`font-bold ${theme.colors.textPrimary}`}>{formatMoney(total)}</p>
                           </div>
                           <div>
                             <p className={theme.colors.textMuted}>Cuotas</p>
@@ -480,7 +509,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
                           </div>
                           <div>
                             <p className={theme.colors.textMuted}>Por pagar</p>
-                            <p className="font-bold text-yn-error-600">{formatCurrency(restante)}</p>
+                            <p className="font-bold text-yn-error-600">{formatMoney(restante)}</p>
                           </div>
                         </div>
                       </div>
@@ -495,6 +524,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ history, cards, pendin
           </div>
         )}
       </div>
+      <UpgradeModal isOpen={!!upgradeFeature} feature={upgradeFeature ?? ''} onClose={() => setUpgradeFeature(null)} />
     </div>
   );
 };
