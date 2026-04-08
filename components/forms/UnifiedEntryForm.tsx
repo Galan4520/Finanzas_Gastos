@@ -31,6 +31,7 @@ interface UnifiedEntryFormProps {
   customIngresosCategories?: string[];
   onAddCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
   onRemoveCustomCategory?: (cat: string, tipo: 'gasto' | 'ingreso') => void;
+  supportsMultiCurrency?: boolean; // true solo cuando GAS >= v7
 }
 
 type EntryType = 'gasto' | 'ingreso' | 'tarjeta' | 'transferencia';
@@ -40,6 +41,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
   onAddPending, onSuccess, notify, onRomperMeta,
   customGastosCategories = [], customIngresosCategories = [],
   onAddCustomCategory, onRemoveCustomCategory,
+  supportsMultiCurrency = false,
 }) => {
   const { theme, themeName } = useTheme();
   const textColors = getTextColor(themeName);
@@ -870,7 +872,7 @@ export const UnifiedEntryForm: React.FC<UnifiedEntryFormProps> = ({
             <div className="space-y-1">
               <div className="flex items-center justify-between ml-1 mb-1">
                 <label className={`text-xs font-bold ${theme.colors.textMuted} uppercase`}>Monto</label>
-                {entryType === 'tarjeta' && (
+                {entryType === 'tarjeta' && supportsMultiCurrency && (
                   <div className="flex gap-1">
                     {(['PEN', 'USD'] as const).map(m => (
                       <button

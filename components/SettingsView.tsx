@@ -490,6 +490,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   existingCards={cards}
                   notify={notify}
                   initialShowForm={true}
+                  supportsMultiCurrency={(gasVersion ?? 0) >= 7}
                 />
               </div>
             </div>

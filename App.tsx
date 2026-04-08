@@ -762,6 +762,7 @@ function App() {
             customIngresosCategories={customIngresosCategories}
             onAddCustomCategory={handleAddCustomCategory}
             onRemoveCustomCategory={handleRemoveCustomCategory}
+            supportsMultiCurrency={(gasVersion ?? 0) >= 7}
           />
         );
 

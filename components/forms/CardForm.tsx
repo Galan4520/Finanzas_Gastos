@@ -13,9 +13,10 @@ interface CardFormProps {
   existingCards: CreditCard[];
   notify?: (msg: string, type: 'success' | 'error') => void;
   initialShowForm?: boolean;
+  supportsMultiCurrency?: boolean;
 }
 
-export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, existingCards, notify, initialShowForm = false }) => {
+export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, existingCards, notify, initialShowForm = false, supportsMultiCurrency = false }) => {
   const { theme } = useTheme();
   const [showForm, setShowForm] = useState(initialShowForm);
   const [loading, setLoading] = useState(false);
@@ -341,8 +342,8 @@ export const CardForm: React.FC<CardFormProps> = ({ scriptUrl, pin, onAddCard, e
             />
           </div>
 
-          {/* Moneda — no para transporte */}
-          {!isTransportCard && (
+          {/* Moneda — no para transporte, solo cuando GAS >= v7 */}
+          {!isTransportCard && supportsMultiCurrency && (
             <div>
               <label className={labelClass}>Moneda</label>
               <div className="grid grid-cols-2 gap-3">

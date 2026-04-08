@@ -9,13 +9,15 @@ interface EditCardModalProps {
     card: CreditCard | null;
     onSave: (updated: CreditCard, originalAlias: string) => Promise<void>;
     onClose: () => void;
+    supportsMultiCurrency?: boolean;
 }
 
 export const EditCardModal: React.FC<EditCardModalProps> = ({
     isOpen,
     card,
     onSave,
-    onClose
+    onClose,
+    supportsMultiCurrency = false
 }) => {
     const { theme } = useTheme();
     const [loading, setLoading] = useState(false);
@@ -208,7 +210,8 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                             />
                         </div>
 
-                        {/* Moneda */}
+                        {/* Moneda — solo cuando GAS >= v7 */}
+                        {supportsMultiCurrency && (
                         <div>
                             <label className={labelClass}>Moneda</label>
                             <div className="grid grid-cols-2 gap-3">
@@ -228,6 +231,7 @@ export const EditCardModal: React.FC<EditCardModalProps> = ({
                                 ))}
                             </div>
                         </div>
+                        )}
 
                         {/* Días, Límite y TEA */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
